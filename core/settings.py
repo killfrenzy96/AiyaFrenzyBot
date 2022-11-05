@@ -17,7 +17,7 @@ template = {
             "max_steps": 50,
             "default_count": 1,
             "max_count": 8,
-            "data_model": "",
+            "data_model": "Default",
             "max_compute": 3.65,
             "max_compute_batch": 8.0,
             "max_compute_queue": 32.0

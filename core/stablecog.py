@@ -245,8 +245,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         copy_command = f'/dream prompt:{prompt}'
         if negative_prompt != '':
             copy_command = copy_command + f' negative:{negative_prompt}'
-        if data_model:
-            copy_command = copy_command + f' checkpoint:{data_model}'
+        if data_model and model_name != 'Default':
+            copy_command = copy_command + f' checkpoint:{model_name}'
         copy_command = copy_command + f' steps:{steps} height:{height} width:{width} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
         if init_image:
             copy_command = copy_command + f' strength:{strength} init_url:{init_image.url}'
@@ -270,20 +270,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 content = f'Please wait! You have too much queued up.'
                 ephemeral = True
             else:
-                queue_index = len(queuehandler.GlobalQueue.queue)
-
-                # allow user to skip queue if others have multiple images lined up
-                if user_already_in_queue == False:
-                    queue_users_id: list[int] = []
-                    for index, queue_object in enumerate(queuehandler.GlobalQueue.queue):
-                        if queue_object.ctx.author.id in queue_users_id:
-                            queue_index = index
-                            break
-                        else:
-                            queue_users_id.append(queue_object.ctx.author.id)
-
+                queue_index = queuehandler.GlobalQueue.get_queue_position(self, ctx.author.id)
                 queuehandler.GlobalQueue.queue.insert(queue_index, queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
-                content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(queuehandler.GlobalQueue.queue + 1)}``'
+                content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(queuehandler.GlobalQueue.queue) + 1}``'
                 if count > 1:
                     content = content + f' - Batch: ``{count}``'
         else:
@@ -422,12 +411,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
 
         if queuehandler.GlobalQueue.queue:
-            # process next item in line that does not belong to the current dream
-            for index, queue in enumerate(queuehandler.GlobalQueue.queue):
-                if queue_object.ctx.author.id != queue.ctx.author.id:
-                    nextIndex = index
-                    break
-            event_loop.create_task(queuehandler.process_dream(self, queuehandler.GlobalQueue.queue.pop(nextIndex)))
+            event_loop.create_task(queuehandler.process_dream(self, queuehandler.GlobalQueue.queue.pop(0)))
 
     # upload the image
     def upload(self, upload_event_loop: AbstractEventLoop, upload_queue_object: queuehandler.UploadObject):

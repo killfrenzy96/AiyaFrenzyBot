@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+import csv
 import discord
 from dotenv import load_dotenv
 from core.logging import get_logger
@@ -43,7 +44,7 @@ async def on_ready():
 async def on_message(message: discord.Message):
     if message.author == self.user:
         try:
-            if message.content.startswith('<@') and '``/dream prompt:' in message.content:
+            if message.content.startswith('<@') and '> ``' in message.content:
                 await message.add_reaction('❌')
                 if '``/dream prompt:' in message.content:
                     await message.add_reaction('🔁')
@@ -126,6 +127,11 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
 
                     checkpoint = get_param('checkpoint')
                     if checkpoint == '': checkpoint = None
+
+                    with open('resources/models.csv', encoding='utf-8') as csv_file:
+                        model_data = list(csv.reader(csv_file, delimiter='|'))
+                        for row in model_data[1:]:
+                            if checkpoint == row[0]: checkpoint = row[1]
 
                     try:
                         height = int(get_param('height'))
