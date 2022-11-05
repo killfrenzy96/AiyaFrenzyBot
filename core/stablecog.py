@@ -6,6 +6,8 @@ import json
 import random
 import time
 import traceback
+import asyncio
+from threading import Thread
 from asyncio import AbstractEventLoop
 from typing import Optional
 import discord
@@ -243,8 +245,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         copy_command = f'/dream prompt:{prompt}'
         if negative_prompt != '':
             copy_command = copy_command + f' negative:{negative_prompt}'
-        if self.post_model:
-            copy_command = copy_command + f' checkpoint:{self.post_model}'
+        if data_model:
+            copy_command = copy_command + f' checkpoint:{data_model}'
         copy_command = copy_command + f' steps:{steps} height:{height} width:{width} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
         if init_image:
             copy_command = copy_command + f' strength:{strength} init_url:{init_image.url}'
@@ -268,25 +270,25 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 content = f'Please wait! You have too much queued up.'
                 ephemeral = True
             else:
-                queue_index = len(self.queue)
+                queue_index = len(queuehandler.GlobalQueue.queue)
 
                 # allow user to skip queue if others have multiple images lined up
                 if user_already_in_queue == False:
                     queue_users_id: list[int] = []
-                    for index, queue_object in enumerate(self.queue):
+                    for index, queue_object in enumerate(queuehandler.GlobalQueue.queue):
                         if queue_object.ctx.author.id in queue_users_id:
                             queue_index = index
                             break
                         else:
                             queue_users_id.append(queue_object.ctx.author.id)
 
-                queuehandler.GlobalQueue.queue.insert(queue_index, queuehandler.DrawObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
-                content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(self.queue + 1)}``'
+                queuehandler.GlobalQueue.queue.insert(queue_index, queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
+                content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(queuehandler.GlobalQueue.queue + 1)}``'
                 if count > 1:
                     content = content + f' - Batch: ``{count}``'
         else:
-            await queuehandler.process_dream(queuehandler.DrawObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
-            content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(self.queue)}``'
+            await queuehandler.process_dream(self, queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
+            content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(queuehandler.GlobalQueue.queue)}``'
             if count > 1:
                 content = content + f' - Batch: ``{count}``'
 
@@ -408,7 +410,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
                         # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
-                        await self.process_upload(queuehandler.UploadObject(
+                        await queuehandler.process_upload(self, queuehandler.UploadObject(
                             ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=None, files=files
                         ))
                 asyncio.run(run())
@@ -421,7 +423,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         if queuehandler.GlobalQueue.queue:
             # process next item in line that does not belong to the current dream
-            for index, queue in enumerate(self.queue):
+            for index, queue in enumerate(queuehandler.GlobalQueue.queue):
                 if queue_object.ctx.author.id != queue.ctx.author.id:
                     nextIndex = index
                     break
@@ -437,8 +439,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             )
         )
 
-        if self.upload_queue:
-            upload_event_loop.create_task(self.process_dream(self.queue.pop(0)))
+        if queuehandler.GlobalUploadQueue.queue:
+            upload_event_loop.create_task(queuehandler.process_upload(self, queuehandler.GlobalUploadQueue.queue.pop(0)))
 
 def setup(bot: discord.Bot):
     bot.add_cog(StableCog(bot))

@@ -43,7 +43,7 @@ async def on_ready():
 async def on_message(message: discord.Message):
     if message.author == self.user:
         try:
-            if message.content.startswith('<@'):
+            if message.content.startswith('<@') and '``/dream prompt:' in message.content:
                 await message.add_reaction('❌')
                 if '``/dream prompt:' in message.content:
                     await message.add_reaction('🔁')
@@ -66,7 +66,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
         if author == None:
             return
 
-        if len(message.attachments) and author.id == self.user.id and message.content.startswith(f'<@{ctx.user_id}>'):
+        if author.id == self.user.id and message.content.startswith(f'<@{ctx.user_id}>'):
             await message.delete()
 
     if ctx.emoji.name == '🔁':

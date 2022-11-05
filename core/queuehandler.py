@@ -27,8 +27,8 @@ class DrawObject:
 class GlobalQueue:
     dream_thread = Thread()
     event_loop = asyncio.get_event_loop()
-    queue = []
-async def process_dream(self, queue_object):
+    queue: list[DrawObject] = []
+async def process_dream(self, queue_object: DrawObject):
     GlobalQueue.dream_thread = Thread(target=self.dream,
                                args=(GlobalQueue.event_loop, queue_object))
     GlobalQueue.dream_thread.start()
@@ -44,8 +44,8 @@ class UploadObject:
 class GlobalUploadQueue:
     upload_thread = Thread()
     event_loop = asyncio.get_event_loop()
-    queue = []
-async def process_upload(self, queue_object):
+    queue: list[UploadObject] = []
+async def process_upload(self, queue_object: UploadObject):
     if GlobalUploadQueue.upload_thread.is_alive():
         GlobalUploadQueue.queue.append(queue_object)
     else:
