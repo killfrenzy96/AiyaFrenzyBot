@@ -260,15 +260,26 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         content = None
         ephemeral = False
 
-        user_already_in_queue: float = 0.0
+        # calculate total cost of queued items
+        user_already_in_queue: float = get_dream_compute_cost(width, height, steps, count)
+
         for queue_object in queuehandler.GlobalQueue.queue:
             if queue_object.ctx.author.id == ctx.author.id:
                 user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
 
+        for queue_object in queuehandler.GlobalQueue.queue_low:
+            if queue_object.ctx.author.id == ctx.author.id:
+                user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
+
+        print(f'Estimated total compute cost: {user_already_in_queue}')
+
         if user_already_in_queue > settings.read(guild)['max_compute_queue']:
-            content = f'Please wait! You have too much queued up.'
+            print(f'Dream rejected: Too much in queue already')
+            content = f'<@{ctx.author.id}> Please wait! You have too much queued up.'
+            append_options = ''
             ephemeral = True
         else:
+            print(f'Dream passed: Generating image(s)...')
             queue_length = len(queuehandler.GlobalQueue.queue)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
 
@@ -294,6 +305,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
             if count > 1: content = content + f' - Batch: ``{count}``'
+            content = content + append_options
 
         if content:
             try:

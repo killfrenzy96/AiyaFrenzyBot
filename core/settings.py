@@ -16,7 +16,7 @@ template = {
             "negative_prompt": "",
             "max_steps": 50,
             "default_count": 1,
-            "max_count": 8,
+            "max_count": 16,
             "data_model": "Default",
             "max_compute": 3.65,
             "max_compute_batch": 16.0,
