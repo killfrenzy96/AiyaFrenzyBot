@@ -132,4 +132,5 @@ class SettingsCog(commands.Cog):
         await ctx.send_response(reply)
 
 def setup(bot):
-    bot.add_cog(SettingsCog(bot))
+    # bot.add_cog(SettingsCog(bot))
+    pass

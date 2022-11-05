@@ -24,35 +24,45 @@ from core import settings
 class QueueObject:
     def __init__(self, ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed,
                  strength, init_image, copy_command, batch_count, facefix):
-        self.ctx = ctx
-        self.prompt = prompt
-        self.negative_prompt = negative_prompt
-        self.steps = steps
-        self.height = height
-        self.width = width
-        self.guidance_scale = guidance_scale
-        self.sampler = sampler
-        self.seed = seed
-        self.strength = strength
-        self.init_image = init_image
-        self.copy_command = copy_command
-        self.batch_count = batch_count
-        self.facefix = facefix
+        self.ctx: discord.ApplicationContext = ctx
+        self.prompt: str = prompt
+        self.negative_prompt: str = negative_prompt
+        self.steps: int = steps
+        self.height: int = height
+        self.width: int = width
+        self.guidance_scale: float = guidance_scale
+        self.sampler: str = sampler
+        self.seed: int = seed
+        self.strength: float = strength
+        self.init_image: discord.Attachment = init_image
+        self.copy_command: str = copy_command
+        self.batch_count: int = batch_count
+        self.facefix: bool = facefix
+
+class QueueObjectUpload:
+    def __init__(self, ctx, content, embed, files):
+        self.ctx: discord.ApplicationContext = ctx
+        self.content: str = content
+        self.embed: discord.Embed = embed
+        self.files: list[discord.File] = files
 
 class StableCog(commands.Cog, name='Stable Diffusion', description='Create images from natural language.'):
     def __init__(self, bot):
         self.dream_thread = Thread()
         self.event_loop = asyncio.get_event_loop()
-        self.queue = []
-        self.wait_message = []
-        self.bot = bot
+        self.queue: list[QueueObject] = []
+        self.upload_thread = Thread()
+        self.upload_event_loop = asyncio.get_event_loop()
+        self.upload_queue: list[QueueObjectUpload] = []
+        self.wait_message: list[str] = []
+        self.bot: discord.Bot = bot
         self.post_model = ""
         self.send_model = False
 
     with open('resources/models.csv', encoding='utf-8') as csv_file:
         model_data = list(csv.reader(csv_file, delimiter='|'))
 
-    @commands.slash_command(name = 'draw', description = 'Create an image')
+    @commands.slash_command(name = 'dream', description = 'Create an image')
     @option(
         'prompt',
         str,
@@ -60,13 +70,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         required=True,
     )
     @option(
-        'negative_prompt',
+        'negative',
         str,
         description='Negative prompts to exclude from output.',
         required=False,
     )
     @option(
-        'data_model',
+        'checkpoint',
         str,
         description='Select the data model for image generation',
         required=False,
@@ -130,7 +140,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         required=False,
     )
     @option(
-        'count',
+        'batch',
         int,
         description='The number of images to generate. This is "Batch count", not "Batch size".',
         required=False,
@@ -141,9 +151,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         description='Tries to improve faces in pictures.',
         required=False,
     )
-    async def dream_handler(self, ctx: discord.ApplicationContext, *,
-                            prompt: str, negative_prompt: str = 'unset',
-                            data_model: Optional[str] = None,
+    async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message, *,
+                            prompt: str, negative: str = 'unset',
+                            checkpoint: Optional[str] = None,
                             steps: Optional[int] = -1,
                             height: Optional[int] = 512, width: Optional[int] = 512,
                             guidance_scale: Optional[float] = 7.0,
@@ -152,11 +162,18 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             strength: Optional[float] = 0.75,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
-                            count: Optional[int] = None,
+                            batch: Optional[int] = None,
                             facefix: Optional[bool] = False):
 
+        negative_prompt: str = negative
+        data_model: str = checkpoint
+        count: str = batch
+
         #update defaults with any new defaults from settingscog
-        guild = '% s' % ctx.guild_id
+        if ctx is discord.ApplicationContext:
+            guild = '% s' % ctx.guild_id
+        else:
+            guild = '% s' % ctx.guild.id
         if negative_prompt == 'unset':
             negative_prompt = settings.read(guild)['negative_prompt']
         if steps == -1:
@@ -212,61 +229,109 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         #formatting bot initial reply
         append_options = ''
+
+        # get estimate of the compute cost of this dream
+        def get_dream_compute_cost(width: int, height: int, steps: int, count: int = 1):
+            dream_compute_cost: float = float(count)
+            dream_compute_cost *= max(1.0, steps / 20)
+            dream_compute_cost *= pow(max(1.0, (width * height) / (512 * 512)), 1.5)
+            return dream_compute_cost
+        dream_compute_cost = get_dream_compute_cost(width, height, steps, 1)
+
         #lower step value to the highest setting if user goes over max steps
+        if dream_compute_cost > settings.read(guild)['max_compute']:
+            steps = min(int(float(steps) * (settings.read(guild)['max_compute'] / dream_compute_cost)), settings.read(guild)['max_steps'])
+            append_options = append_options + '\nDream compute cost is too high! Steps reduced to ' + str(steps)
         if steps > settings.read(guild)['max_steps']:
             steps = settings.read(guild)['max_steps']
             append_options = append_options + '\nExceeded maximum of ``' + str(steps) + '`` steps! This is the best I can do...'
-        if model_name != 'Default':
-            append_options = append_options + '\nModel: ``' + str(model_name) + '``'
-        if negative_prompt != '':
-            append_options = append_options + '\nNegative Prompt: ``' + str(negative_prompt) + '``'
-        if height != 512:
-            append_options = append_options + '\nHeight: ``' + str(height) + '``'
-        if width != 512:
-            append_options = append_options + '\nWidth: ``' + str(width) + '``'
-        if guidance_scale != 7.0:
-            append_options = append_options + '\nGuidance Scale: ``' + str(guidance_scale) + '``'
-        if sampler != 'Euler a':
-            append_options = append_options + '\nSampler: ``' + str(sampler) + '``'
-        if init_image:
-            append_options = append_options + '\nStrength: ``' + str(strength) + '``'
-            append_options = append_options + '\nURL Init Image: ``' + str(init_image.url) + '``'
+        # if model_name != 'Default':
+        #     append_options = append_options + '\nModel: ``' + str(model_name) + '``'
+        # if negative_prompt != '':
+        #     append_options = append_options + '\nNegative Prompt: ``' + str(negative_prompt) + '``'
+        # if height != 512:
+        #     append_options = append_options + '\nHeight: ``' + str(height) + '``'
+        # if width != 512:
+        #     append_options = append_options + '\nWidth: ``' + str(width) + '``'
+        # if guidance_scale != 7.0:
+        #     append_options = append_options + '\nGuidance Scale: ``' + str(guidance_scale) + '``'
+        # if sampler != 'Euler a':
+        #     append_options = append_options + '\nSampler: ``' + str(sampler) + '``'
+        # if init_image:
+        #     append_options = append_options + '\nStrength: ``' + str(strength) + '``'
+        #     append_options = append_options + '\nURL Init Image: ``' + str(init_image.url) + '``'
         if count != 1:
+            dream_compute_batch_cost = get_dream_compute_cost(width, height, steps, count)
             max_count = settings.read(guild)['max_count']
+            if dream_compute_batch_cost > settings.read(guild)['max_compute_batch']:
+                count = min(int(float(count) * settings.read(guild)['max_compute_batch'] / dream_compute_batch_cost), max_count)
+                append_options = append_options + '\nBatch compute cost is too high! Batch count reduced to ' + str(count)
             if count > max_count:
                 count = max_count
                 append_options = append_options + '\nExceeded maximum of ``' + str(count) + '`` images! This is the best I can do...'
-            append_options = append_options + '\nCount: ``' + str(count) + '``'
-        if facefix:
-            append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
+        #     append_options = append_options + '\nCount: ``' + str(count) + '``'
+        # if facefix:
+        #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
 
         #log the command
-        copy_command = f'/draw prompt:{prompt} steps:{steps} height:{str(height)} width:{width} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed} count:{count}'
+        copy_command = f'/dream prompt:{prompt}'
         if negative_prompt != '':
-            copy_command = copy_command + f' negative_prompt:{negative_prompt}'
-        if data_model:
-            copy_command = copy_command + f' data_model:{model_name}'
+            copy_command = copy_command + f' negative:{negative_prompt}'
+        if self.post_model:
+            copy_command = copy_command + f' checkpoint:{self.post_model}'
+        copy_command = copy_command + f' steps:{steps} height:{height} width:{width} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
         if init_image:
             copy_command = copy_command + f' strength:{strength} init_url:{init_image.url}'
         if facefix:
             copy_command = copy_command + f' facefix:{facefix}'
+        if count > 1:
+            copy_command = copy_command + f' batch:{count}'
         print(copy_command)
 
         #setup the queue
+        content = None
+        ephemeral = False
+
         if self.dream_thread.is_alive():
-            user_already_in_queue = False
+            user_already_in_queue: float = 0.0
             for queue_object in self.queue:
                 if queue_object.ctx.author.id == ctx.author.id:
-                    user_already_in_queue = True
-                    break
-            if user_already_in_queue:
-                await ctx.send_response(content=f'Please wait! You\'re queued up.', ephemeral=True)
+                    user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
+
+            if user_already_in_queue > settings.read(guild)['max_compute_queue']:
+                content = f'Please wait! You have too much queued up.'
+                ephemeral = True
             else:
-                self.queue.append(QueueObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
-                await ctx.send_response(f'<@{ctx.author.id}>, {self.wait_message[random.randint(0, message_row_count)]}\nQueue: ``{len(self.queue)}`` - ``{prompt}``\nSteps: ``{steps}`` - Seed: ``{seed}``{append_options}')
+                queue_index = len(self.queue)
+
+                # allow user to skip queue if others have multiple images lined up
+                if user_already_in_queue == False:
+                    queue_users_id: list[int] = []
+                    for index, queue_object in enumerate(self.queue):
+                        if queue_object.ctx.author.id in queue_users_id:
+                            queue_index = index
+                            break
+                        else:
+                            queue_users_id.append(queue_object.ctx.author.id)
+
+                self.queue.insert(queue_index, QueueObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
+                content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(self.queue + 1)}``'
+                if count > 1:
+                    content = content + f' - Batch: ``{count}``'
         else:
             await self.process_dream(QueueObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
-            await ctx.send_response(f'<@{ctx.author.id}>, {self.wait_message[random.randint(0, message_row_count)]}\nQueue: ``{len(self.queue)}`` - ``{prompt}``\nSteps: ``{steps}`` - Seed: ``{seed}``{append_options}')
+            content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(self.queue)}``'
+            if count > 1:
+                content = content + f' - Batch: ``{count}``'
+
+        if content:
+            try:
+                await ctx.send_response(content=content, ephemeral=ephemeral)
+            except:
+                try:
+                    await ctx.reply(content)
+                except:
+                    await ctx.channel.send(content)
 
     async def process_dream(self, queue_object: QueueObject):
         self.dream_thread = Thread(target=self.dream,
@@ -351,42 +416,75 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 metadata = PngImagePlugin.PngInfo()
                 epoch_time = int(time.time())
                 metadata.add_text("parameters", meta)
-                file_path = f'{settings.global_var.dir}\{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
+                file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
                 image.save(file_path, pnginfo=metadata)
                 print(f'Saved image: {file_path}')
 
             # post to discord
-            with contextlib.ExitStack() as stack:
-                buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
+            def post_dream():
+                async def run():
+                    with contextlib.ExitStack() as stack:
+                        buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
 
-                embed = discord.Embed()
-                embed.colour = settings.global_var.embed_color
+                        # embed = discord.Embed()
+                        # embed.colour = settings.global_var.embed_color
 
-                image_count = len(pil_images)
-                noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
-                value = queue_object.copy_command if settings.global_var.copy_command else queue_object.prompt
-                embed.add_field(name=f'My {noun_descriptor} of', value=f'``{value}``', inline=False)
+                        # image_count = len(pil_images)
+                        # noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
+                        # value = queue_object.copy_command if settings.global_var.copy_command else queue_object.prompt
+                        # embed.add_field(name=f'My {noun_descriptor} of', value=f'``{value}``', inline=False)
 
-                embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
+                        # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
 
-                footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
-                if queue_object.ctx.author.avatar is not None:
-                    footer_args['icon_url'] = queue_object.ctx.author.avatar.url
-                embed.set_footer(**footer_args)
+                        # footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
+                        # if queue_object.ctx.author.avatar is not None:
+                        #     footer_args['icon_url'] = queue_object.ctx.author.avatar.url
+                        # embed.set_footer(**footer_args)
 
-                for (pil_image, buffer) in zip(pil_images, buffer_handles):
-                    pil_image.save(buffer, 'PNG')
-                    buffer.seek(0)
+                        for (pil_image, buffer) in zip(pil_images, buffer_handles):
+                            pil_image.save(buffer, 'PNG')
+                            buffer.seek(0)
 
-                files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
+                        files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
+                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
+                        await self.process_upload(QueueObjectUpload(
+                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=None, files=files
+                        ))
+                asyncio.run(run())
+            Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}',
                                   color=settings.global_var.embed_color)
             event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
         if self.queue:
-            event_loop.create_task(self.process_dream(self.queue.pop(0)))
+            # process next item in line that does not belong to the current dream
+            nextIndex = 0
+            for index, queue in enumerate(self.queue):
+                if queue_object.ctx.author.id != queue.ctx.author.id:
+                    nextIndex = index
+                    break
+            event_loop.create_task(self.process_dream(self.queue.pop(nextIndex)))
 
-def setup(bot):
+    async def process_upload(self, upload_queue_object: QueueObjectUpload):
+        if self.upload_thread.is_alive():
+            self.upload_queue.append(upload_queue_object)
+        else:
+            self.upload_thread = Thread(target=self.upload,
+                                    args=(self.upload_event_loop, upload_queue_object))
+            self.upload_thread.start()
+
+    def upload(self, upload_event_loop: AbstractEventLoop, upload_queue_object: QueueObjectUpload):
+        upload_event_loop.create_task(
+            upload_queue_object.ctx.channel.send(
+                content=upload_queue_object.content,
+                embed=upload_queue_object.embed,
+                files=upload_queue_object.files
+            )
+        )
+
+        if self.upload_queue:
+            upload_event_loop.create_task(self.process_dream(self.queue.pop(0)))
+
+def setup(bot: discord.Bot):
     bot.add_cog(StableCog(bot))

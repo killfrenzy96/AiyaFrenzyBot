@@ -11,13 +11,16 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 path = 'resources/'.format(dir_path)
 
 template = {
-            "default_steps": 30,
+            "default_steps": 20,
             "sampler": "Euler a",
             "negative_prompt": "",
             "max_steps": 50,
             "default_count": 1,
-            "max_count": 1,
-            "data_model": ""
+            "max_count": 8,
+            "data_model": "",
+            "max_compute": 3.65,
+            "max_compute_batch": 8.0,
+            "max_compute_queue": 32.0
         }
 
 #initialize global variables here
