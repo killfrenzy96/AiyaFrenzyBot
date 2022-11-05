@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import contextlib
 import csv
@@ -8,9 +7,7 @@ import random
 import time
 import traceback
 from asyncio import AbstractEventLoop
-from threading import Thread
 from typing import Optional
-
 import discord
 import requests
 from PIL import Image, PngImagePlugin
@@ -18,45 +15,14 @@ from discord import option
 from discord.commands import OptionChoice
 from discord.ext import commands
 
+from core import queuehandler
 from core import settings
 
 
-class QueueObject:
-    def __init__(self, ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed,
-                 strength, init_image, copy_command, batch_count, facefix):
-        self.ctx: discord.ApplicationContext = ctx
-        self.prompt: str = prompt
-        self.negative_prompt: str = negative_prompt
-        self.steps: int = steps
-        self.height: int = height
-        self.width: int = width
-        self.guidance_scale: float = guidance_scale
-        self.sampler: str = sampler
-        self.seed: int = seed
-        self.strength: float = strength
-        self.init_image: discord.Attachment = init_image
-        self.copy_command: str = copy_command
-        self.batch_count: int = batch_count
-        self.facefix: bool = facefix
-
-class QueueObjectUpload:
-    def __init__(self, ctx, content, embed, files):
-        self.ctx: discord.ApplicationContext = ctx
-        self.content: str = content
-        self.embed: discord.Embed = embed
-        self.files: list[discord.File] = files
-
 class StableCog(commands.Cog, name='Stable Diffusion', description='Create images from natural language.'):
     def __init__(self, bot):
-        self.dream_thread = Thread()
-        self.event_loop = asyncio.get_event_loop()
-        self.queue: list[QueueObject] = []
-        self.upload_thread = Thread()
-        self.upload_event_loop = asyncio.get_event_loop()
-        self.upload_queue: list[QueueObjectUpload] = []
         self.wait_message: list[str] = []
         self.bot: discord.Bot = bot
-        self.post_model = ""
         self.send_model = False
 
     with open('resources/models.csv', encoding='utf-8') as csv_file:
@@ -182,16 +148,16 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             count = settings.read(guild)['default_count']
         if sampler == 'unset':
             sampler = settings.read(guild)['sampler']
+
         # if a model is not selected, do nothing
         model_name = 'Default'
         if data_model is None:
             data_model = settings.read(guild)['data_model']
             if data_model != '':
-                self.post_model = data_model
                 self.send_model = True
         else:
-            self.post_model = data_model
             self.send_model = True
+
         # get the selected model's display name
         with open('resources/models.csv', 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f, delimiter='|')
@@ -292,9 +258,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         content = None
         ephemeral = False
 
-        if self.dream_thread.is_alive():
+        if queuehandler.GlobalQueue.dream_thread.is_alive():
             user_already_in_queue: float = 0.0
-            for queue_object in self.queue:
+            for queue_object in queuehandler.GlobalQueue.queue:
                 if queue_object.ctx.author.id == ctx.author.id:
                     user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
 
@@ -314,12 +280,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         else:
                             queue_users_id.append(queue_object.ctx.author.id)
 
-                self.queue.insert(queue_index, QueueObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
+                queuehandler.GlobalQueue.queue.insert(queue_index, queuehandler.DrawObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
                 content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(self.queue + 1)}``'
                 if count > 1:
                     content = content + f' - Batch: ``{count}``'
         else:
-            await self.process_dream(QueueObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
+            await queuehandler.process_dream(queuehandler.DrawObject(ctx, prompt, negative_prompt, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(self.queue)}``'
             if count > 1:
                 content = content + f' - Batch: ``{count}``'
@@ -333,13 +299,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 except:
                     await ctx.channel.send(content)
 
-    async def process_dream(self, queue_object: QueueObject):
-        self.dream_thread = Thread(target=self.dream,
-                                   args=(self.event_loop, queue_object))
-        self.dream_thread.start()
-
     #generate the image
-    def dream(self, event_loop: AbstractEventLoop, queue_object: QueueObject):
+    def dream(self, event_loop: AbstractEventLoop, queue_object: queuehandler.DrawObject):
         try:
             start_time = time.time()
 
@@ -347,7 +308,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             model_payload = {
                 "fn_index": settings.global_var.model_fn_index,
                 "data": [
-                    self.post_model
+                    queue_object.data_model
                 ]
             }
             payload = {
@@ -447,7 +408,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
                         # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
-                        await self.process_upload(QueueObjectUpload(
+                        await self.process_upload(queuehandler.UploadObject(
                             ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=None, files=files
                         ))
                 asyncio.run(run())
@@ -457,24 +418,17 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}',
                                   color=settings.global_var.embed_color)
             event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
-        if self.queue:
+
+        if queuehandler.GlobalQueue.queue:
             # process next item in line that does not belong to the current dream
-            nextIndex = 0
             for index, queue in enumerate(self.queue):
                 if queue_object.ctx.author.id != queue.ctx.author.id:
                     nextIndex = index
                     break
-            event_loop.create_task(self.process_dream(self.queue.pop(nextIndex)))
+            event_loop.create_task(queuehandler.process_dream(self, queuehandler.GlobalQueue.queue.pop(nextIndex)))
 
-    async def process_upload(self, upload_queue_object: QueueObjectUpload):
-        if self.upload_thread.is_alive():
-            self.upload_queue.append(upload_queue_object)
-        else:
-            self.upload_thread = Thread(target=self.upload,
-                                    args=(self.upload_event_loop, upload_queue_object))
-            self.upload_thread.start()
-
-    def upload(self, upload_event_loop: AbstractEventLoop, upload_queue_object: QueueObjectUpload):
+    # upload the image
+    def upload(self, upload_event_loop: AbstractEventLoop, upload_queue_object: queuehandler.UploadObject):
         upload_event_loop.create_task(
             upload_queue_object.ctx.channel.send(
                 content=upload_queue_object.content,
