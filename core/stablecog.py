@@ -209,7 +209,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #lower step value to the highest setting if user goes over max steps
         if dream_compute_cost > settings.read(guild)['max_compute']:
             steps = min(int(float(steps) * (settings.read(guild)['max_compute'] / dream_compute_cost)), settings.read(guild)['max_steps'])
-            append_options = append_options + '\nDream compute cost is too high! Steps reduced to ' + str(steps)
+            append_options = append_options + '\nDream compute cost is too high! Steps reduced to ``' + str(steps) + '``'
         if steps > settings.read(guild)['max_steps']:
             steps = settings.read(guild)['max_steps']
             append_options = append_options + '\nExceeded maximum of ``' + str(steps) + '`` steps! This is the best I can do...'
@@ -233,7 +233,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             max_count = settings.read(guild)['max_count']
             if dream_compute_batch_cost > settings.read(guild)['max_compute_batch']:
                 count = min(int(float(count) * settings.read(guild)['max_compute_batch'] / dream_compute_batch_cost), max_count)
-                append_options = append_options + '\nBatch compute cost is too high! Batch count reduced to ' + str(count)
+                append_options = append_options + '\nBatch compute cost is too high! Batch count reduced to ``' + str(count) + '``'
             if count > max_count:
                 count = max_count
                 append_options = append_options + '\nExceeded maximum of ``' + str(count) + '`` images! This is the best I can do...'
