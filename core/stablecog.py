@@ -260,26 +260,40 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         content = None
         ephemeral = False
 
-        if queuehandler.GlobalQueue.dream_thread.is_alive():
-            user_already_in_queue: float = 0.0
-            for queue_object in queuehandler.GlobalQueue.queue:
-                if queue_object.ctx.author.id == ctx.author.id:
-                    user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
+        user_already_in_queue: float = 0.0
+        for queue_object in queuehandler.GlobalQueue.queue:
+            if queue_object.ctx.author.id == ctx.author.id:
+                user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
 
-            if user_already_in_queue > settings.read(guild)['max_compute_queue']:
-                content = f'Please wait! You have too much queued up.'
-                ephemeral = True
-            else:
-                queue_index = queuehandler.GlobalQueue.get_queue_position(self, ctx.author.id)
-                queuehandler.GlobalQueue.queue.insert(queue_index, queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
-                content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(queuehandler.GlobalQueue.queue) + 1}``'
-                if count > 1:
-                    content = content + f' - Batch: ``{count}``'
+        if user_already_in_queue > settings.read(guild)['max_compute_queue']:
+            content = f'Please wait! You have too much queued up.'
+            ephemeral = True
         else:
-            await queuehandler.process_dream(self, queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, facefix))
-            content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{len(queuehandler.GlobalQueue.queue)}``'
-            if count > 1:
-                content = content + f' - Batch: ``{count}``'
+            queue_length = len(queuehandler.GlobalQueue.queue)
+            if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
+
+            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, facefix)
+
+            if count == 1:
+                # regular queue
+                await queuehandler.process_dream(self, draw_object)
+            else:
+                # batched items go into the low priority queue
+                queue_length += len(queuehandler.GlobalQueue.queue_low)
+                if queuehandler.GlobalQueue.dream_thread.is_alive():
+                    queuehandler.GlobalQueue.queue_low.append(draw_object)
+                else:
+                    await queuehandler.process_dream(self, draw_object)
+                batch_count = 1
+                while batch_count < count:
+                    batch_count += 1
+                    seed += 1
+                    command_str = f'seed:{seed}'
+                    command_str = f'#{batch_count}`` ``{command_str}'
+                    queuehandler.GlobalQueue.queue_low.append(queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, facefix))
+
+            content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
+            if count > 1: content = content + f' - Batch: ``{count}``'
 
         if content:
             try:
@@ -352,29 +366,29 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             response_data = response.json()
             end_time = time.time()
 
-            #grab png info
-            load_r = json.loads(response_data['info'])
-            meta = load_r["infotexts"][0]
-            #create safe/sanitized filename
-            keep_chars = (' ', '.', '_')
-            file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
-
-            # save local copy of image and prepare PIL images
-            pil_images = []
-            for i, image_base64 in enumerate(response_data['images']):
-                image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
-                pil_images.append(image)
-
-                metadata = PngImagePlugin.PngInfo()
-                epoch_time = int(time.time())
-                metadata.add_text("parameters", meta)
-                file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
-                image.save(file_path, pnginfo=metadata)
-                print(f'Saved image: {file_path}')
-
-            # post to discord
             def post_dream():
                 async def run():
+                    #grab png info
+                    load_r = json.loads(response_data['info'])
+                    meta = load_r["infotexts"][0]
+                    #create safe/sanitized filename
+                    keep_chars = (' ', '.', '_')
+                    file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
+
+                    # save local copy of image and prepare PIL images
+                    pil_images = []
+                    for i, image_base64 in enumerate(response_data['images']):
+                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
+                        pil_images.append(image)
+
+                        metadata = PngImagePlugin.PngInfo()
+                        epoch_time = int(time.time())
+                        metadata.add_text("parameters", meta)
+                        file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
+                        image.save(file_path, pnginfo=metadata)
+                        print(f'Saved image: {file_path}')
+
+                    # post to discord
                     with contextlib.ExitStack() as stack:
                         buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
 
@@ -411,7 +425,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
 
         if queuehandler.GlobalQueue.queue:
-            event_loop.create_task(queuehandler.process_dream(self, queuehandler.GlobalQueue.queue.pop(0)))
+            # event_loop.create_task(queuehandler.process_dream(self, queuehandler.GlobalQueue.queue.pop(0)))
+            self.dream(queuehandler.GlobalQueue.event_loop, queuehandler.GlobalQueue.queue.pop(0))
+
+        if queuehandler.GlobalQueue.queue_low:
+            self.dream(queuehandler.GlobalQueue.event_loop, queuehandler.GlobalQueue.queue_low.pop(0))
 
     # upload the image
     def upload(self, upload_event_loop: AbstractEventLoop, upload_queue_object: queuehandler.UploadObject):
@@ -424,7 +442,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         )
 
         if queuehandler.GlobalUploadQueue.queue:
-            upload_event_loop.create_task(queuehandler.process_upload(self, queuehandler.GlobalUploadQueue.queue.pop(0)))
+            # upload_event_loop.create_task(queuehandler.process_upload(self, queuehandler.GlobalUploadQueue.queue.pop(0)))
+            self.upload(queuehandler.GlobalUploadQueue.event_loop, queuehandler.GlobalUploadQueue.queue.pop(0))
 
 def setup(bot: discord.Bot):
     bot.add_cog(StableCog(bot))

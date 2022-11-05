@@ -19,8 +19,8 @@ template = {
             "max_count": 8,
             "data_model": "Default",
             "max_compute": 3.65,
-            "max_compute_batch": 8.0,
-            "max_compute_queue": 32.0
+            "max_compute_batch": 16.0,
+            "max_compute_queue": 16.0
         }
 
 #initialize global variables here
