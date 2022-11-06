@@ -103,7 +103,11 @@ def files_check():
 
 def guilds_check(self):
     #guild settings files. has to be done after on_ready
-    for guild in self.guilds:
+    class simple_guild: id: int | str
+    guild_private: simple_guild = simple_guild()
+    guild_private.id = 'private'
+
+    for guild in self.guilds + [guild_private]:
         try:
             read(str(guild.id))
             print(f'I\'m using local settings for {guild.id} a.k.a {guild}.')

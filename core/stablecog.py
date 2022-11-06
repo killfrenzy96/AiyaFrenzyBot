@@ -140,8 +140,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #update defaults with any new defaults from settingscog
         if ctx is discord.ApplicationContext:
             guild = '% s' % ctx.guild_id
-        else:
+        elif ctx.guild:
             guild = '% s' % ctx.guild.id
+        else:
+            guild = '% s' % 'private'
         if negative_prompt == 'unset':
             negative_prompt = settings.read(guild)['negative_prompt']
         if steps == -1:
@@ -164,8 +166,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         with open('resources/models.csv', 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f, delimiter='|')
             for row in reader:
-                if row['model_full_name'] == data_model:
+                if row['display_name'] == data_model:
+                    data_model = row['model_full_name']
                     model_name = row['display_name']
+                    break
+                elif row['model_full_name'] == data_model:
+                    model_name = row['display_name']
+                    break
 
         if not self.send_model:
             print(f'Request -- {ctx.author.name}#{ctx.author.discriminator} -- Prompt: {prompt}')
@@ -176,6 +183,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         #url *will* override init image for compatibility, can be changed here
         if init_url:
+            if init_url.startswith('https://cdn.discordapp.com/') == False:
+                await ctx.send_response('Only URL images from the Discord CDN are allowed!')
+                return
+
             try:
                 init_image = requests.get(init_url)
             except(Exception,):

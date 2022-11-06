@@ -126,7 +126,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     if negative == '': negative = 'unset'
 
                     checkpoint = get_param('checkpoint')
-                    if checkpoint == '': checkpoint = None
+                    if checkpoint == '': checkpoint = 'Default'
 
                     with open('resources/models.csv', encoding='utf-8') as csv_file:
                         model_data = list(csv.reader(csv_file, delimiter='|'))
