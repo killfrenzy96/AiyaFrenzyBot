@@ -108,16 +108,28 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     dream_ctx = message
                     dream_ctx.author = user
 
-                    def get_param_url(param):
-                        return find_between(command, f'{param}:', ' ')
+                    splitter_params = [
+                        'prompt',
+                        'negative',
+                        'checkpoint',
+                        'steps',
+                        'height',
+                        'width',
+                        'guidance_scale',
+                        'sampler',
+                        'seed',
+                        'strength',
+                        'init_url',
+                        'batch',
+                        'facefix'
+                    ]
+
+                    for splitter_param in splitter_params:
+                        command = command.replace(f' {splitter_param}:', f'\n\n{splitter_param}\n')
+                    command = command.replace('``', '\n\n')
 
                     def get_param(param):
-                        result = find_between(command, f'{param}:', ':')
-                        if result == '':
-                            result = find_between(command, f'{param}:', '``')
-                        else:
-                            result = result.rsplit(' ', 1)[0]
-
+                        result = find_between(command, f'\n{param}\n', '\n\n')
                         return result
 
                     prompt = get_param('prompt')
@@ -170,7 +182,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     except:
                         batch = 1
 
-                    init_url = get_param_url('init_url')
+                    init_url = get_param('init_url')
                     if init_url == '': init_url = None
 
                     await stable_cog.dream_handler(ctx=message,
