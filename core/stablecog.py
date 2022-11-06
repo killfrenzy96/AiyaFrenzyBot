@@ -272,47 +272,55 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         ephemeral = False
 
         # calculate total cost of queued items
-        user_already_in_queue: float = get_dream_compute_cost(width, height, steps, count)
+        dream_cost: float = get_dream_compute_cost(width, height, steps, count)
+        queue_cost = 0.0
 
         for queue_object in queuehandler.GlobalQueue.queue:
             if queue_object.ctx.author.id == ctx.author.id:
-                user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
+                queue_cost += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
 
         for queue_object in queuehandler.GlobalQueue.queue_low:
             if queue_object.ctx.author.id == ctx.author.id:
-                user_already_in_queue += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
+                queue_cost += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
 
-        print(f'Estimated total compute cost: {user_already_in_queue}')
+        print(f'Estimated total compute cost: {dream_cost + queue_cost}')
 
-        if user_already_in_queue > settings.read(guild)['max_compute_queue']:
+        if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
             print(f'Dream rejected: Too much in queue already')
             content = f'<@{ctx.author.id}> Please wait! You have too much queued up.'
             append_options = ''
             ephemeral = True
         else:
             print(f'Dream passed: Generating image(s)...')
-            queue_length = len(queuehandler.GlobalQueue.queue)
+            queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
-
             draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, facefix)
 
             if count == 1:
-                # regular queue
-                await queuehandler.process_dream(self, draw_object)
+                # if user does not have a dream in process, they get high priority
+                if queue_cost == 0.0:
+                    priority: str = 'high'
+                    print(f'Dream priority: High')
+                else:
+                    priority: str = 'medium'
+                    print(f'Dream priority: Medium')
+                    queue_length += len(queuehandler.GlobalQueue.queue)
+
+                await queuehandler.process_dream(self, draw_object, priority)
             else:
                 # batched items go into the low priority queue
+                print(f'Dream priority: Low')
                 queue_length += len(queuehandler.GlobalQueue.queue_low)
-                if queuehandler.GlobalQueue.dream_thread.is_alive():
-                    queuehandler.GlobalQueue.queue_low.append(draw_object)
-                else:
-                    await queuehandler.process_dream(self, draw_object)
+                await queuehandler.process_dream(self, draw_object, 'low')
+
                 batch_count = 1
                 while batch_count < count:
                     batch_count += 1
                     seed += 1
                     command_str = f'seed:{seed}'
                     command_str = f'#{batch_count}`` ``{command_str}'
-                    queuehandler.GlobalQueue.queue_low.append(queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, facefix))
+                    draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, facefix)
+                    queuehandler.GlobalQueue.queue_low.append(draw_object)
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
             if count > 1: content = content + f' - Batch: ``{count}``'
@@ -446,6 +454,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}',
                                   color=settings.global_var.embed_color)
             event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
+
+        if queuehandler.GlobalQueue.queue_high:
+            self.dream(queuehandler.GlobalQueue.event_loop, queuehandler.GlobalQueue.queue_high.pop(0))
 
         if queuehandler.GlobalQueue.queue:
             # event_loop.create_task(queuehandler.process_dream(self, queuehandler.GlobalQueue.queue.pop(0)))

@@ -26,12 +26,18 @@ class DrawObject:
 class GlobalQueue:
     dream_thread = Thread()
     event_loop = asyncio.get_event_loop()
+    queue_high: list[DrawObject] = []
     queue: list[DrawObject] = []
     queue_low: list[DrawObject] = []
 
-async def process_dream(self, queue_object: DrawObject):
+async def process_dream(self, queue_object: DrawObject, priority: str = ''):
     if GlobalQueue.dream_thread.is_alive():
-        GlobalQueue.queue.append(queue_object)
+        if priority == 'high':
+            GlobalQueue.queue_high.append(queue_object)
+        if priority == 'low':
+            GlobalQueue.queue_low.append(queue_object)
+        else:
+            GlobalQueue.queue.append(queue_object)
     else:
         GlobalQueue.dream_thread = Thread(target=self.dream,
                                 args=(GlobalQueue.event_loop, queue_object))
