@@ -4,6 +4,19 @@ A Discord bot interface for Stable Diffusion
 
 <img src=https://raw.githubusercontent.com/Kilvoctu/kilvoctu.github.io/master/pics/preview.png  width=50% height=50%>
 
+## Setup requirements
+
+- Set up [AUTOMATIC1111's Stable Diffusion AI Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
+  - AIYA is currently tested on commit `804d9fb83d0c63ca3acd36378707ce47b8f12599` of the Web UI.
+- Run the Web UI as local host with api (`COMMANDLINE_ARGS= --listen --api`).
+- Clone this repo.
+- Create a text file in your cloned repo called ".env", formatted like so:
+```dotenv
+# .env
+TOKEN = put your bot token here
+```
+- Run the AIYA by running launch.bat (or launch.sh for Linux)
+
 ## Usage
 
 To generate an image from text, use the /draw command and include your prompt as the query.
@@ -22,6 +35,7 @@ To generate an image from text, use the /draw command and include your prompt as
 - img2img
 - denoising strength
 - batch count
+- Web UI styles
 - face restoration
 
 #### Bonus features
@@ -34,21 +48,6 @@ To generate an image from text, use the /draw command and include your prompt as
   - batch count / max batch count
 - /stats command - shows how many /draw commands have been used.
 - /tips command - basic tips for writing prompts.
-
-## Setup requirements
-
-- Set up [AUTOMATIC1111's Stable Diffusion AI Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
-  - AIYA is currently tested on commit `321e13ca176b256177c4a752d1f2bbee79b5532e` of the Web UI.
-- Run the Web UI as local host with api (`COMMANDLINE_ARGS= --listen --api`).
-- Clone this repo.
-- Create a text file in your cloned repo called ".env", formatted like so:
-
-```dotenv
-# .env
-TOKEN = put your bot token here
-```
-
-- Run the bot by running launch.bat (or launch.sh for Linux)
 
 ## Notes
 

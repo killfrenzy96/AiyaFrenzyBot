@@ -22,6 +22,7 @@ from core import settings
 
 
 class StableCog(commands.Cog, name='Stable Diffusion', description='Create images from natural language.'):
+    ctx_parse = discord.ApplicationContext
     def __init__(self, bot):
         self.wait_message: list[str] = []
         self.bot: discord.Bot = bot
@@ -29,6 +30,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
     with open('resources/models.csv', encoding='utf-8') as csv_file:
         model_data = list(csv.reader(csv_file, delimiter='|'))
+
+    #pulls from style_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
+    def style_autocomplete(self: discord.AutocompleteContext):
+        return [
+            style for style in settings.global_var.style_names
+        ]
 
     @commands.slash_command(name = 'dream', description = 'Create an image')
     @option(
@@ -82,7 +89,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         str,
         description='The sampler to use for generation. Default: Euler a',
         required=False,
-        choices=['Euler a', 'Euler', 'LMS', 'Heun', 'DPM2', 'DPM2 a', 'DPM fast', 'DPM adaptive', 'LMS Karras', 'DPM2 Karras', 'DPM2 a Karras', 'DDIM', 'PLMS'],
+        choices=settings.global_var.sampler_names,
     )
     @option(
         'seed',
@@ -114,6 +121,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         required=False,
     )
     @option(
+        'style',
+        str,
+        description='Apply a predefined style to the generation.',
+        required=False,
+        autocomplete=discord.utils.basic_autocomplete(style_autocomplete),
+    )
+    @option(
         'facefix',
         bool,
         description='Tries to improve faces in pictures.',
@@ -131,6 +145,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
                             batch: Optional[int] = None,
+                            style: Optional[str] = 'None',
                             facefix: Optional[bool] = False):
 
         negative_prompt: str = negative
@@ -249,6 +264,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 count = max_count
                 append_options = append_options + '\nExceeded maximum of ``' + str(count) + '`` images! This is the best I can do...'
         #     append_options = append_options + '\nCount: ``' + str(count) + '``'
+        # if style != 'None':
+        #     append_options = append_options + '\nStyle: ``' + str(style) + '``'
         # if facefix:
         #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
 
@@ -261,6 +278,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         copy_command = copy_command + f' steps:{steps} height:{height} width:{width} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
         if init_image:
             copy_command = copy_command + f' strength:{strength} init_url:{init_image.url}'
+        if style != 'None':
+            copy_command = copy_command + f' style:{style}'
         if facefix:
             copy_command = copy_command + f' facefix:{facefix}'
         if count > 1:
@@ -294,7 +313,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             print(f'Dream passed: Generating image(s)...')
             queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
-            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, facefix)
+            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix)
 
             if count == 1:
                 # if user does not have a dream in process, they get high priority
@@ -319,7 +338,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     seed += 1
                     command_str = f'seed:{seed}'
                     command_str = f'#{batch_count}`` ``{command_str}'
-                    draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, facefix)
+                    draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
                     queuehandler.GlobalQueue.queue_low.append(draw_object)
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
@@ -359,7 +378,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 "seed_resize_from_h": 0,
                 "seed_resize_from_w": 0,
                 "denoising_strength": None,
-                "n_iter": queue_object.batch_count
+                "n_iter": queue_object.batch_count,
+                "styles": [
+                    queue_object.style
+                ]
             }
             if queue_object.init_image is not None:
                 image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
