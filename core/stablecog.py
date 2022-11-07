@@ -133,6 +133,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         description='Tries to improve faces in pictures.',
         required=False,
     )
+    @option(
+        'script',
+        str,
+        description='Generates image batches using a script.',
+        required=False,
+        choices = ['vary_steps', 'vary_guidance_scale']
+    )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message, *,
                             prompt: str, negative: str = 'unset',
                             checkpoint: Optional[str] = None,
@@ -146,7 +153,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             init_url: Optional[str],
                             batch: Optional[int] = None,
                             style: Optional[str] = 'None',
-                            facefix: Optional[bool] = False):
+                            facefix: Optional[bool] = False,
+                            script: Optional[str] = None):
 
         negative_prompt: str = negative
         data_model: str = checkpoint
@@ -167,7 +175,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             'init_url',
             'batch',
             'style',
-            'facefix'
+            'facefix',
+            'script'
         ]
 
         def sanatize(input: str):
@@ -254,6 +263,14 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #formatting bot initial reply
         append_options = ''
 
+        # apply script modifications
+        match script:
+            case 'vary_steps':
+                steps = 35
+                count = 7
+            case 'vary_guidance_scale':
+                count = max(8, count)
+
         # get estimate of the compute cost of this dream
         def get_dream_compute_cost(width: int, height: int, steps: int, count: int = 1):
             dream_compute_cost: float = float(count)
@@ -299,6 +316,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         # if facefix:
         #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
 
+        # apply script modifications 2
+        match script:
+            case 'vary_steps':
+                steps = 20
+
         #log the command
         copy_command = f'/dream prompt:{prompt}'
         if negative_prompt != '':
@@ -314,6 +336,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             copy_command = copy_command + f' facefix:{facefix}'
         if count > 1:
             copy_command = copy_command + f' batch:{count}'
+        if script:
+            copy_command = copy_command + f' script:{script}'
         print(copy_command)
 
         #setup the queue
@@ -363,13 +387,32 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 await queuehandler.process_dream(self, draw_object, 'low')
 
                 batch_count = 1
-                while batch_count < count:
-                    batch_count += 1
-                    seed += 1
-                    command_str = f'seed:{seed}'
-                    command_str = f'#{batch_count}`` ``{command_str}'
-                    draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
-                    queuehandler.GlobalQueue.queue_low.append(draw_object)
+
+                match script:
+                    case 'vary_steps':
+                        steps = 20
+                        while batch_count < count:
+                            batch_count += 1
+                            steps += 5
+                            command_str = f'#{batch_count}`` ``steps:{steps}'
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
+                            queuehandler.GlobalQueue.queue_low.append(draw_object)
+
+                    case 'vary_guidance_scale':
+                        while batch_count < count:
+                            batch_count += 1
+                            guidance_scale += 1
+                            command_str = f'#{batch_count}`` ``guidance_scale:{guidance_scale}'
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
+                            queuehandler.GlobalQueue.queue_low.append(draw_object)
+
+                    case other:
+                        while batch_count < count:
+                            batch_count += 1
+                            seed += 1
+                            command_str = f'#{batch_count}`` ``seed:{seed}'
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
+                            queuehandler.GlobalQueue.queue_low.append(draw_object)
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
             if count > 1: content = content + f' - Batch: ``{count}``'

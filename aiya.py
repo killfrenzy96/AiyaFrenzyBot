@@ -122,7 +122,8 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         'init_url',
                         'batch',
                         'style',
-                        'facefix'
+                        'facefix',
+                        'script'
                     ]
 
                     for param in params:
@@ -195,6 +196,9 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     style = get_param('style')
                     if style == '': style = 'None'
 
+                    script = get_param('script')
+                    if script == '': script = None
+
                     await stable_cog.dream_handler(ctx=message,
                         prompt=prompt,
                         negative=negative,
@@ -208,7 +212,8 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         init_url=init_url,
                         strength=strength,
                         batch=batch,
-                        style=style
+                        style=style,
+                        script=script
                     )
 
 @self.event
