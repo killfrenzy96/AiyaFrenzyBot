@@ -150,7 +150,37 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         negative_prompt: str = negative
         data_model: str = checkpoint
-        count: str = batch
+        count: int = batch
+
+        # sanatize input strings
+        params = [
+            'prompt',
+            'negative',
+            'checkpoint',
+            'steps',
+            'height',
+            'width',
+            'guidance_scale',
+            'sampler',
+            'seed',
+            'strength',
+            'init_url',
+            'batch',
+            'style',
+            'facefix'
+        ]
+
+        def sanatize(input: str):
+            if input:
+                input = input.replace('``', ' ')
+                for param in params:
+                    input = input.replace(f' {param}:', f' {param} ')
+            return input
+
+        prompt = sanatize(prompt)
+        negative_prompt = sanatize(negative_prompt)
+        style = sanatize(style)
+        init_url = sanatize(init_url)
 
         #update defaults with any new defaults from settingscog
         if ctx is discord.ApplicationContext:

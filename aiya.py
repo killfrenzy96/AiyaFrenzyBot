@@ -102,13 +102,13 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                             return ''
 
                     # command = message.embeds[0].fields[0].value
-                    command = '``/dream ' + find_between(message.content, '``/dream ', '``') + '``'
+                    command = '\n\n ' + find_between(message.content, '``/dream ', '``') + '\n\n'
                     # messageReference = await self.get_channel(ctx.channel_id).fetch_message(message.reference.message_id)
 
                     dream_ctx = message
                     dream_ctx.author = user
 
-                    splitter_params = [
+                    params = [
                         'prompt',
                         'negative',
                         'checkpoint',
@@ -121,11 +121,12 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         'strength',
                         'init_url',
                         'batch',
+                        'style',
                         'facefix'
                     ]
 
-                    for splitter_param in splitter_params:
-                        command = command.replace(f' {splitter_param}:', f'\n\n{splitter_param}\n')
+                    for param in params:
+                        command = command.replace(f' {param}:', f'\n\n{param}\n')
                     command = command.replace('``', '\n\n')
 
                     def get_param(param):
@@ -135,7 +136,6 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     prompt = get_param('prompt')
 
                     negative = get_param('negative')
-                    if negative == '': negative = 'unset'
 
                     checkpoint = get_param('checkpoint')
                     if checkpoint == '': checkpoint = 'Default'
@@ -147,26 +147,31 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
 
                     try:
                         height = int(get_param('height'))
+                        if height not in [x for x in range(192, 832, 64)]: height = 512
                     except:
                         height = 512
 
                     try:
                         width = int(get_param('width'))
+                        if width not in [x for x in range(192, 832, 64)]: width = 512
                     except:
                         width = 512
 
                     try:
                         guidance_scale = float(get_param('guidance_scale'))
+                        guidance_scale = max(1.0, guidance_scale)
                     except:
                         guidance_scale = 7.0
 
                     try:
-                        step = int(get_param('steps'))
+                        steps = int(get_param('steps'))
+                        steps = max(1, steps)
                     except:
-                        step = -1
+                        steps = -1
 
                     try:
                         sampler = get_param('sampler')
+                        if sampler not in settings.global_var.sampler_names: sampler = 'Euler a'
                     except:
                         sampler = 'Euler a'
 
@@ -174,16 +179,21 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
 
                     try:
                         strength = float(get_param('strength'))
+                        strength = max(0.0, min(1.0, strength))
                     except:
                         strength = 0.75
 
                     try:
                         batch = int(get_param('batch'))
+                        batch = max(1.0, batch)
                     except:
                         batch = 1
 
                     init_url = get_param('init_url')
                     if init_url == '': init_url = None
+
+                    style = get_param('style')
+                    if style == '': style = 'None'
 
                     await stable_cog.dream_handler(ctx=message,
                         prompt=prompt,
@@ -192,12 +202,13 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         height=height,
                         width=width,
                         guidance_scale=guidance_scale,
-                        steps=step,
+                        steps=steps,
                         sampler=sampler,
                         seed=seed,
                         init_url=init_url,
                         strength=strength,
-                        batch=batch
+                        batch=batch,
+                        style=style
                     )
 
 @self.event
