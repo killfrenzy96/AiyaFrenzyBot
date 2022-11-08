@@ -14,7 +14,7 @@ template = {
             "default_steps": 20,
             "sampler": "Euler a",
             "negative_prompt": "",
-            "max_steps": 50,
+            "max_steps": 70,
             "default_count": 1,
             "max_count": 16,
             "data_model": "Default",
