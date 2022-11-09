@@ -395,6 +395,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             else:
                 # batched items go into the low priority queue
                 print(f'Dream priority: Low')
+                queue_length += len(queuehandler.GlobalQueue.queue)
                 queue_length += len(queuehandler.GlobalQueue.queue_low)
                 await queuehandler.process_dream(self, get_draw_object(), 'low')
 
