@@ -5,7 +5,7 @@ from threading import Thread
 #the queue object for txt2image and img2img
 class DrawObject:
     def __init__(self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed,
-                 strength, init_image, copy_command, batch_count, style, facefix, simple_prompt):
+                 strength, init_image, copy_command, batch_count, style, facefix, tiling, simple_prompt):
         self.ctx: discord.ApplicationContext = ctx
         self.prompt: str = prompt
         self.negative_prompt: str = negative_prompt
@@ -22,6 +22,7 @@ class DrawObject:
         self.batch_count: int = batch_count
         self.style: str = style
         self.facefix: bool = facefix
+        self.tiling: bool = tiling
         self.simple_prompt: str = simple_prompt
 
 #any command that needs to wait on processing should use the dream thread

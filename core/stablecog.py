@@ -133,6 +133,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         required=False,
     )
     @option(
+        'tiling',
+        bool,
+        description='Produces an image that can be tiled.',
+        required=False,
+    )
+    @option(
         'script',
         str,
         description='Generates image batches using a script.',
@@ -153,6 +159,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch: Optional[int] = None,
                             style: Optional[str] = 'None',
                             facefix: Optional[bool] = False,
+                            tiling: Optional[bool] = False,
                             script: Optional[str] = None):
 
         negative_prompt: str = negative
@@ -314,6 +321,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #     append_options = append_options + '\nStyle: ``' + str(style) + '``'
         # if facefix:
         #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
+        # if tiling:
+        #     append_options = append_options + '\nTiling: ``' + str(tiling) + '``'
 
         # apply script modifications 2
         match script:
@@ -333,6 +342,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             copy_command = copy_command + f' style:{style}'
         if facefix:
             copy_command = copy_command + f' facefix:{facefix}'
+        if tiling:
+            copy_command = copy_command + f' tiling:{tiling}'
         if count > 1:
             copy_command = copy_command + f' batch:{count}'
         if script:
@@ -366,7 +377,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             print(f'Dream passed: Generating image(s)...')
             queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
-            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, simple_prompt)
+            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, tiling, simple_prompt)
 
             if count == 1:
                 # if user does not have a dream in process, they get high priority
@@ -394,7 +405,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch_count += 1
                             steps += 5
                             command_str = f'#{batch_count}`` ``steps:{steps}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, simple_prompt)
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, tiling, simple_prompt)
                             queuehandler.GlobalQueue.queue_low.append(draw_object)
 
                     case 'vary_guidance_scale':
@@ -402,7 +413,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch_count += 1
                             guidance_scale += 1
                             command_str = f'#{batch_count}`` ``guidance_scale:{guidance_scale}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, simple_prompt)
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, tiling, simple_prompt)
                             queuehandler.GlobalQueue.queue_low.append(draw_object)
 
                     case other:
@@ -410,7 +421,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch_count += 1
                             seed += 1
                             command_str = f'#{batch_count}`` ``seed:{seed}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, simple_prompt)
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, tiling, simple_prompt)
                             queuehandler.GlobalQueue.queue_low.append(draw_object)
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
@@ -469,6 +480,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     "restore_faces": True
                 }
                 payload.update(facefix_payload)
+            if queue_object.tiling:
+                tiling_payload = {
+                    "tiling": True
+                }
+                payload.update(tiling_payload)
 
             #send normal payload to webui
             with requests.Session() as s:
