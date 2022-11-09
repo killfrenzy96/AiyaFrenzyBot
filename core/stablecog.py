@@ -2,7 +2,6 @@ import base64
 import contextlib
 import csv
 import io
-import json
 import random
 import time
 import traceback
@@ -207,7 +206,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         if sampler == 'unset':
             sampler = settings.read(guild)['sampler']
 
-        # if a model is not selected, do nothing
+        #if a model is not selected, do nothing
         model_name = 'Default'
         if data_model is None:
             data_model = settings.read(guild)['data_model']
@@ -216,16 +215,16 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         else:
             self.send_model = True
 
-        # get the selected model's display name
+        simple_prompt = prompt
+        #get the selected model's display name and prepend prompt with its token (even if blank)
         with open('resources/models.csv', 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f, delimiter='|')
             for row in reader:
-                if row['display_name'] == data_model:
+                if row['display_name'] == data_model or row['model_full_name'] == data_model:
                     data_model = row['model_full_name']
                     model_name = row['display_name']
-                    break
-                elif row['model_full_name'] == data_model:
-                    model_name = row['display_name']
+                    prompt = row['activator_token'] + " " + prompt
+                    prompt = prompt.lstrip(' ')
                     break
 
         if not self.send_model:
@@ -322,7 +321,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 steps = 20
 
         #log the command
-        copy_command = f'/dream prompt:{prompt}'
+        copy_command = f'/dream prompt:{simple_prompt}'
         if negative_prompt != '':
             copy_command = copy_command + f' negative:{negative_prompt}'
         if data_model and model_name != 'Default':
@@ -367,7 +366,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             print(f'Dream passed: Generating image(s)...')
             queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
-            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix)
+            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, simple_prompt)
 
             if count == 1:
                 # if user does not have a dream in process, they get high priority
@@ -395,7 +394,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch_count += 1
                             steps += 5
                             command_str = f'#{batch_count}`` ``steps:{steps}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, simple_prompt)
                             queuehandler.GlobalQueue.queue_low.append(draw_object)
 
                     case 'vary_guidance_scale':
@@ -403,7 +402,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch_count += 1
                             guidance_scale += 1
                             command_str = f'#{batch_count}`` ``guidance_scale:{guidance_scale}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, simple_prompt)
                             queuehandler.GlobalQueue.queue_low.append(draw_object)
 
                     case other:
@@ -411,7 +410,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch_count += 1
                             seed += 1
                             command_str = f'#{batch_count}`` ``seed:{seed}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix)
+                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, simple_prompt)
                             queuehandler.GlobalQueue.queue_low.append(draw_object)
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
@@ -494,9 +493,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
             def post_dream():
                 async def run():
-                    #grab png info
-                    load_r = json.loads(response_data['info'])
-                    meta = load_r["infotexts"][0]
                     #create safe/sanitized filename
                     keep_chars = (' ', '.', '_')
                     file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
@@ -529,7 +525,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                         # image_count = len(pil_images)
                         # noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
-                        # value = queue_object.copy_command if settings.global_var.copy_command else queue_object.prompt
+                        # value = queue_object.copy_command if settings.global_var.copy_command else queue_object.simple_prompt
                         # embed.add_field(name=f'My {noun_descriptor} of', value=f'``{value}``', inline=False)
 
                         # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
