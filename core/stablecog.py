@@ -461,6 +461,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 "seed_resize_from_h": 0,
                 "seed_resize_from_w": 0,
                 "denoising_strength": None,
+                "tiling": queue_object.tiling,
                 "n_iter": queue_object.batch_count,
                 "styles": [
                     queue_object.style
@@ -480,11 +481,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     "restore_faces": True
                 }
                 payload.update(facefix_payload)
-            if queue_object.tiling:
-                tiling_payload = {
-                    "tiling": True
-                }
-                payload.update(tiling_payload)
 
             #send normal payload to webui
             with requests.Session() as s:
