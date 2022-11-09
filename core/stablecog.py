@@ -130,6 +130,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         description='Tries to improve faces in pictures.',
         required=False,
     )
+    @option(
+        'tiling',
+        bool,
+        description='Produces an image that can be tiled.',
+        required=False,
+    )
     async def dream_handler(self, ctx: discord.ApplicationContext, *,
                             prompt: str, negative_prompt: str = 'unset',
                             data_model: Optional[str] = None,
@@ -143,7 +149,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             init_url: Optional[str],
                             count: Optional[int] = None,
                             style: Optional[str] = 'None',
-                            facefix: Optional[bool] = False):
+                            facefix: Optional[bool] = False,
+                            tiling: Optional[bool] = False):
 
         #update defaults with any new defaults from settingscog
         guild = '% s' % ctx.guild_id
@@ -234,6 +241,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             append_options = append_options + '\nStyle: ``' + str(style) + '``'
         if facefix:
             append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
+        if tiling:
+            append_options = append_options + '\nTiling: ``' + str(tiling) + '``'
 
         #log the command
         copy_command = f'/draw prompt:{simple_prompt} steps:{steps} height:{str(height)} width:{width} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed} count:{count}'
@@ -247,6 +256,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             copy_command = copy_command + f' style:{style}'
         if facefix:
             copy_command = copy_command + f' facefix:{facefix}'
+        if tiling:
+            copy_command = copy_command + f' tiling:{tiling}'
         print(copy_command)
 
         #setup the queue
@@ -259,10 +270,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if user_already_in_queue:
                 await ctx.send_response(content=f'Please wait! You\'re queued up.', ephemeral=True)
             else:
-                queuehandler.GlobalQueue.queue.append(queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, style, facefix, simple_prompt))
+                queuehandler.GlobalQueue.queue.append(queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, style, facefix, tiling, simple_prompt))
                 await ctx.send_response(f'<@{ctx.author.id}>, {self.wait_message[random.randint(0, message_row_count)]}\nQueue: ``{len(queuehandler.GlobalQueue.queue)}`` - ``{simple_prompt}``\nSteps: ``{steps}`` - Seed: ``{seed}``{append_options}')
         else:
-            await queuehandler.process_dream(self, queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, style, facefix, simple_prompt))
+            await queuehandler.process_dream(self, queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, count, style, facefix, tiling, simple_prompt))
             await ctx.send_response(f'<@{ctx.author.id}>, {self.wait_message[random.randint(0, message_row_count)]}\nQueue: ``{len(queuehandler.GlobalQueue.queue)}`` - ``{simple_prompt}``\nSteps: ``{steps}`` - Seed: ``{seed}``{append_options}')
 
     #generate the image
@@ -308,6 +319,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     "restore_faces": True
                 }
                 payload.update(facefix_payload)
+            if queue_object.tiling:
+                tiling_payload = {
+                    "restore_faces": True
+                }
+                payload.update(tiling_payload)
 
             #send normal payload to webui
             with requests.Session() as s:
