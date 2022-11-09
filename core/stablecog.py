@@ -321,7 +321,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 payload.update(facefix_payload)
             if queue_object.tiling:
                 tiling_payload = {
-                    "restore_faces": True
+                    "tiling": True
                 }
                 payload.update(tiling_payload)
 
