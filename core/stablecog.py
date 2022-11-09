@@ -378,7 +378,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             print(f'Dream passed: Generating image(s)...')
             queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
-            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, tiling, simple_prompt)
+            def get_draw_object():
+                return queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, tiling, simple_prompt)
 
             if count == 1:
                 # if user does not have a dream in process, they get high priority
@@ -390,12 +391,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     print(f'Dream priority: Medium')
                     queue_length += len(queuehandler.GlobalQueue.queue)
 
-                await queuehandler.process_dream(self, draw_object, priority)
+                await queuehandler.process_dream(self, get_draw_object(), priority)
             else:
                 # batched items go into the low priority queue
                 print(f'Dream priority: Low')
                 queue_length += len(queuehandler.GlobalQueue.queue_low)
-                await queuehandler.process_dream(self, draw_object, 'low')
+                await queuehandler.process_dream(self, get_draw_object(), 'low')
 
                 batch_count = 1
 
@@ -405,25 +406,22 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         while batch_count < count:
                             batch_count += 1
                             steps += 5
-                            command_str = f'#{batch_count}`` ``steps:{steps}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, tiling, simple_prompt)
-                            queuehandler.GlobalQueue.queue_low.append(draw_object)
+                            copy_command = f'#{batch_count}`` ``steps:{steps}'
+                            queuehandler.GlobalQueue.queue_low.append(get_draw_object())
 
                     case 'vary_guidance_scale':
                         while batch_count < count:
                             batch_count += 1
                             guidance_scale += 1
-                            command_str = f'#{batch_count}`` ``guidance_scale:{guidance_scale}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, tiling, simple_prompt)
-                            queuehandler.GlobalQueue.queue_low.append(draw_object)
+                            copy_command = f'#{batch_count}`` ``guidance_scale:{guidance_scale}'
+                            queuehandler.GlobalQueue.queue_low.append(get_draw_object())
 
                     case other:
                         while batch_count < count:
                             batch_count += 1
                             seed += 1
-                            command_str = f'#{batch_count}`` ``seed:{seed}'
-                            draw_object = queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, command_str, 1, style, facefix, tiling, simple_prompt)
-                            queuehandler.GlobalQueue.queue_low.append(draw_object)
+                            copy_command = f'#{batch_count}`` ``seed:{seed}'
+                            queuehandler.GlobalQueue.queue_low.append(get_draw_object())
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
             if count > 1: content = content + f' - Batch: ``{count}``'
