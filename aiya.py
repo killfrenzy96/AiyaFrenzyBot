@@ -23,6 +23,7 @@ settings.old_api_check()
 self.load_extension('core.settingscog')
 self.load_extension('core.stablecog')
 self.load_extension('core.tipscog')
+self.load_extension('core.cancelcog')
 
 #stats slash command
 @self.slash_command(name = 'stats', description = 'How many images has the bot generated?')
