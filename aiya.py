@@ -196,6 +196,11 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     style = get_param('style')
                     if style == '': style = 'None'
 
+                    try:
+                        facefix = (get_param('facefix').lower() == 'true')
+                    except:
+                        facefix = False
+
                     script = get_param('script')
                     if script == '': script = None
 
@@ -213,6 +218,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         strength=strength,
                         batch=batch,
                         style=style,
+                        facefix=facefix,
                         script=script
                     )
 
