@@ -291,7 +291,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                 average_step_cost = get_dream_compute_cost(width, height, steps + (increment_steps * count * 0.5), 1)
                 if average_step_cost > settings.read(guild)['max_compute_batch']:
-                    count = min(int(float(count) * settings.read(guild)['max_compute_batch'] / average_step_cost), max_count)
+                    increment_steps = 10
+                    count = 4
 
             case 'preset_guidance_scales':
                 guidance_scale = 4.0
