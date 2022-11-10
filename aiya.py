@@ -1,11 +1,12 @@
 import asyncio
+import discord
 import os
 import sys
 import csv
 import discord
-from dotenv import load_dotenv
-from core.logging import get_logger
 from core import settings
+from core.logging import get_logger
+from dotenv import load_dotenv
 
 
 #start up initialization stuff
