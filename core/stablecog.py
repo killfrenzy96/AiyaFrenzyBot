@@ -143,7 +143,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         str,
         description='Generates image batches using a script.',
         required=False,
-        choices = ['vary_steps', 'vary_guidance_scale']
+        choices = ['preset_steps', 'preset_guidance_scales', 'finetune_steps', 'finetune_guidance_scale']
     )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message, *,
                             prompt: str, negative: str = 'unset',
@@ -270,14 +270,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #formatting bot initial reply
         append_options = ''
 
-        # apply script modifications
-        match script:
-            case 'vary_steps':
-                steps = 35
-                count = 7
-            case 'vary_guidance_scale':
-                count = max(8, count)
-
         # get estimate of the compute cost of this dream
         def get_dream_compute_cost(width: int, height: int, steps: int, count: int = 1):
             dream_compute_cost: float = float(count)
@@ -285,6 +277,41 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             dream_compute_cost *= pow(max(1.0, (width * height) / (512 * 512)), 1.5)
             return dream_compute_cost
         dream_compute_cost = get_dream_compute_cost(width, height, steps, 1)
+
+        # apply script modifications
+        increment_seed = 0
+        increment_steps = 0
+        increment_guidance_scale = 0
+
+        match script:
+            case 'preset_steps':
+                steps = 20
+                increment_steps = 5
+                count = 7
+
+                average_step_cost = get_dream_compute_cost(width, height, steps + (increment_steps * count * 0.5), 1)
+                if average_step_cost > settings.read(guild)['max_compute_batch']:
+                    count = min(int(float(count) * settings.read(guild)['max_compute_batch'] / average_step_cost), max_count)
+
+            case 'preset_guidance_scales':
+                guidance_scale = 4.0
+                increment_guidance_scale = 1.0
+                count = max(8, count)
+
+            case 'finetune_steps':
+                increment_steps = 1
+                count = 10
+
+                max_step_cost = get_dream_compute_cost(width, height, steps + (increment_steps * count), 1)
+                if max_step_cost > settings.read(guild)['max_compute']:
+                    count = min(int(float(count) * (settings.read(guild)['max_compute'] / max_step_cost)), 10)
+
+            case 'finetune_guidance_scale':
+                increment_guidance_scale = 0.1
+                count = max(10, count)
+
+            case other:
+                increment_seed = 1
 
         #lower step value to the highest setting if user goes over max steps
         if dream_compute_cost > settings.read(guild)['max_compute']:
@@ -324,11 +351,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
         # if tiling:
         #     append_options = append_options + '\nTiling: ``' + str(tiling) + '``'
-
-        # apply script modifications 2
-        match script:
-            case 'vary_steps':
-                steps = 20
 
         #log the command
         copy_command = f'/dream prompt:{simple_prompt}'
@@ -375,11 +397,14 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             append_options = ''
             ephemeral = True
         else:
-            print(f'Dream passed: Generating image(s)...')
+            init_image_encoded = None
+            if init_image is not None:
+                init_image_encoded = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+
             queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
             def get_draw_object():
-                return queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, tiling, simple_prompt)
+                return queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, init_image_encoded, copy_command, 1, style, facefix, tiling, simple_prompt)
 
             if count == 1:
                 # if user does not have a dream in process, they get high priority
@@ -400,29 +425,24 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 await queuehandler.process_dream(self, get_draw_object(), 'low')
 
                 batch_count = 1
+                while batch_count < count:
+                    batch_count += 1
+                    copy_command = f'#{batch_count}`` ``'
 
-                match script:
-                    case 'vary_steps':
-                        steps = 20
-                        while batch_count < count:
-                            batch_count += 1
-                            steps += 5
-                            copy_command = f'#{batch_count}`` ``steps:{steps}'
-                            queuehandler.GlobalQueue.queue_low.append(get_draw_object())
+                    if increment_seed:
+                        seed += increment_seed
+                        copy_command = copy_command + f'seed:{seed}'
 
-                    case 'vary_guidance_scale':
-                        while batch_count < count:
-                            batch_count += 1
-                            guidance_scale += 1
-                            copy_command = f'#{batch_count}`` ``guidance_scale:{guidance_scale}'
-                            queuehandler.GlobalQueue.queue_low.append(get_draw_object())
+                    if increment_steps:
+                        steps += increment_steps
+                        copy_command = copy_command + f'steps:{steps}'
 
-                    case other:
-                        while batch_count < count:
-                            batch_count += 1
-                            seed += 1
-                            copy_command = f'#{batch_count}`` ``seed:{seed}'
-                            queuehandler.GlobalQueue.queue_low.append(get_draw_object())
+                    if increment_guidance_scale:
+                        guidance_scale += increment_guidance_scale
+                        guidance_scale = round(guidance_scale, 4)
+                        copy_command = copy_command + f'guidance_scale:{guidance_scale}'
+
+                    queuehandler.GlobalQueue.queue_low.append(get_draw_object())
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
             if count > 1: content = content + f' - Batch: ``{count}``'
@@ -468,7 +488,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 ]
             }
             if queue_object.init_image is not None:
-                image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
+                if queue_object.init_image_encoded:
+                    image = queue_object.init_image_encoded
+                else:
+                    image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
                 img_payload = {
                     "init_images": [
                         'data:image/png;base64,' + image
