@@ -22,7 +22,7 @@ class DrawObject:
         self.copy_command: str = copy_command
         self.batch_count: int = batch_count
         self.style: str = style
-        self.facefix: bool = facefix
+        self.facefix: str = facefix
         self.tiling: bool = tiling
         self.simple_prompt: str = simple_prompt
 
