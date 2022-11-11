@@ -298,7 +298,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             case 'preset_guidance_scales':
                 guidance_scale = 4.0
                 increment_guidance_scale = 1.0
-                count = max(8, count)
+                count = max(10, count)
 
             case 'finetune_steps':
                 increment_steps = 1
