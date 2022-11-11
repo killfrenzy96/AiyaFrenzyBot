@@ -201,6 +201,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
 
                     try:
                         facefix = get_param('facefix')
+                        if facefix == '': facefix = 'None'
                     except:
                         facefix = 'None'
 
