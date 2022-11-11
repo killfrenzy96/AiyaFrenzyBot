@@ -200,9 +200,9 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     if style == '': style = 'None'
 
                     try:
-                        facefix = (get_param('facefix').lower() == 'true')
+                        facefix = get_param('facefix')
                     except:
-                        facefix = False
+                        facefix = 'None'
 
                     script = get_param('script')
                     if script == '': script = None
