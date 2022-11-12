@@ -19,7 +19,7 @@ template = {
             "default_count": 1,
             "max_count": 16,
             "data_model": "Default",
-            "max_compute": 3.65,
+            "max_compute": 4.0,
             "max_compute_batch": 16.0,
             "max_compute_queue": 16.0
         }
