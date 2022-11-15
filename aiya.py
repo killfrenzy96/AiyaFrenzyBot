@@ -151,13 +151,13 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
 
                     try:
                         height = int(get_param('height'))
-                        if height not in [x for x in range(192, 832, 64)]: height = 512
+                        if height not in [x for x in range(192, 1025, 64)]: height = 512
                     except:
                         height = 512
 
                     try:
                         width = int(get_param('width'))
-                        if width not in [x for x in range(192, 832, 64)]: width = 512
+                        if width not in [x for x in range(192, 1025, 64)]: width = 512
                     except:
                         width = 512
 

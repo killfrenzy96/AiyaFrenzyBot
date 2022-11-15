@@ -15,11 +15,11 @@ template = {
             "default_steps": 20,
             "sampler": "Euler a",
             "negative_prompt": "",
-            "max_steps": 70,
+            "max_steps": 100,
             "default_count": 1,
             "max_count": 16,
             "data_model": "Default",
-            "max_compute": 4.0,
+            "max_compute": 6.0,
             "max_compute_batch": 16.0,
             "max_compute_queue": 16.0
         }

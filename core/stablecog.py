@@ -69,14 +69,14 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         int,
         description='Height of the generated image. Default: 512',
         required=False,
-        choices = [x for x in range(192, 832, 64)]
+        choices = [x for x in range(192, 1025, 64)]
     )
     @option(
         'width',
         int,
         description='Width of the generated image. Default: 512',
         required=False,
-        choices = [x for x in range(192, 832, 64)]
+        choices = [x for x in range(192, 1025, 64)]
     )
     @option(
         'guidance_scale',
@@ -278,7 +278,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         def get_dream_compute_cost(width: int, height: int, steps: int, count: int = 1):
             dream_compute_cost: float = float(count)
             dream_compute_cost *= max(1.0, steps / 20)
-            dream_compute_cost *= pow(max(1.0, (width * height) / (512 * 512)), 1.5)
+            dream_compute_cost *= pow(max(1.0, (width * height) / (512 * 512)), 1.25)
             return dream_compute_cost
         dream_compute_cost = get_dream_compute_cost(width, height, steps, 1)
 
