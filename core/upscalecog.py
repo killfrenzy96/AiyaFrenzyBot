@@ -71,7 +71,7 @@ class UpscaleCog(commands.Cog):
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
                             resize: float = 4.0,
-                            upscaler_1: str = "4xESRGAN",
+                            upscaler_1: str = "SwinIR 4x",
                             upscaler_2: Optional[str] = "None",
                             upscaler_2_strength: Optional[float] = 0.5):
 
@@ -124,7 +124,9 @@ class UpscaleCog(commands.Cog):
 
         if has_image:
             #log the command
-            copy_command = f'/identify init_url:{init_image.url}'
+            copy_command = f'/upscale init_url:{init_image.url} resize:{resize} upscaler_1:{upscaler_1}'
+            if upscaler_2 != 'None':
+                copy_command = copy_command + f' upscaler_2:{upscaler_2} upscaler_2_strength:{upscaler_2_strength}'
             print(copy_command)
 
             #creates the upscale object out of local variables
@@ -227,7 +229,7 @@ class UpscaleCog(commands.Cog):
                         # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed,
                         #                                 file=discord.File(fp=buffer, filename=file_path)))
                         queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=[discord.File(fp=buffer, filename=file_path)]
+                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, files=[discord.File(fp=buffer, filename=file_path)]
                         ))
                 except Exception as e:
                     embed = discord.Embed(title='upscale failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
