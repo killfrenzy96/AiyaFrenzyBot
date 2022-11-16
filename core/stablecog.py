@@ -9,6 +9,7 @@ import asyncio
 from threading import Thread
 from asyncio import AbstractEventLoop
 from typing import Optional
+
 import discord
 import requests
 from PIL import Image, PngImagePlugin
@@ -275,12 +276,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         append_options = ''
 
         # get estimate of the compute cost of this dream
-        def get_dream_compute_cost(width: int, height: int, steps: int, count: int = 1):
-            dream_compute_cost: float = float(count)
-            dream_compute_cost *= max(1.0, steps / 20)
-            dream_compute_cost *= pow(max(1.0, (width * height) / (512 * 512)), 1.25)
-            return dream_compute_cost
-        dream_compute_cost = get_dream_compute_cost(width, height, steps, 1)
+        def get_dream_cost(width: int, height: int, steps: int, count: int = 1):
+            return queuehandler.get_dream_cost(queuehandler.DrawObject(
+                self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, None, None, count, style, facefix, tiling, simple_prompt
+            ))
+        dream_compute_cost = get_dream_cost(width, height, steps, 1)
 
         # apply script modifications
         increment_seed = 0
@@ -293,7 +293,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 increment_steps = 5
                 count = 7
 
-                average_step_cost = get_dream_compute_cost(width, height, steps + (increment_steps * count * 0.5), 1)
+                average_step_cost = get_dream_cost(width, height, steps + (increment_steps * count * 0.5), 1)
                 if average_step_cost > settings.read(guild)['max_compute_batch']:
                     increment_steps = 10
                     count = 4
@@ -307,7 +307,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 increment_steps = 1
                 count = 10
 
-                max_step_cost = get_dream_compute_cost(width, height, steps + (increment_steps * count), 1)
+                max_step_cost = get_dream_cost(width, height, steps + (increment_steps * count), 1)
                 if max_step_cost > settings.read(guild)['max_compute']:
                     count = min(int(float(count) * (settings.read(guild)['max_compute'] / max_step_cost)), 10)
 
@@ -341,7 +341,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #     append_options = append_options + '\nStrength: ``' + str(strength) + '``'
         #     append_options = append_options + '\nURL Init Image: ``' + str(init_image.url) + '``'
         if count != 1:
-            dream_compute_batch_cost = get_dream_compute_cost(width, height, steps, count)
+            dream_compute_batch_cost = get_dream_cost(width, height, steps, count)
             max_count = settings.read(guild)['max_count']
             if dream_compute_batch_cost > settings.read(guild)['max_compute_batch']:
                 count = min(int(float(count) * settings.read(guild)['max_compute_batch'] / dream_compute_batch_cost), max_count)
@@ -383,24 +383,16 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         ephemeral = False
 
         # calculate total cost of queued items
-        dream_cost: float = get_dream_compute_cost(width, height, steps, count)
-        queue_cost = 0.0
-
-        for queue_object in queuehandler.GlobalQueue.queue:
-            if queue_object.ctx.author.id == ctx.author.id:
-                queue_cost += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
-
-        for queue_object in queuehandler.GlobalQueue.queue_low:
-            if queue_object.ctx.author.id == ctx.author.id:
-                queue_cost += get_dream_compute_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
+        dream_cost = get_dream_cost(width, height, steps, count)
+        queue_cost = queuehandler.get_user_queue_cost(ctx.author.id)
 
         print(f'Estimated total compute cost: {dream_cost + queue_cost}')
 
         if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
             print(f'Dream rejected: Too much in queue already')
             content = f'<@{ctx.author.id}> Please wait! You have too much queued up.'
-            append_options = ''
             ephemeral = True
+            append_options = ''
         else:
             init_image_encoded = None
             if init_image is not None:
@@ -409,7 +401,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
             def get_draw_object():
-                return queuehandler.DrawObject(ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, init_image_encoded, copy_command, 1, style, facefix, tiling, simple_prompt)
+                return queuehandler.DrawObject(self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, init_image_encoded, copy_command, 1, style, facefix, tiling, simple_prompt)
 
             if count == 1:
                 # if user does not have a dream in process, they get high priority
@@ -421,13 +413,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     print(f'Dream priority: Medium')
                     queue_length += len(queuehandler.GlobalQueue.queue)
 
-                await queuehandler.process_dream(self, get_draw_object(), priority)
+                queuehandler.process_dream(self, get_draw_object(), priority)
             else:
                 # batched items go into the low priority queue
                 print(f'Dream priority: Low')
                 queue_length += len(queuehandler.GlobalQueue.queue)
                 queue_length += len(queuehandler.GlobalQueue.queue_low)
-                await queuehandler.process_dream(self, get_draw_object(), 'low')
+                queuehandler.process_dream(self, get_draw_object(), 'low')
 
                 batch_count = 1
                 while batch_count < count:
@@ -535,59 +527,57 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             end_time = time.time()
 
             def post_dream():
-                async def run():
-                    #create safe/sanitized filename
-                    keep_chars = (' ', '.', '_')
-                    file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
+                #create safe/sanitized filename
+                keep_chars = (' ', '.', '_')
+                file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
-                    # save local copy of image and prepare PIL images
-                    pil_images = []
-                    for i, image_base64 in enumerate(response_data['images']):
-                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
-                        pil_images.append(image)
+                # save local copy of image and prepare PIL images
+                pil_images = []
+                for i, image_base64 in enumerate(response_data['images']):
+                    image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
+                    pil_images.append(image)
 
-                        #grab png info
-                        png_payload = {
-                            "image": "data:image/png;base64," + image_base64
-                        }
-                        png_response = requests.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
+                    #grab png info
+                    png_payload = {
+                        "image": "data:image/png;base64," + image_base64
+                    }
+                    png_response = requests.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
 
-                        metadata = PngImagePlugin.PngInfo()
-                        epoch_time = int(time.time())
-                        metadata.add_text("parameters", png_response.json().get("info"))
-                        file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
-                        image.save(file_path, pnginfo=metadata)
-                        print(f'Saved image: {file_path}')
+                    metadata = PngImagePlugin.PngInfo()
+                    epoch_time = int(time.time())
+                    metadata.add_text("parameters", png_response.json().get("info"))
+                    file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
+                    image.save(file_path, pnginfo=metadata)
+                    print(f'Saved image: {file_path}')
 
-                    # post to discord
-                    with contextlib.ExitStack() as stack:
-                        buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
+                # post to discord
+                with contextlib.ExitStack() as stack:
+                    buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
 
-                        # embed = discord.Embed()
-                        # embed.colour = settings.global_var.embed_color
+                    # embed = discord.Embed()
+                    # embed.colour = settings.global_var.embed_color
 
-                        # image_count = len(pil_images)
-                        # noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
-                        # value = queue_object.copy_command if settings.global_var.copy_command else queue_object.simple_prompt
-                        # embed.add_field(name=f'My {noun_descriptor} of', value=f'``{value}``', inline=False)
+                    # image_count = len(pil_images)
+                    # noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
+                    # value = queue_object.copy_command if settings.global_var.copy_command else queue_object.simple_prompt
+                    # embed.add_field(name=f'My {noun_descriptor} of', value=f'``{value}``', inline=False)
 
-                        # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
+                    # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
 
-                        # footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
-                        # if queue_object.ctx.author.avatar is not None:
-                        #     footer_args['icon_url'] = queue_object.ctx.author.avatar.url
-                        # embed.set_footer(**footer_args)
+                    # footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
+                    # if queue_object.ctx.author.avatar is not None:
+                    #     footer_args['icon_url'] = queue_object.ctx.author.avatar.url
+                    # embed.set_footer(**footer_args)
 
-                        for (pil_image, buffer) in zip(pil_images, buffer_handles):
-                            pil_image.save(buffer, 'PNG')
-                            buffer.seek(0)
+                    for (pil_image, buffer) in zip(pil_images, buffer_handles):
+                        pil_image.save(buffer, 'PNG')
+                        buffer.seek(0)
 
-                        files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
-                        await queuehandler.process_upload(self, queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=None, files=files
-                        ))
-                asyncio.run(run())
+                    files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
+                    # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
+                    queuehandler.process_upload(queuehandler.UploadObject(
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=files
+                    ))
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
@@ -595,29 +585,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                                   color=settings.global_var.embed_color)
             event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
 
-        if queuehandler.GlobalQueue.queue_high:
-            self.dream(queuehandler.GlobalQueue.event_loop, queuehandler.GlobalQueue.queue_high.pop(0))
-
-        if queuehandler.GlobalQueue.queue:
-            # event_loop.create_task(queuehandler.process_dream(self, queuehandler.GlobalQueue.queue.pop(0)))
-            self.dream(queuehandler.GlobalQueue.event_loop, queuehandler.GlobalQueue.queue.pop(0))
-
-        if queuehandler.GlobalQueue.queue_low:
-            self.dream(queuehandler.GlobalQueue.event_loop, queuehandler.GlobalQueue.queue_low.pop(0))
-
-    # upload the image
-    def upload(self, upload_event_loop: AbstractEventLoop, upload_queue_object: queuehandler.UploadObject):
-        upload_event_loop.create_task(
-            upload_queue_object.ctx.channel.send(
-                content=upload_queue_object.content,
-                embed=upload_queue_object.embed,
-                files=upload_queue_object.files
-            )
-        )
-
-        if queuehandler.GlobalUploadQueue.queue:
-            # upload_event_loop.create_task(queuehandler.process_upload(self, queuehandler.GlobalUploadQueue.queue.pop(0)))
-            self.upload(queuehandler.GlobalUploadQueue.event_loop, queuehandler.GlobalUploadQueue.queue.pop(0))
+        queuehandler.process_queue()
 
 def setup(bot: discord.Bot):
     bot.add_cog(StableCog(bot))
