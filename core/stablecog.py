@@ -56,7 +56,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         str,
         description='Select the data model for image generation',
         required=False,
-        autocomplete=discord.utils.basic_autocomplete(model_autocomplete),
+        # autocomplete=discord.utils.basic_autocomplete(model_autocomplete),
+        choices=settings.global_var.model_names,
     )
     @option(
         'steps',
@@ -126,7 +127,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         str,
         description='Apply a predefined style to the generation.',
         required=False,
-        autocomplete=discord.utils.basic_autocomplete(style_autocomplete),
+        # autocomplete=discord.utils.basic_autocomplete(style_autocomplete),
+        choices=settings.global_var.style_names,
     )
     @option(
         'facefix',
