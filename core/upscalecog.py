@@ -75,6 +75,8 @@ class UpscaleCog(commands.Cog):
                             upscaler_2: Optional[str] = "None",
                             upscaler_2_strength: Optional[float] = 0.5):
 
+        print(f'Upscale Request -- {ctx.author.name}#{ctx.author.discriminator}')
+
         has_image = True
         #url *will* override init image for compatibility, can be changed here
         if init_url:
@@ -116,15 +118,19 @@ class UpscaleCog(commands.Cog):
         else:
             guild = '% s' % 'private'
 
-        #creates the upscale object out of local variables
-        def get_upscale_object():
-            return queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength)
-
         #set up the queue if an image was found
         content = None
         ephemeral = False
 
         if has_image:
+            #log the command
+            copy_command = f'/identify init_url:{init_image.url}'
+            print(copy_command)
+
+            #creates the upscale object out of local variables
+            def get_upscale_object():
+                return queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command)
+
             upscale_object = get_upscale_object()
             dream_cost = queuehandler.get_dream_cost(upscale_object)
             queue_cost = queuehandler.get_user_queue_cost(ctx.author.id)
@@ -191,43 +197,50 @@ class UpscaleCog(commands.Cog):
             end_time = time.time()
 
             def post_dream():
-                #create safe/sanitized filename
-                epoch_time = int(time.time())
-                file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
+                try:
+                    #create safe/sanitized filename
+                    epoch_time = int(time.time())
+                    file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
 
-                # save local copy of image
-                image_data = response_data['image']
-                with open(file_path, "wb") as fh:
-                    fh.write(base64.b64decode(image_data))
-                print(f'Saved image: {file_path}')
+                    # save local copy of image
+                    image_data = response_data['image']
+                    with open(file_path, "wb") as fh:
+                        fh.write(base64.b64decode(image_data))
+                    print(f'Saved image: {file_path}')
 
-                # post to discord
-                with io.BytesIO() as buffer:
-                    image = Image.open(io.BytesIO(base64.b64decode(image_data)))
-                    image.save(buffer, 'PNG')
-                    buffer.seek(0)
-                    embed = discord.Embed()
+                    # post to discord
+                    with io.BytesIO() as buffer:
+                        image = Image.open(io.BytesIO(base64.b64decode(image_data)))
+                        image.save(buffer, 'PNG')
+                        buffer.seek(0)
+                        embed = discord.Embed()
 
-                    embed.colour = settings.global_var.embed_color
-                    embed.add_field(name=f'My upscale of', value=f'``{queue_object.resize}``x', inline=False)
-                    embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
+                        embed.colour = settings.global_var.embed_color
+                        embed.add_field(name=f'My upscale of', value=f'``{queue_object.resize}``x', inline=False)
+                        embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
 
-                    footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
-                    if queue_object.ctx.author.avatar is not None:
-                        footer_args['icon_url'] = queue_object.ctx.author.avatar.url
-                    embed.set_footer(**footer_args)
+                        footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
+                        if queue_object.ctx.author.avatar is not None:
+                            footer_args['icon_url'] = queue_object.ctx.author.avatar.url
+                        embed.set_footer(**footer_args)
 
-                    # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed,
-                    #                                 file=discord.File(fp=buffer, filename=file_path)))
+                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed,
+                        #                                 file=discord.File(fp=buffer, filename=file_path)))
+                        queuehandler.process_upload(queuehandler.UploadObject(
+                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=[discord.File(fp=buffer, filename=file_path)]
+                        ))
+                except Exception as e:
+                    embed = discord.Embed(title='upscale failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=[discord.File(fp=buffer, filename=file_path)]
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
                     ))
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
-            embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}',
-                                  color=settings.global_var.embed_color)
-            event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
+            embed = discord.Embed(title='upscale failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
+            queuehandler.process_upload(queuehandler.UploadObject(
+                ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+            ))
         #check each queue for any remaining tasks
         queuehandler.process_queue()
 

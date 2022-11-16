@@ -29,7 +29,7 @@ class DrawObject:
 
 #the queue object for extras - upscale
 class UpscaleObject:
-    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength):
+    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command):
         self.cog = cog
         self.ctx = ctx
         self.resize = resize
@@ -37,13 +37,15 @@ class UpscaleObject:
         self.upscaler_1 = upscaler_1
         self.upscaler_2 = upscaler_2
         self.upscaler_2_strength = upscaler_2_strength
+        self.copy_command: str = copy_command
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
-    def __init__(self, cog, ctx, init_image):
+    def __init__(self, cog, ctx, init_image, copy_command):
         self.cog = cog
         self.ctx = ctx
         self.init_image = init_image
+        self.copy_command: str = copy_command
 
 #any command that needs to wait on processing should use the dream thread
 class GlobalQueue:

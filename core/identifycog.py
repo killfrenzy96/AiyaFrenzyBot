@@ -34,6 +34,8 @@ class IdentifyCog(commands.Cog):
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str]):
 
+        print(f'Identify Request -- {ctx.author.name}#{ctx.author.discriminator}')
+
         has_image = True
         #url *will* override init image for compatibility, can be changed here
         if init_url:
@@ -57,15 +59,19 @@ class IdentifyCog(commands.Cog):
         else:
             guild = '% s' % 'private'
 
-        #creates the upscale object out of local variables
-        def get_identify_object():
-            return queuehandler.IdentifyObject(self, ctx, init_image)
-
         #set up the queue if an image was found
         content = None
         ephemeral = False
 
         if has_image:
+            #log the command
+            copy_command = f'/identify init_url:{init_image.url}'
+            print(copy_command)
+
+            #creates the upscale object out of local variables
+            def get_identify_object():
+                return queuehandler.IdentifyObject(self, ctx, init_image, copy_command)
+
             identify_object = get_identify_object()
             dream_cost = queuehandler.get_dream_cost(identify_object)
             queue_cost = queuehandler.get_user_queue_cost(ctx.author.id)
@@ -120,22 +126,29 @@ class IdentifyCog(commands.Cog):
             response_data = response.json()
 
             def post_dream():
-                # post to discord
-                # embed = discord.Embed()
-                # embed.set_image(url=queue_object.init_image.url)
-                # embed.colour = settings.global_var.embed_color
-                # embed.add_field(name=f'I think this is', value=f'``{response_data.get("caption")}``', inline=False)
-                # event_loop.create_task(
-                #     queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed))
-                queuehandler.process_upload(queuehandler.UploadObject(
-                    ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> I think this is ``{response_data.get("caption")}``'
-                ))
+                try:
+                    # post to discord
+                    # embed = discord.Embed()
+                    # embed.set_image(url=queue_object.init_image.url)
+                    # embed.colour = settings.global_var.embed_color
+                    # embed.add_field(name=f'I think this is', value=f'``{response_data.get("caption")}``', inline=False)
+                    # event_loop.create_task(
+                    #     queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed))
+                    queuehandler.process_upload(queuehandler.UploadObject(
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> I think this is ``{response_data.get("caption")}``'
+                    ))
+                except Exception as e:
+                    embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
+                    queuehandler.process_upload(queuehandler.UploadObject(
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+                    ))
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
-            embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}',
-                                  color=settings.global_var.embed_color)
-            event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
+            embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
+            queuehandler.process_upload(queuehandler.UploadObject(
+                ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+            ))
         #check each queue for any remaining tasks
         queuehandler.process_queue()
 

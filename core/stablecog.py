@@ -242,10 +242,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     prompt = prompt.lstrip(' ')
                     break
 
-        if not self.send_model:
-            print(f'Request -- {ctx.author.name}#{ctx.author.discriminator} -- Prompt: {prompt}')
-        else:
-            print(f'Request -- {ctx.author.name}#{ctx.author.discriminator} -- Prompt: {prompt} -- Using model: {data_model}')
+        print(f'Dream Request -- {ctx.author.name}#{ctx.author.discriminator}')
 
         if seed == -1: seed = random.randint(0, 0xFFFFFFFF)
 
@@ -529,63 +526,70 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             end_time = time.time()
 
             def post_dream():
-                #create safe/sanitized filename
-                keep_chars = (' ', '.', '_')
-                file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
+                try:
+                    #create safe/sanitized filename
+                    keep_chars = (' ', '.', '_')
+                    file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
-                # save local copy of image and prepare PIL images
-                pil_images = []
-                for i, image_base64 in enumerate(response_data['images']):
-                    image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
-                    pil_images.append(image)
+                    # save local copy of image and prepare PIL images
+                    pil_images = []
+                    for i, image_base64 in enumerate(response_data['images']):
+                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
+                        pil_images.append(image)
 
-                    #grab png info
-                    png_payload = {
-                        "image": "data:image/png;base64," + image_base64
-                    }
-                    png_response = requests.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
+                        #grab png info
+                        png_payload = {
+                            "image": "data:image/png;base64," + image_base64
+                        }
+                        png_response = requests.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
 
-                    metadata = PngImagePlugin.PngInfo()
-                    epoch_time = int(time.time())
-                    metadata.add_text("parameters", png_response.json().get("info"))
-                    file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
-                    image.save(file_path, pnginfo=metadata)
-                    print(f'Saved image: {file_path}')
+                        metadata = PngImagePlugin.PngInfo()
+                        epoch_time = int(time.time())
+                        metadata.add_text("parameters", png_response.json().get("info"))
+                        file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
+                        image.save(file_path, pnginfo=metadata)
+                        print(f'Saved image: {file_path}')
 
-                # post to discord
-                with contextlib.ExitStack() as stack:
-                    buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
+                    # post to discord
+                    with contextlib.ExitStack() as stack:
+                        buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
 
-                    # embed = discord.Embed()
-                    # embed.colour = settings.global_var.embed_color
+                        # embed = discord.Embed()
+                        # embed.colour = settings.global_var.embed_color
 
-                    # image_count = len(pil_images)
-                    # noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
-                    # value = queue_object.copy_command if settings.global_var.copy_command else queue_object.simple_prompt
-                    # embed.add_field(name=f'My {noun_descriptor} of', value=f'``{value}``', inline=False)
+                        # image_count = len(pil_images)
+                        # noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
+                        # value = queue_object.copy_command if settings.global_var.copy_command else queue_object.simple_prompt
+                        # embed.add_field(name=f'My {noun_descriptor} of', value=f'``{value}``', inline=False)
 
-                    # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
+                        # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
 
-                    # footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
-                    # if queue_object.ctx.author.avatar is not None:
-                    #     footer_args['icon_url'] = queue_object.ctx.author.avatar.url
-                    # embed.set_footer(**footer_args)
+                        # footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
+                        # if queue_object.ctx.author.avatar is not None:
+                        #     footer_args['icon_url'] = queue_object.ctx.author.avatar.url
+                        # embed.set_footer(**footer_args)
 
-                    for (pil_image, buffer) in zip(pil_images, buffer_handles):
-                        pil_image.save(buffer, 'PNG')
-                        buffer.seek(0)
+                        for (pil_image, buffer) in zip(pil_images, buffer_handles):
+                            pil_image.save(buffer, 'PNG')
+                            buffer.seek(0)
 
-                    files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                    # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
+                        files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
+                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
+                        queuehandler.process_upload(queuehandler.UploadObject(
+                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=files
+                        ))
+                except Exception as e:
+                    embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=files
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, files=files
                     ))
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
-            embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}',
-                                  color=settings.global_var.embed_color)
-            event_loop.create_task(queue_object.ctx.channel.send(embed=embed))
+            embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
+            queuehandler.process_upload(queuehandler.UploadObject(
+                ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+            ))
 
         queuehandler.process_queue()
 
