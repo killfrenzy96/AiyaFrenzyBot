@@ -4,16 +4,16 @@ from threading import Thread
 
 #the queue object for txt2image and img2img
 class DrawObject:
-    def __init__(self, cog, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed,
-                 strength, init_image, init_image_encoded, copy_command, batch_count, style, facefix, tiling, simple_prompt):
+    def __init__(self, cog, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed,
+                 strength, init_image, init_image_encoded, copy_command, batch_count, style, facefix, tiling, simple_prompt, script, view):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.prompt: str = prompt
         self.negative_prompt: str = negative_prompt
         self.data_model: str = data_model
         self.steps: int = steps
-        self.height: int = height
         self.width: int = width
+        self.height: int = height
         self.guidance_scale: float = guidance_scale
         self.sampler: str = sampler
         self.seed: int = seed
@@ -26,10 +26,12 @@ class DrawObject:
         self.facefix: str = facefix
         self.tiling: bool = tiling
         self.simple_prompt: str = simple_prompt
+        self.script: str = script
+        self.view = view
 
 #the queue object for extras - upscale
 class UpscaleObject:
-    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command):
+    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view):
         self.cog = cog
         self.ctx = ctx
         self.resize = resize
@@ -38,14 +40,16 @@ class UpscaleObject:
         self.upscaler_2 = upscaler_2
         self.upscaler_2_strength = upscaler_2_strength
         self.copy_command: str = copy_command
+        self.view = view
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
-    def __init__(self, cog, ctx, init_image, copy_command):
+    def __init__(self, cog, ctx, init_image, copy_command, view):
         self.cog = cog
         self.ctx = ctx
         self.init_image = init_image
         self.copy_command: str = copy_command
+        self.view = view
 
 #any command that needs to wait on processing should use the dream thread
 class GlobalQueue:
@@ -102,11 +106,12 @@ def process_queue():
 
 
 class UploadObject:
-    def __init__(self, ctx, content, embed = None, files = None):
+    def __init__(self, ctx, content, embed = None, files = None, view = None):
         self.ctx: discord.ApplicationContext = ctx
         self.content: str = content
         self.embed: discord.Embed = embed
         self.files: list[discord.File] = files
+        self.view = view
 
 class GlobalUploadQueue:
     upload_thread = Thread()
@@ -119,7 +124,8 @@ def upload(upload_event_loop: asyncio.AbstractEventLoop, upload_queue_object: Up
         upload_queue_object.ctx.channel.send(
             content=upload_queue_object.content,
             embed=upload_queue_object.embed,
-            files=upload_queue_object.files
+            files=upload_queue_object.files,
+            view=upload_queue_object.view
         )
     )
 

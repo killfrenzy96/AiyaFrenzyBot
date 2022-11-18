@@ -44,7 +44,7 @@ async def on_ready():
     #because guilds are only known when on_ready, run files check for guilds
     settings.guilds_check(self)
 
-#feature to delete generations. give bot 'Add Reactions' permission (or not, to hide the ❌)
+#fallback feature to delete generations if aiya has been restarted
 @self.event
 async def on_message(message: discord.Message):
     if message.author == self.user:
@@ -118,8 +118,8 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         'negative',
                         'checkpoint',
                         'steps',
-                        'height',
                         'width',
+                        'height',
                         'guidance_scale',
                         'sampler',
                         'seed',
@@ -153,16 +153,16 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                             if checkpoint == row[0]: checkpoint = row[1]
 
                     try:
-                        height = int(get_param('height'))
-                        if height not in [x for x in range(192, 1025, 64)]: height = 512
-                    except:
-                        height = 512
-
-                    try:
                         width = int(get_param('width'))
                         if width not in [x for x in range(192, 1025, 64)]: width = 512
                     except:
                         width = 512
+
+                    try:
+                        height = int(get_param('height'))
+                        if height not in [x for x in range(192, 1025, 64)]: height = 512
+                    except:
+                        height = 512
 
                     try:
                         guidance_scale = float(get_param('guidance_scale'))
@@ -224,8 +224,8 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         prompt=prompt,
                         negative=negative,
                         checkpoint=checkpoint,
-                        height=height,
                         width=width,
+                        height=height,
                         guidance_scale=guidance_scale,
                         steps=steps,
                         sampler=sampler,

@@ -1,6 +1,6 @@
 import base64
-import discord
 import csv
+import discord
 import io
 import random
 import requests
@@ -9,14 +9,15 @@ import traceback
 import asyncio
 from threading import Thread
 from asyncio import AbstractEventLoop
-from typing import Optional
 from discord import option
 from discord.ext import commands
 from os.path import splitext, basename
 from PIL import Image
+from typing import Optional
 from urllib.parse import urlparse
 
 from core import queuehandler
+from core import viewhandler
 from core import settings
 
 
@@ -118,6 +119,8 @@ class UpscaleCog(commands.Cog):
         else:
             guild = '% s' % 'private'
 
+        view = viewhandler.DeleteView(ctx.author.id)
+
         #set up the queue if an image was found
         content = None
         ephemeral = False
@@ -131,7 +134,7 @@ class UpscaleCog(commands.Cog):
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                return queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command)
+                return queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view)
 
             upscale_object = get_upscale_object()
             dream_cost = queuehandler.get_dream_cost(upscale_object)
@@ -234,7 +237,7 @@ class UpscaleCog(commands.Cog):
                 except Exception as e:
                     embed = discord.Embed(title='upscale failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, view=queue_object.view
                     ))
             Thread(target=post_dream, daemon=True).start()
 

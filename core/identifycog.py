@@ -1,6 +1,6 @@
 import base64
-import traceback
 import discord
+import traceback
 import requests
 import asyncio
 from threading import Thread
@@ -10,6 +10,7 @@ from discord.ext import commands
 from typing import Optional
 
 from core import queuehandler
+from core import viewhandler
 from core import settings
 
 
@@ -59,6 +60,7 @@ class IdentifyCog(commands.Cog):
         else:
             guild = '% s' % 'private'
 
+        view = viewhandler.DeleteView(ctx.author.id)
         #set up the queue if an image was found
         content = None
         ephemeral = False
@@ -70,7 +72,7 @@ class IdentifyCog(commands.Cog):
 
             #creates the upscale object out of local variables
             def get_identify_object():
-                return queuehandler.IdentifyObject(self, ctx, init_image, copy_command)
+                return queuehandler.IdentifyObject(self, ctx, init_image, copy_command, view)
 
             identify_object = get_identify_object()
             dream_cost = queuehandler.get_dream_cost(identify_object)
@@ -140,7 +142,7 @@ class IdentifyCog(commands.Cog):
                 except Exception as e:
                     embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, view=queue_object.view
                     ))
             Thread(target=post_dream, daemon=True).start()
 
