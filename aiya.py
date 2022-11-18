@@ -128,6 +128,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         'batch',
                         'style',
                         'facefix',
+                        'tiling',
                         'script'
                     ]
 
@@ -202,6 +203,15 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     if style == '': style = 'None'
 
                     try:
+                        tiling = get_param('tiling')
+                        if tiling.lower() == 'true':
+                            tiling = True
+                        else:
+                            tiling = False
+                    except:
+                        tiling = False
+
+                    try:
                         facefix = get_param('facefix')
                         if facefix == '': facefix = 'None'
                     except:
@@ -225,6 +235,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         batch=batch,
                         style=style,
                         facefix=facefix,
+                        tiling=tiling,
                         script=script
                     )
 

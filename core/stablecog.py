@@ -137,12 +137,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         required=False,
         choices=settings.global_var.facefix_models,
     )
-    # @option(
-    #     'tiling',
-    #     bool,
-    #     description='Produces an image that can be tiled.',
-    #     required=False,
-    # )
+    @option(
+        'tiling',
+        bool,
+        description='Produces an image that can be tiled.',
+        required=False,
+    )
     @option(
         'script',
         str,
@@ -164,13 +164,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             batch: Optional[int] = None,
                             style: Optional[str] = 'None',
                             facefix: Optional[str] = 'None',
-                            # tiling: Optional[bool] = False,
+                            tiling: Optional[bool] = False,
                             script: Optional[str] = None):
 
         negative_prompt: str = negative
         data_model: str = checkpoint
         count: int = batch
-        tiling: bool = False
+        # tiling: bool = False
 
         # sanatize input strings
         params = [
@@ -188,6 +188,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             'batch',
             'style',
             'facefix',
+            'tiling',
             'script'
         ]
 
