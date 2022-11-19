@@ -67,9 +67,28 @@ def union(list_1, list_2, list_3):
 # get estimate of the compute cost of a dream
 def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
     if queue_object is DrawObject:
+        steps = queue_object.steps
+        if queue_object.sampler == 'DPM adaptive': steps = 120
+
         dream_compute_cost: float = float(queue_object.batch_count)
-        dream_compute_cost *= max(1.0, queue_object.steps / 20)
+        dream_compute_cost *= max(1.0, steps / 20)
         dream_compute_cost *= pow(max(1.0, (queue_object.width * queue_object.height) / (512 * 512)), 1.25)
+
+        match queue_object.sampler:
+            case 'Huen':
+                dream_compute_cost *= 2.0
+            case 'DPM2':
+                dream_compute_cost *= 2.0
+            case 'DPM2 a':
+                dream_compute_cost *= 2.0
+            case 'DPM++ 2S a':
+                dream_compute_cost *= 2.0
+            case 'DPM2 Karras':
+                dream_compute_cost *= 2.0
+            case 'DPM2 a Karras':
+                dream_compute_cost *= 2.0
+            case 'DPM++ 2S a Karras':
+                dream_compute_cost *= 2.0
     else:
         dream_compute_cost = 1.0
     return dream_compute_cost
