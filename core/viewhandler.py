@@ -74,9 +74,9 @@ class DrawView(View):
         self.input_tuple = input_tuple
 
     #the 🖋 button will allow a new prompt and keep same parameters for everything else
-    @discord.ui.button(
-        custom_id="button_re-prompt",
-        emoji="🖋")
+    # @discord.ui.button(
+    #     custom_id="button_re-prompt",
+    #     emoji="🖋")
     async def button_draw(self, button, interaction):
         try:
             #check if the /draw output is from the person who requested it
