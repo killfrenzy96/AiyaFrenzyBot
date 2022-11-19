@@ -66,7 +66,7 @@ def union(list_1, list_2, list_3):
 
 # get estimate of the compute cost of a dream
 def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
-    if queue_object is DrawObject:
+    if type(queue_object) is DrawObject:
         steps = queue_object.steps
         if queue_object.sampler == 'DPM adaptive': steps = 120
 
