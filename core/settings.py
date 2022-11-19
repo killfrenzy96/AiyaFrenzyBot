@@ -13,7 +13,7 @@ path = 'resources/'.format(dir_path)
 
 template = {
             "default_steps": 20,
-            "sampler": "Euler a",
+            "sampler": "DPM++ 2M Karras",
             "negative_prompt": "",
             "max_steps": 100,
             "default_count": 1,

@@ -93,7 +93,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
     @option(
         'sampler',
         str,
-        description='The sampler to use for generation. Default: Euler a',
+        description='The sampler to use for generation. Default: DPM++ 2M Karras',
         required=False,
         choices=settings.global_var.sampler_names,
     )
