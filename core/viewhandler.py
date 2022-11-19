@@ -97,7 +97,7 @@ class DrawView(View):
                 else:
                     await interaction.response.send_modal(DrawModal(self.input_tuple))
             else:
-                await interaction.response.send_message("You can't use other people's buttons!", ephemeral=True)
+                await interaction.response.send_message("You can't use other people's 🖋!", ephemeral=True)
         except(Exception,):
             #if interaction fails, assume it's because aiya restarted (breaks buttons)
             button.disabled = True
@@ -141,7 +141,7 @@ class DrawView(View):
                     script=draw_object.script
                 )
             else:
-                await interaction.response.send_message("You can't use other people's buttons!", ephemeral=True)
+                await interaction.response.send_message("You can't use other people's 🎲!", ephemeral=True)
         except(Exception,):
             #if interaction fails, assume it's because aiya restarted (breaks buttons)
             button.disabled = True
