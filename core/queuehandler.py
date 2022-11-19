@@ -98,7 +98,7 @@ def get_user_queue_cost(user_id: int):
     queue = GlobalQueue.queue_high + GlobalQueue.queue + GlobalQueue.queue_low
     for queue_object in queue:
         if queue_object.ctx.author.id == user_id:
-            queue_cost += get_dream_cost(queue_object.width, queue_object.height, queue_object.steps, queue_object.batch_count)
+            queue_cost += get_dream_cost(queue_object)
     return queue_cost
 
 def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObject, priority: str = ''):
