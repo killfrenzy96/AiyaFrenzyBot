@@ -471,10 +471,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
             #construct a payload for data model, then the normal payload
             model_payload = {
-                "fn_index": settings.global_var.model_fn_index,
-                "data": [
-                    queue_object.data_model
-                ]
+                "sd_model_checkpoint": queue_object.data_model
             }
             payload = {
                 "prompt": queue_object.prompt,
@@ -526,9 +523,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 else:
                     s.post(settings.global_var.url + '/login')
 
-                #only send model payload if one is defined
-                if self.send_model:
-                    s.post(url=f'{settings.global_var.url}/api/predict', json=model_payload)
+                # only send model payload if one is defined
+                if settings.global_var.send_model:
+                    s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
                 if queue_object.init_image is not None:
                     response = s.post(url=f'{settings.global_var.url}/sdapi/v1/img2img', json=payload)
                 else:
