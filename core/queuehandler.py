@@ -103,25 +103,29 @@ def get_user_queue_cost(user_id: int):
 
 def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObject, priority: str = ''):
     if GlobalQueue.dream_thread.is_alive():
-        if priority == 'high':
-            GlobalQueue.queue_high.append(queue_object)
-        if priority == 'low':
-            GlobalQueue.queue_low.append(queue_object)
-        else:
-            GlobalQueue.queue.append(queue_object)
+        match priority:
+            case 'high':
+                target_queue = GlobalQueue.queue_high
+            case 'medium':
+                target_queue = GlobalQueue.queue
+            case 'low':
+                target_queue = GlobalQueue.queue_low
+            case other:
+                target_queue = GlobalQueue.queue
+        target_queue.append(queue_object)
     else:
         GlobalQueue.dream_thread = Thread(target=self.dream,
                                 args=(GlobalQueue.event_loop, queue_object))
         GlobalQueue.dream_thread.start()
 
 def process_queue():
-    def start(target_queue: list[DrawObject | UpscaleObject | IdentifyObject]):
+    if GlobalQueue.queue_high: target_queue = GlobalQueue.queue_high
+    elif GlobalQueue.queue: target_queue = GlobalQueue.queue
+    else: target_queue = GlobalQueue.queue_low
+
+    if target_queue:
         queue_object = target_queue.pop(0)
         queue_object.cog.dream(GlobalQueue.event_loop, queue_object)
-
-    if GlobalQueue.queue_high: start(GlobalQueue.queue_high)
-    elif GlobalQueue.queue: start(GlobalQueue.queue)
-    elif GlobalQueue.queue_low: start(GlobalQueue.queue_low)
 
 
 class UploadObject:
