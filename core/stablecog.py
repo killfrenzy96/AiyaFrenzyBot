@@ -253,7 +253,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         #url *will* override init image for compatibility, can be changed here
         if init_url:
-            if init_url.startswith('https://cdn.discordapp.com/') == False or init_url.endswith('.png') == False:
+            if init_url.startswith('https://cdn.discordapp.com/') == False:
                 await ctx.send_response('Only URL images from the Discord CDN are allowed!')
                 return
 
