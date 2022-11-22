@@ -469,7 +469,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         try:
             start_time = time.time()
 
-            #construct a payload for data model, then the normal payload
+            # create persistent session since we'll need to do a few API calls
+            s = requests.Session()
+            if settings.global_var.api_auth:
+                s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
+
+            # construct a payload for data model, then the normal payload
             model_payload = {
                 "sd_model_checkpoint": queue_object.data_model
             }
@@ -512,6 +517,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 }
                 payload.update(facefix_payload)
 
+            # update payload with override_settings
+            override_payload = {
+                "override_settings": override_settings
+            }
+            payload.update(override_payload)
+
             #send normal payload to webui
             with requests.Session() as s:
                 if settings.global_var.username is not None:
@@ -546,11 +557,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
                         pil_images.append(image)
 
-                        #grab png info
+                        # grab png info
                         png_payload = {
                             "image": "data:image/png;base64," + image_base64
                         }
-                        png_response = requests.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
+                        png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
 
                         metadata = PngImagePlugin.PngInfo()
                         epoch_time = int(time.time())
