@@ -71,6 +71,8 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
         dream_compute_cost *= max(1.0, queue_object.steps / 20)
         dream_compute_cost *= pow(max(1.0, (queue_object.width * queue_object.height) / (512 * 512)), 1.25)
 
+        if queue_object.init_image: dream_compute_cost *= max(0.2, queue_object.strength)
+
         match queue_object.sampler:
             case 'Huen':
                 dream_compute_cost *= 2.0
