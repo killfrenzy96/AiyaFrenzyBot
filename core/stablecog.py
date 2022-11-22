@@ -533,11 +533,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     response = s.post(url=f'{settings.global_var.url}/sdapi/v1/img2img', json=payload)
                 else:
                     response = s.post(url=f'{settings.global_var.url}/sdapi/v1/txt2img', json=payload)
-            response_data = response.json()
-            end_time = time.time()
 
             def post_dream():
                 try:
+                    response_data = response.json()
+                    end_time = time.time()
+
                     #create safe/sanitized filename
                     keep_chars = (' ', '.', '_')
                     file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
@@ -589,6 +590,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=files, view=queue_object.view
                         ))
                 except Exception as e:
+                    print('txt2img failed (thread)')
+                    print(response)
                     embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
                         ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, files=files
@@ -596,6 +599,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
+            print('txt2img failed (main)')
             embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
             queuehandler.process_upload(queuehandler.UploadObject(
                 ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed

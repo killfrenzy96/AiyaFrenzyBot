@@ -129,10 +129,11 @@ class IdentifyCog(commands.Cog):
                     s.post(settings.global_var.url + '/login')
 
                 response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=payload)
-            response_data = response.json()
 
             def post_dream():
                 try:
+                    response_data = response.json()
+
                     # post to discord
                     # embed = discord.Embed()
                     # embed.set_image(url=queue_object.init_image.url)
@@ -144,6 +145,8 @@ class IdentifyCog(commands.Cog):
                         ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> I think this is ``{response_data.get("caption")}``'
                     ))
                 except Exception as e:
+                    print('identify failed (thread)')
+                    print(response)
                     embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
                         ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, view=queue_object.view
@@ -151,6 +154,7 @@ class IdentifyCog(commands.Cog):
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
+            print('identify failed (main)')
             embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
             queuehandler.process_upload(queuehandler.UploadObject(
                 ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed

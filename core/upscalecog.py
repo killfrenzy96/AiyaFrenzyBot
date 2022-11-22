@@ -53,14 +53,14 @@ class UpscaleCog(commands.Cog):
         str,
         description='The upscaler model to use.',
         required=False,
-        choices=['None', 'Lanczos', 'Nearest', 'LDSR', '4x_FuzzyBox', '4x-UniScale-Balanced [72000g]', '4x-UniScaleV2_Moderate', '4xESRGAN', '4x_FatalPixels_340000_G', '4x-UniScaleV2_Soft', 'lollypop', '4x-UniScale_Restore', '4xBox', '4x-UltraSharp', '4x-UniScaleV2_Sharp', 'SwinIR 4x', 'ScuNET GAN', 'ScuNET PSNR'],
+        choices=['None', 'Lanczos', 'Nearest', 'LDSR', 'SwinIR_4x', 'ScuNET', 'ScuNET PSNR', '4x_FatalPixels_340000_G', '4x_FuzzyBox', 'lollypop', '4xESRGAN', '4x-UltraSharp', '4x-UniScale_Restore', 'BSRGAN', '4x-UniScaleV2_Soft', '4x-UniScaleV2_Moderate', '4x-UniScale-Balanced [72000g]', '4xBox', '4x-UniScaleV2_Sharp'],
     )
     @option(
         'upscaler_2',
         str,
         description='The 2nd upscaler model to use.',
         required=False,
-        choices=['None', 'Lanczos', 'Nearest', 'LDSR', '4x_FuzzyBox', '4x-UniScale-Balanced [72000g]', '4x-UniScaleV2_Moderate', '4xESRGAN', '4x_FatalPixels_340000_G', '4x-UniScaleV2_Soft', 'lollypop', '4x-UniScale_Restore', '4xBox', '4x-UltraSharp', '4x-UniScaleV2_Sharp', 'SwinIR 4x', 'ScuNET GAN', 'ScuNET PSNR'],
+        choices=['None', 'Lanczos', 'Nearest', 'LDSR', 'SwinIR_4x', 'ScuNET', 'ScuNET PSNR', '4x_FatalPixels_340000_G', '4x_FuzzyBox', 'lollypop', '4xESRGAN', '4x-UltraSharp', '4x-UniScale_Restore', 'BSRGAN', '4x-UniScaleV2_Soft', '4x-UniScaleV2_Moderate', '4x-UniScale-Balanced [72000g]', '4xBox', '4x-UniScaleV2_Sharp'],
     )
     @option(
         'upscaler_2_strength',
@@ -72,7 +72,7 @@ class UpscaleCog(commands.Cog):
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
                             resize: float = 4.0,
-                            upscaler_1: str = "SwinIR 4x",
+                            upscaler_1: str = "SwinIR_4x",
                             upscaler_2: Optional[str] = "None",
                             upscaler_2_strength: Optional[float] = 0.5):
 
@@ -202,11 +202,12 @@ class UpscaleCog(commands.Cog):
                     s.post(settings.global_var.url + '/login')
 
                 response = s.post(url=f'{settings.global_var.url}/sdapi/v1/extra-single-image', json=payload)
-            response_data = response.json()
-            end_time = time.time()
 
             def post_dream():
                 try:
+                    response_data = response.json()
+                    end_time = time.time()
+
                     #create safe/sanitized filename
                     epoch_time = int(time.time())
                     file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
@@ -239,6 +240,8 @@ class UpscaleCog(commands.Cog):
                             ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, files=[discord.File(fp=buffer, filename=file_path)]
                         ))
                 except Exception as e:
+                    print('upscale failed (thread)')
+                    print(response.content)
                     embed = discord.Embed(title='upscale failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
                         ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, view=queue_object.view
@@ -246,6 +249,7 @@ class UpscaleCog(commands.Cog):
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
+            print('upscale failed (main)')
             embed = discord.Embed(title='upscale failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
             queuehandler.process_upload(queuehandler.UploadObject(
                 ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
