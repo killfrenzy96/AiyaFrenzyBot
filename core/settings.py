@@ -165,6 +165,8 @@ def files_check():
         for s3 in r3.json():
             global_var.facefix_models.append(s3['name'])
 
+        if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
+
 def guilds_check(self):
     #guild settings files. has to be done after on_ready
     class simple_guild: id: int | str
