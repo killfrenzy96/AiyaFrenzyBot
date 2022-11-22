@@ -74,9 +74,13 @@ class IdentifyCog(commands.Cog):
             copy_command = f'/identify init_url:{init_image.url}'
             print(copy_command)
 
+            init_image_encoded = None
+            if init_image is not None:
+                init_image_encoded = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+
             #creates the upscale object out of local variables
             def get_identify_object():
-                return queuehandler.IdentifyObject(self, ctx, init_image, copy_command, view)
+                return queuehandler.IdentifyObject(self, ctx, init_image, init_image_encoded, copy_command, view)
 
             identify_object = get_identify_object()
             dream_cost = queuehandler.get_dream_cost(identify_object)
@@ -112,7 +116,11 @@ class IdentifyCog(commands.Cog):
     def dream(self, event_loop: AbstractEventLoop, queue_object: queuehandler.IdentifyObject):
         try:
             #construct a payload
-            image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
+            if queue_object.init_image_encoded:
+                image = queue_object.init_image_encoded
+            else:
+                image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
+
             payload = {
                 "image": 'data:image/png;base64,' + image
             }

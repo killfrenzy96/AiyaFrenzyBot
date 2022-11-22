@@ -136,9 +136,13 @@ class UpscaleCog(commands.Cog):
                 copy_command = copy_command + f' upscaler_2:{upscaler_2} upscaler_2_strength:{upscaler_2_strength}'
             print(copy_command)
 
+            init_image_encoded = None
+            if init_image is not None:
+                init_image_encoded = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+
             #creates the upscale object out of local variables
             def get_upscale_object():
-                return queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view)
+                return queuehandler.UpscaleObject(self, ctx, resize, init_image, init_image_encoded, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view)
 
             upscale_object = get_upscale_object()
             dream_cost = queuehandler.get_dream_cost(upscale_object)
@@ -177,7 +181,11 @@ class UpscaleCog(commands.Cog):
             start_time = time.time()
 
             #construct a payload
-            image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
+            if queue_object.init_image_encoded:
+                image = queue_object.init_image_encoded
+            else:
+                image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
+
             payload = {
                 "upscaling_resize": queue_object.resize,
                 "upscaler_1": queue_object.upscaler_1,

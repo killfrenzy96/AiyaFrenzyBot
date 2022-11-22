@@ -31,23 +31,25 @@ class DrawObject:
 
 #the queue object for extras - upscale
 class UpscaleObject:
-    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view):
+    def __init__(self, cog, ctx, resize, init_image, init_image_encoded, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view):
         self.cog = cog
-        self.ctx = ctx
-        self.resize = resize
-        self.init_image = init_image
-        self.upscaler_1 = upscaler_1
-        self.upscaler_2 = upscaler_2
-        self.upscaler_2_strength = upscaler_2_strength
+        self.ctx: discord.ApplicationContext = ctx
+        self.resize: float = resize
+        self.init_image: discord.Attachment = init_image
+        self.init_image_encoded: str = init_image_encoded
+        self.upscaler_1: str = upscaler_1
+        self.upscaler_2: str = upscaler_2
+        self.upscaler_2_strength: float = upscaler_2_strength
         self.copy_command: str = copy_command
         self.view = view
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
-    def __init__(self, cog, ctx, init_image, copy_command, view):
+    def __init__(self, cog, ctx, init_image, init_image_encoded, copy_command, view):
         self.cog = cog
-        self.ctx = ctx
-        self.init_image = init_image
+        self.ctx: discord.ApplicationContext = ctx
+        self.init_image: discord.Attachment = init_image
+        self.init_image_encoded: str = init_image_encoded
         self.copy_command: str = copy_command
         self.view = view
 
@@ -88,8 +90,13 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
                 dream_compute_cost *= 2.0
             case 'DPM++ 2S a Karras':
                 dream_compute_cost *= 2.0
+
+    elif type(queue_object) is UpscaleObject:
+        dream_compute_cost = queue_object.resize
+
     else:
         dream_compute_cost = 1.0
+
     return dream_compute_cost
 
 def get_user_queue_cost(user_id: int):
