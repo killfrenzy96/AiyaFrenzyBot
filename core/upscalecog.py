@@ -241,21 +241,21 @@ class UpscaleCog(commands.Cog):
                             file_path += '.jpeg'
                             print(f'New image size: {buffer.getbuffer().nbytes} bytes - Quality: {quality}')
                         buffer.seek(0)
-                        embed = discord.Embed()
+                        # embed = discord.Embed()
 
-                        embed.colour = settings.global_var.embed_color
-                        embed.add_field(name=f'My upscale of', value=f'``{queue_object.resize}``x', inline=False)
-                        embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
+                        # embed.colour = settings.global_var.embed_color
+                        # embed.add_field(name=f'My upscale of', value=f'``{queue_object.resize}``x', inline=False)
+                        # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
 
-                        footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
-                        if queue_object.ctx.author.avatar is not None:
-                            footer_args['icon_url'] = queue_object.ctx.author.avatar.url
-                        embed.set_footer(**footer_args)
+                        # footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
+                        # if queue_object.ctx.author.avatar is not None:
+                        #     footer_args['icon_url'] = queue_object.ctx.author.avatar.url
+                        # embed.set_footer(**footer_args)
 
                         # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed,
                         #                                 file=discord.File(fp=buffer, filename=file_path)))
                         queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, files=[discord.File(fp=buffer, filename=file_path)]
+                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=[discord.File(fp=buffer, filename=file_path)]
                         ))
                 except Exception as e:
                     print('upscale failed (thread)')
