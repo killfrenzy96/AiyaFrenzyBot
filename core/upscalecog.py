@@ -230,6 +230,14 @@ class UpscaleCog(commands.Cog):
                     with io.BytesIO() as buffer:
                         image = Image.open(io.BytesIO(base64.b64decode(image_data)))
                         image.save(buffer, 'PNG')
+                        size = buffer.getbuffer().nbytes
+                        if buffer.getbuffer().nbytes > 8 * 1000 * 1000:
+                            print(f'Image too large: {size} bytes - Converting image to JPEG')
+                            buffer.truncate(0)
+                            buffer.seek(0)
+                            image.save(buffer, format='JPEG', optimize=True, quality=int(max(5, min(95, (8 * 1000 * 1000) / size) * 400.0)))
+                            file_path += '.jpeg'
+                            print(f'New image size: {buffer.getbuffer().nbytes} bytes')
                         buffer.seek(0)
                         embed = discord.Embed()
 
