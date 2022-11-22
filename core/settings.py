@@ -161,28 +161,38 @@ def files_check():
         if global_var.api_auth:
             s.auth = (global_var.api_user, global_var.api_pass)
 
-        if global_var.username is not None:
-            login_payload = {
-                'username': global_var.username,
-                'password': global_var.password
-            }
-            s.post(global_var.url + '/login', data=login_payload)
-            r = s.get(global_var.url + "/sdapi/v1/samplers")
-            r2 = s.get(global_var.url + "/sdapi/v1/prompt-styles")
-            r3 = s.get(global_var.url + "/sdapi/v1/face-restorers")
-        else:
-            s.post(global_var.url + '/login')
-            r = s.get(global_var.url + "/sdapi/v1/samplers")
-            r2 = s.get(global_var.url + "/sdapi/v1/prompt-styles")
-            r3 = s.get(global_var.url + "/sdapi/v1/face-restorers")
-        for s1 in r.json():
-            global_var.sampler_names.append(s1['name'])
-        for s2 in r2.json():
-            global_var.style_names[s2['name']] = s2['prompt']
-        for s3 in r3.json():
-            global_var.facefix_models.append(s3['name'])
+    # do a check to see if --gradio-auth is set
+    r0 = s.get(global_var.url + '/sdapi/v1/cmd-flags')
+    response_data = r0.json()
+    if response_data['gradio_auth']:
+        global_var.gradio_auth = True
 
-        if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
+    if global_var.gradio_auth:
+        login_payload = {
+            'username': global_var.username,
+            'password': global_var.password
+        }
+        s.post(global_var.url + '/login', data=login_payload)
+    else:
+        s.post(global_var.url + '/login')
+
+    r = s.get(global_var.url + "/sdapi/v1/samplers")
+    r2 = s.get(global_var.url + "/sdapi/v1/prompt-styles")
+    r3 = s.get(global_var.url + "/sdapi/v1/face-restorers")
+    for s1 in r.json():
+        try:
+            global_var.sampler_names.append(s1['name'])
+        except(Exception,):
+            # throw in last exception error for anything that wasn't caught earlier
+            print("Can't connect to API for some reason!"
+                  "Please check your .env URL or credentials.")
+            os.system("pause")
+    for s2 in r2.json():
+        global_var.style_names[s2['name']] = s2['prompt']
+    for s3 in r3.json():
+        global_var.facefix_models.append(s3['name'])
+
+    if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
 
 def guilds_check(self):
     #guild settings files. has to be done after on_ready
