@@ -508,14 +508,25 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     "denoising_strength": queue_object.strength
                 }
                 payload.update(img_payload)
+            # add any options that would go into the override_settings
+            override_settings = {"CLIP_stop_at_last_layers": queue_object.clip_skip}
             if queue_object.facefix != 'None':
+                override_settings["face_restoration_model"] = queue_object.facefix
+                # face restoration needs this extra parameter
                 facefix_payload = {
                     "restore_faces": True,
-                    "override_settings": {
-                        "face_restoration_model": queue_object.facefix
-                    }
                 }
                 payload.update(facefix_payload)
+
+            # send normal payload to webui
+            if settings.global_var.gradio_auth:
+                login_payload = {
+                    'username': settings.global_var.username,
+                    'password': settings.global_var.password
+                }
+                s.post(settings.global_var.url + '/login', data=login_payload)
+            else:
+                s.post(settings.global_var.url + '/login')
 
             # update payload with override_settings
             override_payload = {
@@ -523,24 +534,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             }
             payload.update(override_payload)
 
-            #send normal payload to webui
-            with requests.Session() as s:
-                if settings.global_var.username is not None:
-                    login_payload = {
-                    'username': settings.global_var.username,
-                    'password': settings.global_var.password
-                    }
-                    s.post(settings.global_var.url + '/login', data=login_payload)
-                else:
-                    s.post(settings.global_var.url + '/login')
-
-                # only send model payload if one is defined
-                if settings.global_var.send_model:
-                    s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
-                if queue_object.init_image is not None:
-                    response = s.post(url=f'{settings.global_var.url}/sdapi/v1/img2img', json=payload)
-                else:
-                    response = s.post(url=f'{settings.global_var.url}/sdapi/v1/txt2img', json=payload)
+            # only send model payload if one is defined
+            if settings.global_var.send_model:
+                s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
+            if queue_object.init_image is not None:
+                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/img2img', json=payload)
+            else:
+                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/txt2img', json=payload)
 
             def post_dream():
                 try:

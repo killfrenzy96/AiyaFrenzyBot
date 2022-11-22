@@ -32,6 +32,7 @@ class GlobalVar:
     username: Optional[str] = None
     password: Optional[str] = None
     api_auth = False
+    gradio_auth = False
     api_user: Optional[str] = None
     api_pass: Optional[str] = None
     sampler_names = []
@@ -88,7 +89,7 @@ def startup_check():
             if response.status_code == 401:
                 global_var.api_auth = True
                 # lazy method to see if --api-auth credentials are set
-                if not global_var.api_pass:
+                if (not global_var.api_pass) or (not global_var.api_user):
                     print('API rejected me! If using --api-auth, '
                           'please check your .env file for APIUSER and APIPASS values.')
                     os.system("pause")
@@ -156,10 +157,11 @@ def files_check():
         print(f'The folder for DIR doesn\'t exist! Creating folder at {global_var.dir}.')
         os.mkdir(global_var.dir)
 
-    #pull list of samplers, styles and face restorers from api
-    with requests.Session() as s:
-        if global_var.api_auth:
-            s.auth = (global_var.api_user, global_var.api_pass)
+    # pull list of samplers, styles and face restorers from api
+    # create persistent session since we'll need to do a few API calls
+    s = requests.Session()
+    if global_var.api_auth:
+        s.auth = (global_var.api_user, global_var.api_pass)
 
     # do a check to see if --gradio-auth is set
     r0 = s.get(global_var.url + '/sdapi/v1/cmd-flags')
