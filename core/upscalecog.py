@@ -235,9 +235,11 @@ class UpscaleCog(commands.Cog):
                             print(f'Image too large: {size} bytes - Converting image to JPEG')
                             buffer.truncate(0)
                             buffer.seek(0)
-                            image.save(buffer, format='JPEG', optimize=True, quality=int(max(5, min(95, (8 * 1000 * 1000) / size) * 400.0)))
+                            quality = int(max(5, min(95, ((8 * 1000 * 1000) / size) * 350.0)))
+                            image.save(buffer, format='JPEG', optimize=True, quality=quality)
+                            file_path = file_path.lstrip('.png')
                             file_path += '.jpeg'
-                            print(f'New image size: {buffer.getbuffer().nbytes} bytes')
+                            print(f'New image size: {buffer.getbuffer().nbytes} bytes - Quality: {quality}')
                         buffer.seek(0)
                         embed = discord.Embed()
 
