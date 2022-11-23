@@ -24,7 +24,8 @@ input_tuple[0] = ctx
 [12] = count
 [13] = style
 [14] = facefix
-[15] = simple_prompt
+[15] = clip_skip
+[16] = simple_prompt
 '''
 
 #the modal that is used for the 🖋 button
@@ -35,7 +36,7 @@ class DrawModal(Modal):
         self.add_item(
             InputText(
                 label='Input your new prompt',
-                value=input_tuple[15],
+                value=input_tuple[16],
                 style=discord.InputTextStyle.long
             )
         )
@@ -59,8 +60,8 @@ class DrawModal(Modal):
     async def callback(self, interaction: discord.Interaction):
         # update the tuple with new prompts
         new_prompt = list(self.input_tuple)
-        new_prompt[1] = new_prompt[1].replace(new_prompt[15], self.children[0].value)
-        new_prompt[15] = self.children[0].value
+        new_prompt[1] = new_prompt[1].replace(new_prompt[16], self.children[0].value)
+        new_prompt[16] = self.children[0].value
         new_prompt[2] = self.children[1].value
 
         # update the tuple new seed (random if set to -1)
@@ -185,8 +186,8 @@ class DrawView(View):
             #generate the command for copy-pasting, and also add embed fields
             embed = discord.Embed(title="About the image!", description="")
             embed.colour = settings.global_var.embed_color
-            embed.add_field(name=f'Prompt', value=f'``{rev[15]}``', inline=False)
-            copy_command = f'/draw prompt:{rev[15]} data_model:{model_name} steps:{rev[4]} width:{rev[5]} height:{rev[6]} guidance_scale:{rev[7]} sampler:{rev[8]} seed:{rev[9]} count:{rev[12]} '
+            embed.add_field(name=f'Prompt', value=f'``{rev[16]}``', inline=False)
+            copy_command = f'/draw prompt:{rev[16]} data_model:{model_name} steps:{rev[4]} width:{rev[5]} height:{rev[6]} guidance_scale:{rev[7]} sampler:{rev[8]} seed:{rev[9]} count:{rev[12]} '
             if rev[2] != '':
                 copy_command = copy_command + f' negative_prompt:{rev[2]}'
                 embed.add_field(name=f'Negative prompt', value=f'``{rev[2]}``', inline=False)
@@ -198,12 +199,17 @@ class DrawView(View):
             if rev[11]:
                 #not interested in adding embed fields for strength and init_image
                 copy_command = copy_command + f' strength:{rev[10]} init_url:{rev[11]}'
+            if rev[12] != 1:
+                copy_command = copy_command + f' count:{rev[13]}'
             if rev[13] != 'None':
                 copy_command = copy_command + f' style:{rev[13]}'
                 extra_params = extra_params + f'\nStyle preset: ``{rev[13]}``'
             if rev[14] != 'None':
                 copy_command = copy_command + f' facefix:{rev[14]}'
                 extra_params = extra_params + f'\nFace restoration model: ``{rev[14]}``'
+            if rev[15] != 1:
+                copy_command = copy_command + f' clip_skip:{rev[15]}'
+                extra_params = extra_params + f'\nCLIP skip: ``{rev[15]}``'
             embed.add_field(name=f'Other parameters', value=extra_params, inline=False)
             embed.add_field(name=f'Command for copying', value=f'``{copy_command}``', inline=False)
 

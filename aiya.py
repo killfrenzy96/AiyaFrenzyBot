@@ -29,7 +29,7 @@ self.load_extension('core.tipscog')
 self.load_extension('core.cancelcog')
 
 #stats slash command
-@self.slash_command(name = 'stats', description = 'How many images has the bot generated?')
+@self.slash_command(name='stats', description='How many images have I generated?')
 async def stats(ctx: discord.ApplicationContext):
     with open('resources/stats.txt', 'r') as f:
         data = list(map(int, f.readlines()))
@@ -128,6 +128,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         'style',
                         'facefix',
                         'tiling',
+                        'clip_skip',
                         'script'
                     ]
 
@@ -216,6 +217,12 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                     except:
                         facefix = 'None'
 
+                    try:
+                        clip_skip = int(get_param('clip_skip'))
+                        clip_skip = max(1.0, clip_skip)
+                    except:
+                        clip_skip = 0
+
                     script = get_param('script')
                     if script == '': script = None
 
@@ -235,6 +242,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         style=style,
                         facefix=facefix,
                         tiling=tiling,
+                        clip_skip=clip_skip,
                         script=script
                     )
 

@@ -148,6 +148,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         required=False,
     )
     @option(
+        'clip_skip',
+        int,
+        description='Number of last layers of CLIP model to skip',
+        required=False,
+        choices=[x for x in range(1, 13, 1)]
+    )
+    @option(
         'script',
         str,
         description='Generates image batches using a script.',
@@ -169,6 +176,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             style: Optional[str] = 'None',
                             facefix: Optional[str] = 'None',
                             tiling: Optional[bool] = False,
+                            clip_skip: Optional[int] = 0,
                             script: Optional[str] = None):
 
         negative_prompt: str = negative
@@ -193,6 +201,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             'style',
             'facefix',
             'tiling',
+            'clip_skip',
             'script'
         ]
 
@@ -223,15 +232,18 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             count = settings.read(guild)['default_count']
         if sampler == 'unset':
             sampler = settings.read(guild)['sampler']
+        if clip_skip == 0:
+            clip_skip = settings.read(guild)['clip_skip']
 
         #if a model is not selected, do nothing
         model_name = 'Default'
+        settings.global_var.send_model = False
         if data_model is None:
             data_model = settings.read(guild)['data_model']
             if data_model != '':
-                self.send_model = True
+                settings.global_var.send_model = True
         else:
-            self.send_model = True
+            settings.global_var.send_model = True
 
         simple_prompt = prompt
         #take selected data_model and get model_name, then update data_model with the full name
@@ -269,20 +281,20 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         with open('resources/stats.txt', 'w') as f:
             f.write('\n'.join(str(x) for x in data))
 
-        #random messages for bot to say
+        #random messages for aiya to say
         with open('resources/messages.csv') as csv_file:
             message_data = list(csv.reader(csv_file, delimiter='|'))
             message_row_count = len(message_data) - 1
             for row in message_data:
                 self.wait_message.append( row[0] )
 
-        #formatting bot initial reply
+        #formatting aiya initial reply
         append_options = ''
 
         # get estimate of the compute cost of this dream
         def get_dream_cost(width: int, height: int, steps: int, count: int = 1):
             return queuehandler.get_dream_cost(queuehandler.DrawObject(
-                self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, None, None, count, style, facefix, tiling, simple_prompt, script, None
+                self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, None, None, count, style, facefix, tiling, clip_skip, simple_prompt, script, None
             ))
         dream_compute_cost = get_dream_cost(width, height, steps, 1)
 
@@ -360,6 +372,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
         # if tiling:
         #     append_options = append_options + '\nTiling: ``' + str(tiling) + '``'
+        # if clip_skip != 1:
+        #     append_options = append_options + f'\nCLIP skip: ``{clip_skip}``'
 
         #log the command
         copy_command = f'/dream prompt:{simple_prompt}'
@@ -376,6 +390,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             copy_command = copy_command + f' facefix:{facefix}'
         if tiling:
             copy_command = copy_command + f' tiling:{tiling}'
+        if clip_skip != 1:
+            copy_command = copy_command + f' clip_skip:{clip_skip}'
         if count > 1:
             copy_command = copy_command + f' batch:{count}'
         if script:
@@ -383,7 +399,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         print(copy_command)
 
         #set up tuple of parameters to pass into the Discord view
-        input_tuple = (ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, count, style, facefix, simple_prompt)
+        input_tuple = (ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, count, style, facefix, clip_skip, simple_prompt)
         view = viewhandler.DrawView(input_tuple)
 
         #setup the queue
@@ -409,7 +425,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             queue_length = len(queuehandler.GlobalQueue.queue_high)
             if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
             def get_draw_object():
-                return queuehandler.DrawObject(self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, init_image_encoded, copy_command, 1, style, facefix, tiling, simple_prompt, script, view)
+                return queuehandler.DrawObject(self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, init_image_encoded, copy_command, 1, style, facefix, tiling, clip_skip, simple_prompt, script, view)
 
             if count == 1:
                 # if user does not have a dream in process, they get high priority

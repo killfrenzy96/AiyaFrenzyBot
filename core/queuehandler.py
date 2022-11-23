@@ -5,7 +5,7 @@ from threading import Thread
 #the queue object for txt2image and img2img
 class DrawObject:
     def __init__(self, cog, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_image, init_image_encoded, copy_command, batch_count, style, facefix, tiling, simple_prompt, script, view):
+                 strength, init_image, init_image_encoded, copy_command, batch_count, style, facefix, tiling, clip_skip, simple_prompt, script, view):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.prompt: str = prompt
@@ -25,6 +25,7 @@ class DrawObject:
         self.style: str = style
         self.facefix: str = facefix
         self.tiling: bool = tiling
+        self.clip_skip: int = clip_skip
         self.simple_prompt: str = simple_prompt
         self.script: str = script
         self.view = view
