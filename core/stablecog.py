@@ -159,7 +159,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         str,
         description='Generates image batches using a script.',
         required=False,
-        choices = ['preset_steps', 'preset_guidance_scales', 'finetune_steps', 'finetune_guidance_scale']
+        choices = ['preset steps', 'preset guidance_scale', 'preset clip_skip', 'increment steps +5', 'increment steps +1', 'increment guidance_scale +2', 'increment guidance_scale +1', 'increment guidance_scale +0.1', 'increment clip_skip +1']
     )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, *,
                             prompt: str, negative: str = 'unset',
@@ -298,48 +298,82 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             ))
         dream_compute_cost = get_dream_cost(width, height, steps, 1)
 
+        #get settings
+        setting_max_compute = settings.read(guild)['max_compute']
+        setting_max_compute_batch = settings.read(guild)['max_compute_batch']
+        setting_max_steps = settings.read(guild)['max_steps']
+
         # apply script modifications
         increment_seed = 0
         increment_steps = 0
         increment_guidance_scale = 0
+        increment_clip_skip = 0
 
         match script:
-            case 'preset_steps':
+            case None:
+                increment_seed = 1
+
+            case 'preset steps':
                 steps = 20
                 increment_steps = 5
                 count = 7
 
                 average_step_cost = get_dream_cost(width, height, steps + (increment_steps * count * 0.5), 1)
-                if average_step_cost > settings.read(guild)['max_compute_batch']:
+                if average_step_cost > setting_max_compute_batch:
                     increment_steps = 10
                     count = 4
 
-            case 'preset_guidance_scales':
-                guidance_scale = 4.0
+            case 'preset guidance_scale':
+                guidance_scale = 5.0
                 increment_guidance_scale = 1.0
                 count = max(10, count)
 
-            case 'finetune_steps':
-                increment_steps = 1
-                count = 10
+                if dream_compute_cost * count > setting_max_compute_batch:
+                    count = int(count / 2)
+                    increment_guidance_scale = 2.0
 
-                max_step_cost = get_dream_cost(width, height, steps + (increment_steps * count), 1)
-                if max_step_cost > settings.read(guild)['max_compute']:
-                    count = min(int(float(count) * (settings.read(guild)['max_compute'] / max_step_cost)), 10)
-
-            case 'finetune_guidance_scale':
-                increment_guidance_scale = 0.1
-                count = max(10, count)
+            case 'preset clip_skip':
+                clip_skip = 1
+                increment_clip_skip = 1
+                count = max(6, min(12, count))
 
             case other:
-                increment_seed = 1
+                try:
+                    script_parts = script.split(' ')
+                    script_setting = script_parts[0]
+                    script_param = script_parts[1]
+                    script_value = float(script_parts[2])
+
+                    if script_setting == 'increment':
+                        match script_param:
+                            case 'steps':
+                                increment_steps = int(script_value)
+                                count = max(5, count)
+                            case 'guidance_scale':
+                                increment_guidance_scale = script_value
+                                if increment_guidance_scale < 1.0:
+                                    count = max(10, count)
+                                else:
+                                    count = max(4, count)
+                            case 'clip_skip':
+                                increment_clip_skip = int(script_value)
+                                count = max(4, count)
+                                clip_skip_max = clip_skip + (count * increment_clip_skip)
+                                if clip_skip_max > 12:
+                                    count = clip_skip_max - 12
+                except:
+                    append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
+                    increment_seed = 1
+                    increment_steps = 0
+                    increment_guidance_scale = 0
+                    increment_clip_skip = 0
 
         #lower step value to the highest setting if user goes over max steps
-        if dream_compute_cost > settings.read(guild)['max_compute']:
-            steps = min(int(float(steps) * (settings.read(guild)['max_compute'] / dream_compute_cost)), settings.read(guild)['max_steps'])
+        if dream_compute_cost > setting_max_compute:
+            steps = min(int(float(steps) * (setting_max_compute / dream_compute_cost)), setting_max_steps)
             append_options = append_options + '\nDream compute cost is too high! Steps reduced to ``' + str(steps) + '``'
-        if steps > settings.read(guild)['max_steps']:
-            steps = settings.read(guild)['max_steps']
+        if steps > setting_max_steps:
+            steps = setting_max_steps
             append_options = append_options + '\nExceeded maximum of ``' + str(steps) + '`` steps! This is the best I can do...'
         # if model_name != 'Default':
         #     append_options = append_options + '\nModel: ``' + str(model_name) + '``'
@@ -357,13 +391,16 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #     append_options = append_options + '\nStrength: ``' + str(strength) + '``'
         #     append_options = append_options + '\nURL Init Image: ``' + str(init_image.url) + '``'
         if count != 1:
-            dream_compute_batch_cost = get_dream_cost(width, height, steps, count)
-            max_count = settings.read(guild)['max_count']
-            if dream_compute_batch_cost > settings.read(guild)['max_compute_batch']:
-                count = min(int(float(count) * settings.read(guild)['max_compute_batch'] / dream_compute_batch_cost), max_count)
+            if increment_steps:
+                dream_compute_batch_cost = get_dream_cost(width, height, steps + (increment_steps * count * 0.5), count)
+            else:
+                dream_compute_batch_cost = get_dream_cost(width, height, steps, count)
+            setting_max_count = settings.read(guild)['max_count']
+            if dream_compute_batch_cost > setting_max_compute_batch:
+                count = min(int(float(count) * setting_max_compute_batch / dream_compute_batch_cost), setting_max_count)
                 append_options = append_options + '\nBatch compute cost is too high! Batch count reduced to ``' + str(count) + '``'
-            if count > max_count:
-                count = max_count
+            if count > setting_max_count:
+                count = setting_max_count
                 append_options = append_options + '\nExceeded maximum of ``' + str(count) + '`` images! This is the best I can do...'
         #     append_options = append_options + '\nCount: ``' + str(count) + '``'
         # if style != 'None':
@@ -462,6 +499,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         guidance_scale += increment_guidance_scale
                         guidance_scale = round(guidance_scale, 4)
                         copy_command = copy_command + f'guidance_scale:{guidance_scale}'
+
+                    if increment_clip_skip:
+                        clip_skip += increment_clip_skip
+                        copy_command = copy_command + f'clip_skip:{clip_skip}'
 
                     queuehandler.GlobalQueue.queue_low.append(get_draw_object())
 
