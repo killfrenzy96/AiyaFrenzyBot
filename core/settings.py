@@ -199,7 +199,10 @@ def files_check():
 
 def guilds_check(self):
     #guild settings files. has to be done after on_ready
-    class simple_guild: id: int | str
+    class simple_guild:
+        id: int | str
+        def __str__(self):
+            return self.id
     guild_private: simple_guild = simple_guild()
     guild_private.id = 'private'
 
