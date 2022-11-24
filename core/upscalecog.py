@@ -273,8 +273,6 @@ class UpscaleCog(commands.Cog):
             queuehandler.process_upload(queuehandler.UploadObject(
                 ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
             ))
-        #check each queue for any remaining tasks
-        queuehandler.process_queue()
 
 def setup(bot):
     bot.add_cog(UpscaleCog(bot))

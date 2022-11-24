@@ -66,11 +66,6 @@ class GlobalQueue:
 
     queues: list[list[DrawObject | UpscaleObject | IdentifyObject]] = [queue_high, queue_medium, queue_low, queue_lowest]
 
-#this creates the master queue that oversees all queues
-def union(list_1, list_2, list_3):
-    master_queue = list_1 + list_2 + list_3
-    return master_queue
-
 # get estimate of the compute cost of a dream
 def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
     if type(queue_object) is DrawObject:

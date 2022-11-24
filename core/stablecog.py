@@ -668,7 +668,5 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
             ))
 
-        queuehandler.process_queue()
-
 def setup(bot: discord.Bot):
     bot.add_cog(StableCog(bot))
