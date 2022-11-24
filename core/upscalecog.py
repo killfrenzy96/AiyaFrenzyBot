@@ -81,15 +81,15 @@ class UpscaleCog(commands.Cog):
         has_image = True
         #url *will* override init image for compatibility, can be changed here
         if init_url:
-            try:
-                init_image = requests.get(init_url)
-            except(Exception,):
-                await ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True)
-                has_image = False
-
             if init_url.startswith('https://cdn.discordapp.com/') == False:
                 await ctx.send_response('Only URL images from the Discord CDN are allowed!')
                 has_image = False
+            else:
+                try:
+                    init_image = requests.get(init_url)
+                except(Exception,):
+                    await ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True)
+                    has_image = False
 
         #fail if no image is provided
         if init_url is None:
