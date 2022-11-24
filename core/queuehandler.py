@@ -1,5 +1,6 @@
 import asyncio
 import discord
+import traceback
 from threading import Thread
 
 #the queue object for txt2image and img2img
@@ -59,8 +60,11 @@ class GlobalQueue:
     dream_thread = Thread()
     event_loop = asyncio.get_event_loop()
     queue_high: list[DrawObject | UpscaleObject | IdentifyObject] = []
-    queue: list[DrawObject | UpscaleObject | IdentifyObject] = []
+    queue_medium: list[DrawObject | UpscaleObject | IdentifyObject] = []
     queue_low: list[DrawObject | UpscaleObject | IdentifyObject] = []
+    queue_lowest: list[DrawObject | UpscaleObject | IdentifyObject] = []
+
+    queues: list[list[DrawObject | UpscaleObject | IdentifyObject]] = [queue_high, queue_medium, queue_low, queue_lowest]
 
 #this creates the master queue that oversees all queues
 def union(list_1, list_2, list_3):
@@ -102,38 +106,61 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
 
 def get_user_queue_cost(user_id: int):
     queue_cost = 0.0
-    queue = GlobalQueue.queue_high + GlobalQueue.queue + GlobalQueue.queue_low
+    queue = GlobalQueue.queue_high + GlobalQueue.queue_medium + GlobalQueue.queue_low + GlobalQueue.queue_lowest
     for queue_object in queue:
         if queue_object.ctx.author.id == user_id:
             queue_cost += get_dream_cost(queue_object)
     return queue_cost
 
-def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObject, priority: str = ''):
-    if GlobalQueue.dream_thread.is_alive():
+def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObject, priority: str | int = 1, print_info = True):
+    if type(priority) is str:
         match priority:
-            case 'high':
-                target_queue = GlobalQueue.queue_high
-            case 'medium':
-                target_queue = GlobalQueue.queue
-            case 'low':
-                target_queue = GlobalQueue.queue_low
-            case other:
-                target_queue = GlobalQueue.queue
-        target_queue.append(queue_object)
-    else:
-        GlobalQueue.dream_thread = Thread(target=self.dream,
-                                args=(GlobalQueue.event_loop, queue_object))
+            case 'high': priority = 0
+            case 'medium': priority = 1
+            case 'low': priority = 2
+            case 'lowest': priority = 3
+
+    if print_info:
+        # get queue length
+        queue_index = 0
+        queue_length = 0
+        while queue_index <= priority:
+            queue_length += len(GlobalQueue.queues[queue_index])
+            queue_index += 1
+
+        match priority:
+            case 0: priority_string = 'High'
+            case 1: priority_string = 'Medium'
+            case 2: priority_string = 'Low'
+            case 3: priority_string = 'Lowest'
+        print(f'Dream Priority: {priority_string} - Queue: {queue_length}')
+
+    # append dream to queue
+    if type(priority) is int:
+        GlobalQueue.queues[priority].append(queue_object)
+
+    # start dream queue thread
+    if GlobalQueue.dream_thread.is_alive() == False:
+        GlobalQueue.dream_thread = Thread(target=process_queue)
         GlobalQueue.dream_thread.start()
 
+    if print_info:
+        return queue_length
+
+
 def process_queue():
-    if GlobalQueue.queue_high: target_queue = GlobalQueue.queue_high
-    elif GlobalQueue.queue: target_queue = GlobalQueue.queue
-    else: target_queue = GlobalQueue.queue_low
-
-    if target_queue:
-        queue_object = target_queue.pop(0)
-        queue_object.cog.dream(GlobalQueue.event_loop, queue_object)
-
+    queue_index = 0
+    while queue_index < len(GlobalQueue.queues):
+        queue = GlobalQueue.queues[queue_index]
+        if queue:
+            queue_object = queue.pop(0)
+            try:
+                queue_object.cog.dream(GlobalQueue.event_loop, queue_object)
+            except Exception as e:
+                print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
+            queue_index = 0
+        else:
+            queue_index += 1
 
 class UploadObject:
     def __init__(self, ctx, content, embed = None, files = None, view = None):

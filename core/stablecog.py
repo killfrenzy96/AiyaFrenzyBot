@@ -223,7 +223,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         elif ctx.guild:
             guild = '% s' % ctx.guild.id
         else:
-            guild = '% s' % 'private'
+            guild = 'private'
         if negative_prompt == 'unset':
             negative_prompt = settings.read(guild)['negative_prompt']
         if steps == -1:
@@ -314,14 +314,14 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 increment_seed = 1
 
             case 'preset steps':
-                steps = 20
+                steps = 10
                 increment_steps = 5
-                count = 7
+                count = 9
 
-                average_step_cost = get_dream_cost(width, height, steps + (increment_steps * count * 0.5), 1)
+                average_step_cost = get_dream_cost(width, height, steps + (increment_steps * count * 0.5), count)
                 if average_step_cost > setting_max_compute_batch:
                     increment_steps = 10
-                    count = 4
+                    count = 5
 
             case 'preset guidance_scale':
                 guidance_scale = 5.0
@@ -459,28 +459,26 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if init_image is not None:
                 init_image_encoded = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
-            queue_length = len(queuehandler.GlobalQueue.queue_high)
-            if queuehandler.GlobalQueue.dream_thread.is_alive(): queue_length += 1
             def get_draw_object():
                 return queuehandler.DrawObject(self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, init_image_encoded, copy_command, 1, style, facefix, tiling, clip_skip, simple_prompt, script, view)
 
             if count == 1:
+                if guild == 'private':
+                    priority: str = 'lowest'
                 # if user does not have a dream in process, they get high priority
-                if queue_cost == 0.0:
+                elif queue_cost == 0.0:
                     priority: str = 'high'
-                    print(f'Dream priority: High')
                 else:
                     priority: str = 'medium'
-                    print(f'Dream priority: Medium')
-                    queue_length += len(queuehandler.GlobalQueue.queue)
 
-                queuehandler.process_dream(self, get_draw_object(), priority)
+                queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
             else:
+                if guild == 'private':
+                    priority: str = 'lowest'
                 # batched items go into the low priority queue
-                print(f'Dream priority: Low')
-                queue_length += len(queuehandler.GlobalQueue.queue)
-                queue_length += len(queuehandler.GlobalQueue.queue_low)
-                queuehandler.process_dream(self, get_draw_object(), 'low')
+                else:
+                    priority: str = 'low'
+                queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
 
                 batch_count = 1
                 while batch_count < count:
@@ -504,7 +502,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         clip_skip += increment_clip_skip
                         copy_command = copy_command + f'clip_skip:{clip_skip}'
 
-                    queuehandler.GlobalQueue.queue_low.append(get_draw_object())
+                    queuehandler.process_dream(self, get_draw_object(), priority, False)
 
             content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
             if count > 1: content = content + f' - Batch: ``{count}``'

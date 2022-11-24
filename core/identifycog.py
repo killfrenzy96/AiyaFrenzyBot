@@ -62,7 +62,7 @@ class IdentifyCog(commands.Cog):
         elif ctx.guild:
             guild = '% s' % ctx.guild.id
         else:
-            guild = '% s' % 'private'
+            guild = 'private'
 
         view = viewhandler.DeleteView(ctx.author.id)
         #set up the queue if an image was found
@@ -85,22 +85,20 @@ class IdentifyCog(commands.Cog):
             identify_object = get_identify_object()
             dream_cost = queuehandler.get_dream_cost(identify_object)
             queue_cost = queuehandler.get_user_queue_cost(ctx.author.id)
-            queue_length = len(queuehandler.GlobalQueue.queue_high)
 
             if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
                 content = f'<@{ctx.author.id}> Please wait! You have too much queued up.'
                 ephemeral = True
             else:
-                if queue_cost == 0.0:
+                if guild == 'private':
+                    priority: str = 'lowest'
+                elif queue_cost == 0.0:
                     priority: str = 'high'
-                    print(f'Dream priority: High')
                 else:
                     priority: str = 'medium'
-                    print(f'Dream priority: Medium')
-                    queue_length += len(queuehandler.GlobalQueue.queue)
 
                 # queuehandler.GlobalQueue.identify_q.append(identify_object)
-                queuehandler.process_dream(self, identify_object, priority)
+                queue_length = queuehandler.process_dream(self, identify_object, priority)
                 # await ctx.send_response(f'<@{ctx.author.id}>, I\'m identifying the image!\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}``')
                 content = f'<@{ctx.author.id}> I\'m identifying the image! Queue: ``{queue_length}``'
 
