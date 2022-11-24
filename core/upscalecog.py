@@ -187,7 +187,7 @@ class UpscaleCog(commands.Cog):
                 if ephemeral:
                     await ctx.channel.send(content, delete_after=30)
                 else:
-                    await ctx.channel.send(content)
+                    await ctx.channel.send(content, delete_after=120)
 
     #generate the image
     def dream(self, queue_object: queuehandler.UpscaleObject):

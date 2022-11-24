@@ -563,7 +563,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if ephemeral:
                 delete_after = 30
             else:
-                delete_after = None
+                delete_after = 120
             try:
                 if type(ctx) is discord.ApplicationContext:
                     await ctx.send_response(content=content, ephemeral=ephemeral)
