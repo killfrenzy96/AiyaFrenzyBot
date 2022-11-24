@@ -29,7 +29,7 @@ class DrawObject:
         self.clip_skip: int = clip_skip
         self.simple_prompt: str = simple_prompt
         self.script: str = script
-        self.view = view
+        self.view: discord.ui.View = view
 
 #the queue object for extras - upscale
 class UpscaleObject:
@@ -43,7 +43,7 @@ class UpscaleObject:
         self.upscaler_2: str = upscaler_2
         self.upscaler_2_strength: float = upscaler_2_strength
         self.copy_command: str = copy_command
-        self.view = view
+        self.view: discord.ui.View = view
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
@@ -53,7 +53,7 @@ class IdentifyObject:
         self.init_image: discord.Attachment = init_image
         self.init_image_encoded: str = init_image_encoded
         self.copy_command: str = copy_command
-        self.view = view
+        self.view: discord.ui.View = view
 
 #any command that needs to wait on processing should use the dream thread
 class GlobalQueue:
@@ -158,12 +158,13 @@ def process_queue():
             queue_index += 1
 
 class UploadObject:
-    def __init__(self, ctx, content, embed = None, files = None, view = None):
+    def __init__(self, ctx, content, embed = None, files = None, view = None, delete_after = None):
         self.ctx: discord.ApplicationContext = ctx
         self.content: str = content
         self.embed: discord.Embed = embed
         self.files: list[discord.File] = files
-        self.view = view
+        self.view: discord.ui.View = view
+        self.delete_after: float = delete_after
 
 class GlobalUploadQueue:
     upload_thread = Thread()
@@ -189,7 +190,8 @@ def process_upload_queue():
                     content=queue_object.content,
                     embed=queue_object.embed,
                     files=queue_object.files,
-                    view=queue_object.view
+                    view=queue_object.view,
+                    delete_after=queue_object.delete_after
                 )
             )
         except Exception as e:

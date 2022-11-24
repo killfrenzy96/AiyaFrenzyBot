@@ -106,9 +106,9 @@ class IdentifyCog(commands.Cog):
             try:
                 await ctx.send_response(content=content, ephemeral=ephemeral)
             except:
-                try:
-                    await ctx.reply(content)
-                except:
+                if ephemeral:
+                    await ctx.channel.send(content, delete_after=30)
+                else:
                     await ctx.channel.send(content)
 
     def dream(self, event_loop: AbstractEventLoop, queue_object: queuehandler.IdentifyObject):
@@ -151,7 +151,7 @@ class IdentifyCog(commands.Cog):
                     # event_loop.create_task(
                     #     queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed))
                     queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> I think this is ``{response_data.get("caption")}``'
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``\nI think this is ``{response_data.get("caption")}``'
                     ))
                 except Exception as e:
                     print('identify failed (thread)')

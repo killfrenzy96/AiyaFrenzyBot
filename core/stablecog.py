@@ -509,15 +509,19 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             content = content + append_options
 
         if content:
+            if ephemeral:
+                delete_after = 30
+            else:
+                delete_after = None
             try:
                 if type(ctx) is discord.ApplicationContext:
                     await ctx.send_response(content=content, ephemeral=ephemeral)
                 elif type(ctx) is discord.Interaction:
-                    ctx.response.send_message(content=content, ephemeral=ephemeral)
+                    ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after)
                 else:
-                    await ctx.reply(content)
+                    await ctx.reply(content, delete_after=delete_after)
             except:
-                await ctx.channel.send(content)
+                await ctx.channel.send(content, delete_after=delete_after)
 
     #generate the image
     def dream(self, event_loop: AbstractEventLoop, queue_object: queuehandler.DrawObject):

@@ -168,9 +168,9 @@ class UpscaleCog(commands.Cog):
             try:
                 await ctx.send_response(content=content, ephemeral=ephemeral)
             except:
-                try:
-                    await ctx.reply(content)
-                except:
+                if ephemeral:
+                    await ctx.channel.send(content, delete_after=30)
+                else:
                     await ctx.channel.send(content)
 
     #generate the image
