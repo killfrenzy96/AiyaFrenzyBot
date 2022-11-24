@@ -58,7 +58,6 @@ class IdentifyObject:
 #any command that needs to wait on processing should use the dream thread
 class GlobalQueue:
     dream_thread = Thread()
-    event_loop = asyncio.get_event_loop()
     queue_high: list[DrawObject | UpscaleObject | IdentifyObject] = []
     queue_medium: list[DrawObject | UpscaleObject | IdentifyObject] = []
     queue_low: list[DrawObject | UpscaleObject | IdentifyObject] = []
@@ -150,7 +149,7 @@ def process_queue():
         if queue:
             queue_object = queue.pop(0)
             try:
-                queue_object.cog.dream(GlobalQueue.event_loop, queue_object)
+                queue_object.cog.dream(queue_object)
             except Exception as e:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
             queue_index = 0

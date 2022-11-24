@@ -524,7 +524,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 await ctx.channel.send(content, delete_after=delete_after)
 
     #generate the image
-    def dream(self, event_loop: AbstractEventLoop, queue_object: queuehandler.DrawObject):
+    def dream(self, queue_object: queuehandler.DrawObject):
         try:
             start_time = time.time()
 

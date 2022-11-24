@@ -174,7 +174,7 @@ class UpscaleCog(commands.Cog):
                     await ctx.channel.send(content)
 
     #generate the image
-    def dream(self, event_loop: AbstractEventLoop, queue_object: queuehandler.UpscaleObject):
+    def dream(self, queue_object: queuehandler.UpscaleObject):
         try:
             start_time = time.time()
 

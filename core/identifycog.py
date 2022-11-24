@@ -111,7 +111,7 @@ class IdentifyCog(commands.Cog):
                 else:
                     await ctx.channel.send(content)
 
-    def dream(self, event_loop: AbstractEventLoop, queue_object: queuehandler.IdentifyObject):
+    def dream(self, queue_object: queuehandler.IdentifyObject):
         try:
             #construct a payload
             if queue_object.init_image_encoded:
