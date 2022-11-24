@@ -124,6 +124,7 @@ def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObjec
         while queue_index <= priority:
             queue_length += len(GlobalQueue.queues[queue_index])
             queue_index += 1
+        if GlobalQueue.dream_thread.is_alive(): queue_length += 1
 
         match priority:
             case 0: priority_string = 'High'

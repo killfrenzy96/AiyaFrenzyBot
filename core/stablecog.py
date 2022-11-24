@@ -602,14 +602,15 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             # only send model payload if one is defined
             if settings.global_var.send_model:
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
-            if queue_object.init_image is not None:
-                url = f'{settings.global_var.url}/sdapi/v1/img2img'
-            else:
-                url = f'{settings.global_var.url}/sdapi/v1/txt2img'
-            response = s.post(url=url, json=queue_object.payload)
 
             def post_dream():
                 try:
+                    if queue_object.init_image is not None:
+                        url = f'{settings.global_var.url}/sdapi/v1/img2img'
+                    else:
+                        url = f'{settings.global_var.url}/sdapi/v1/txt2img'
+                    response = s.post(url=url, json=queue_object.payload)
+
                     response_data = response.json()
                     end_time = time.time()
 

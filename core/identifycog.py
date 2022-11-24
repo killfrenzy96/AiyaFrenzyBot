@@ -135,10 +135,9 @@ class IdentifyCog(commands.Cog):
                 # else:
                 #     s.post(settings.global_var.url + '/login')
 
-                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
-
             def post_dream():
                 try:
+                    response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
                     response_data = response.json()
 
                     # post to discord
