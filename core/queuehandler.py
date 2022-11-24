@@ -176,23 +176,27 @@ class GlobalUploadQueue:
     queue: list[UploadObject] = []
 
 # upload the image
-def upload(upload_event_loop: asyncio.AbstractEventLoop, upload_queue_object: UploadObject):
-    upload_event_loop.create_task(
-        upload_queue_object.ctx.channel.send(
-            content=upload_queue_object.content,
-            embed=upload_queue_object.embed,
-            files=upload_queue_object.files,
-            view=upload_queue_object.view
-        )
-    )
-
-    if GlobalUploadQueue.queue:
-        upload(GlobalUploadQueue.event_loop, GlobalUploadQueue.queue.pop(0))
-
 def process_upload(queue_object: UploadObject):
-    if GlobalUploadQueue.upload_thread.is_alive():
-        GlobalUploadQueue.queue.append(queue_object)
-    else:
-        GlobalUploadQueue.upload_thread = Thread(target=upload,
-                                args=(GlobalUploadQueue.event_loop, queue_object))
+    # append upload to queue
+    GlobalUploadQueue.queue.append(queue_object)
+
+    # start upload queue thread
+    if GlobalUploadQueue.upload_thread.is_alive() == False:
+        GlobalUploadQueue.upload_thread = Thread(target=process_upload_queue)
         GlobalUploadQueue.upload_thread.start()
+
+def process_upload_queue():
+    while GlobalUploadQueue.queue:
+        queue_object = GlobalUploadQueue.queue.pop(0)
+        try:
+            GlobalUploadQueue.event_loop.create_task(
+                queue_object.ctx.channel.send(
+                    content=queue_object.content,
+                    embed=queue_object.embed,
+                    files=queue_object.files,
+                    view=queue_object.view
+                )
+            )
+        except Exception as e:
+            print(f'Upload failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
+
