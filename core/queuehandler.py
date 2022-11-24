@@ -6,7 +6,8 @@ from threading import Thread
 #the queue object for txt2image and img2img
 class DrawObject:
     def __init__(self, cog, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_image, init_image_encoded, copy_command, batch_count, style, facefix, tiling, clip_skip, simple_prompt, script, view):
+                 strength, init_image, copy_command, batch_count, style, facefix, tiling, clip_skip, simple_prompt, script, view,
+                 payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.prompt: str = prompt
@@ -20,7 +21,6 @@ class DrawObject:
         self.seed: int = seed
         self.strength: float = strength
         self.init_image: discord.Attachment = init_image
-        self.init_image_encoded: str = init_image_encoded
         self.copy_command: str = copy_command
         self.batch_count: int = batch_count
         self.style: str = style
@@ -30,30 +30,33 @@ class DrawObject:
         self.simple_prompt: str = simple_prompt
         self.script: str = script
         self.view: discord.ui.View = view
+        self.payload = payload
 
 #the queue object for extras - upscale
 class UpscaleObject:
-    def __init__(self, cog, ctx, resize, init_image, init_image_encoded, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view):
+    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view,
+                 payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.resize: float = resize
         self.init_image: discord.Attachment = init_image
-        self.init_image_encoded: str = init_image_encoded
         self.upscaler_1: str = upscaler_1
         self.upscaler_2: str = upscaler_2
         self.upscaler_2_strength: float = upscaler_2_strength
         self.copy_command: str = copy_command
         self.view: discord.ui.View = view
+        self.payload = payload
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
-    def __init__(self, cog, ctx, init_image, init_image_encoded, copy_command, view):
+    def __init__(self, cog, ctx, init_image, copy_command, view,
+                 payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.init_image: discord.Attachment = init_image
-        self.init_image_encoded: str = init_image_encoded
         self.copy_command: str = copy_command
         self.view: discord.ui.View = view
+        self.payload = payload
 
 #any command that needs to wait on processing should use the dream thread
 class GlobalQueue:

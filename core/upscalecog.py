@@ -136,13 +136,29 @@ class UpscaleCog(commands.Cog):
                 copy_command = copy_command + f' upscaler_2:{upscaler_2} upscaler_2_strength:{upscaler_2_strength}'
             print(copy_command)
 
-            init_image_encoded = None
+            image = None
             if init_image is not None:
-                init_image_encoded = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+                image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                return queuehandler.UpscaleObject(self, ctx, resize, init_image, init_image_encoded, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view)
+                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view)
+
+                #construct a payload
+                payload = {
+                    "upscaling_resize": queue_object.resize,
+                    "upscaler_1": queue_object.upscaler_1,
+                    "image": 'data:image/png;base64,' + image
+                }
+                if queue_object.upscaler_2 is not None:
+                    up2_payload = {
+                        "upscaler_2": queue_object.upscaler_2,
+                        "extras_upscaler_2_visibility": queue_object.upscaler_2_strength
+                    }
+                    payload.update(up2_payload)
+
+                queue_object.payload = payload
+                return queue_object
 
             upscale_object = get_upscale_object()
             dream_cost = queuehandler.get_dream_cost(upscale_object)
@@ -178,24 +194,6 @@ class UpscaleCog(commands.Cog):
         try:
             start_time = time.time()
 
-            #construct a payload
-            if queue_object.init_image_encoded:
-                image = queue_object.init_image_encoded
-            else:
-                image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
-
-            payload = {
-                "upscaling_resize": queue_object.resize,
-                "upscaler_1": queue_object.upscaler_1,
-                "image": 'data:image/png;base64,' + image
-            }
-            if queue_object.upscaler_2 is not None:
-                up2_payload = {
-                    "upscaler_2": queue_object.upscaler_2,
-                    "extras_upscaler_2_visibility": queue_object.upscaler_2_strength
-                }
-                payload.update(up2_payload)
-
             #send normal payload to webui
             with requests.Session() as s:
                 if settings.global_var.api_auth:
@@ -203,14 +201,14 @@ class UpscaleCog(commands.Cog):
 
                 if settings.global_var.gradio_auth:
                     login_payload = {
-                    'username': settings.global_var.username,
-                    'password': settings.global_var.password
+                        'username': settings.global_var.username,
+                        'password': settings.global_var.password
                     }
                     s.post(settings.global_var.url + '/login', data=login_payload)
-                else:
-                    s.post(settings.global_var.url + '/login')
+                # else:
+                #     s.post(settings.global_var.url + '/login')
 
-                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/extra-single-image', json=payload)
+                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/extra-single-image', json=queue_object.payload)
 
             def post_dream():
                 try:

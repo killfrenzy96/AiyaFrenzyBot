@@ -294,7 +294,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         # get estimate of the compute cost of this dream
         def get_dream_cost(width: int, height: int, steps: int, count: int = 1):
             return queuehandler.get_dream_cost(queuehandler.DrawObject(
-                self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, None, None, count, style, facefix, tiling, clip_skip, simple_prompt, script, None
+                self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, None, count, style, facefix, tiling, clip_skip, simple_prompt, script, None
             ))
         dream_compute_cost = get_dream_cost(width, height, steps, 1)
 
@@ -455,12 +455,63 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             ephemeral = True
             append_options = ''
         else:
-            init_image_encoded = None
+            image = None
             if init_image is not None:
-                init_image_encoded = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+                image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
             def get_draw_object():
-                return queuehandler.DrawObject(self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, init_image_encoded, copy_command, 1, style, facefix, tiling, clip_skip, simple_prompt, script, view)
+                queue_object = queuehandler.DrawObject(self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, tiling, clip_skip, simple_prompt, script, view)
+
+                # create persistent session since we'll need to do a few API calls
+                s = requests.Session()
+                if settings.global_var.api_auth:
+                    s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
+
+                # construct a payload
+                payload = {
+                    "prompt": queue_object.prompt,
+                    "negative_prompt": queue_object.negative_prompt,
+                    "steps": queue_object.steps,
+                    "width": queue_object.width,
+                    "height": queue_object.height,
+                    "cfg_scale": queue_object.guidance_scale,
+                    "sampler_index": queue_object.sampler,
+                    "seed": queue_object.seed,
+                    "seed_resize_from_h": 0,
+                    "seed_resize_from_w": 0,
+                    "denoising_strength": None,
+                    "tiling": queue_object.tiling,
+                    "n_iter": queue_object.batch_count,
+                    "styles": [
+                        queue_object.style
+                    ]
+                }
+                if queue_object.init_image is not None:
+                    img_payload = {
+                        "init_images": [
+                            'data:image/png;base64,' + image
+                        ],
+                        "denoising_strength": queue_object.strength
+                    }
+                    payload.update(img_payload)
+                # add any options that would go into the override_settings
+                override_settings = {"CLIP_stop_at_last_layers": queue_object.clip_skip}
+                if queue_object.facefix != 'None':
+                    override_settings["face_restoration_model"] = queue_object.facefix
+                    # face restoration needs this extra parameter
+                    facefix_payload = {
+                        "restore_faces": True,
+                    }
+                    payload.update(facefix_payload)
+
+                # update payload with override_settings
+                override_payload = {
+                    "override_settings": override_settings
+                }
+                payload.update(override_payload)
+
+                queue_object.payload = payload
+                return queue_object
 
             if count == 1:
                 if guild == 'private':
@@ -533,49 +584,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if settings.global_var.api_auth:
                 s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
-            # construct a payload for data model, then the normal payload
+            # construct a payload for data model
             model_payload = {
                 "sd_model_checkpoint": queue_object.data_model
             }
-            payload = {
-                "prompt": queue_object.prompt,
-                "negative_prompt": queue_object.negative_prompt,
-                "steps": queue_object.steps,
-                "width": queue_object.width,
-                "height": queue_object.height,
-                "cfg_scale": queue_object.guidance_scale,
-                "sampler_index": queue_object.sampler,
-                "seed": queue_object.seed,
-                "seed_resize_from_h": 0,
-                "seed_resize_from_w": 0,
-                "denoising_strength": None,
-                "tiling": queue_object.tiling,
-                "n_iter": queue_object.batch_count,
-                "styles": [
-                    queue_object.style
-                ]
-            }
-            if queue_object.init_image is not None:
-                if queue_object.init_image_encoded:
-                    image = queue_object.init_image_encoded
-                else:
-                    image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
-                img_payload = {
-                    "init_images": [
-                        'data:image/png;base64,' + image
-                    ],
-                    "denoising_strength": queue_object.strength
-                }
-                payload.update(img_payload)
-            # add any options that would go into the override_settings
-            override_settings = {"CLIP_stop_at_last_layers": queue_object.clip_skip}
-            if queue_object.facefix != 'None':
-                override_settings["face_restoration_model"] = queue_object.facefix
-                # face restoration needs this extra parameter
-                facefix_payload = {
-                    "restore_faces": True,
-                }
-                payload.update(facefix_payload)
 
             # send normal payload to webui
             if settings.global_var.gradio_auth:
@@ -584,22 +596,17 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     'password': settings.global_var.password
                 }
                 s.post(settings.global_var.url + '/login', data=login_payload)
-            else:
-                s.post(settings.global_var.url + '/login')
-
-            # update payload with override_settings
-            override_payload = {
-                "override_settings": override_settings
-            }
-            payload.update(override_payload)
+            # else:
+            #     s.post(settings.global_var.url + '/login')
 
             # only send model payload if one is defined
             if settings.global_var.send_model:
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
             if queue_object.init_image is not None:
-                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/img2img', json=payload)
+                url = f'{settings.global_var.url}/sdapi/v1/img2img'
             else:
-                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/txt2img', json=payload)
+                url = f'{settings.global_var.url}/sdapi/v1/txt2img'
+            response = s.post(url=url, json=queue_object.payload)
 
             def post_dream():
                 try:

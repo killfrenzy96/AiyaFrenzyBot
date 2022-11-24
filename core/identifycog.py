@@ -74,13 +74,21 @@ class IdentifyCog(commands.Cog):
             copy_command = f'/identify init_url:{init_image.url}'
             print(copy_command)
 
-            init_image_encoded = None
+            image = None
             if init_image is not None:
-                init_image_encoded = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+                image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
             #creates the upscale object out of local variables
             def get_identify_object():
-                return queuehandler.IdentifyObject(self, ctx, init_image, init_image_encoded, copy_command, view)
+                queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, view)
+
+                #construct a payload
+                payload = {
+                    "image": 'data:image/png;base64,' + image
+                }
+
+                queue_object.payload = payload
+                return queue_object
 
             identify_object = get_identify_object()
             dream_cost = queuehandler.get_dream_cost(identify_object)
@@ -113,16 +121,6 @@ class IdentifyCog(commands.Cog):
 
     def dream(self, queue_object: queuehandler.IdentifyObject):
         try:
-            #construct a payload
-            if queue_object.init_image_encoded:
-                image = queue_object.init_image_encoded
-            else:
-                image = base64.b64encode(requests.get(queue_object.init_image.url, stream=True).content).decode('utf-8')
-
-            payload = {
-                "image": 'data:image/png;base64,' + image
-            }
-
             #send normal payload to webui
             with requests.Session() as s:
                 if settings.global_var.api_auth:
@@ -130,14 +128,14 @@ class IdentifyCog(commands.Cog):
 
                 if settings.global_var.gradio_auth:
                     login_payload = {
-                    'username': settings.global_var.username,
-                    'password': settings.global_var.password
+                        'username': settings.global_var.username,
+                        'password': settings.global_var.password
                     }
                     s.post(settings.global_var.url + '/login', data=login_payload)
-                else:
-                    s.post(settings.global_var.url + '/login')
+                # else:
+                #     s.post(settings.global_var.url + '/login')
 
-                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=payload)
+                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
 
             def post_dream():
                 try:
