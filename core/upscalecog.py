@@ -254,14 +254,14 @@ class UpscaleCog(commands.Cog):
                         # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed,
                         #                                 file=discord.File(fp=buffer, filename=file_path)))
                         queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=[discord.File(fp=buffer, filename=file_path)]
+                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=[discord.File(fp=buffer, filename=file_path)], view=queue_object.view
                         ))
                 except Exception as e:
                     print('upscale failed (thread)')
                     print(response.content)
                     embed = discord.Embed(title='upscale failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed, view=queue_object.view
+                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
                     ))
             Thread(target=post_dream, daemon=True).start()
 
