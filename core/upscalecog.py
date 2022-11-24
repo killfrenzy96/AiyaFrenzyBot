@@ -181,13 +181,14 @@ class UpscaleCog(commands.Cog):
                 content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
 
         if content:
+            if ephemeral:
+                delete_after = 30
+            else:
+                delete_after = 120
             try:
-                await ctx.send_response(content=content, ephemeral=ephemeral)
+                await ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after)
             except:
-                if ephemeral:
-                    await ctx.channel.send(content, delete_after=30)
-                else:
-                    await ctx.channel.send(content, delete_after=120)
+                await ctx.channel.send(content, delete_after=delete_after)
 
     #generate the image
     def dream(self, queue_object: queuehandler.UpscaleObject):

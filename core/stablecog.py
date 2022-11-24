@@ -566,7 +566,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 delete_after = 120
             try:
                 if type(ctx) is discord.ApplicationContext:
-                    await ctx.send_response(content=content, ephemeral=ephemeral)
+                    await ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after)
                 elif type(ctx) is discord.Interaction:
                     ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after)
                 else:

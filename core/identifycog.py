@@ -111,13 +111,14 @@ class IdentifyCog(commands.Cog):
                 content = f'<@{ctx.author.id}> I\'m identifying the image! Queue: ``{queue_length}``'
 
         if content:
+            if ephemeral:
+                delete_after = 30
+            else:
+                delete_after = 120
             try:
-                await ctx.send_response(content=content, ephemeral=ephemeral)
+                await ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after)
             except:
-                if ephemeral:
-                    await ctx.channel.send(content, delete_after=30)
-                else:
-                    await ctx.channel.send(content, delete_after=120)
+                await ctx.channel.send(content, delete_after=delete_after)
 
     def dream(self, queue_object: queuehandler.IdentifyObject):
         try:
