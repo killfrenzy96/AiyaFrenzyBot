@@ -11,9 +11,10 @@ from core import stablecog
 
 #the modal that is used for the 🖋 button
 class DrawModal(Modal):
-    def __init__(self, input_object: queuehandler.DrawObject) -> None:
+    def __init__(self, input_object: queuehandler.DrawObject, message: discord.Message) -> None:
         super().__init__(title="Change Prompt!")
         self.input_object = input_object
+        self.message = message
 
         self.add_item(
             InputText(
@@ -30,14 +31,24 @@ class DrawModal(Modal):
                 required=False
             )
         )
-        self.add_item(
-            InputText(
-                label='Seed. Remove to randomize',
-                style=discord.InputTextStyle.short,
-                value=self.input_object.seed,
-                required=False
+        if self.input_object.init_image:
+            self.add_item(
+                InputText(
+                    label='Seed. Remove to randomize.',
+                    style=discord.InputTextStyle.short,
+                    value=self.input_object.seed,
+                    required=False
+                )
             )
-        )
+        else:
+            self.add_item(
+                InputText(
+                    label='Seed. Remove to randomize. "V" for img2img.',
+                    style=discord.InputTextStyle.short,
+                    value=self.input_object.seed,
+                    required=False
+                )
+            )
         self.add_item(
             InputText(
                 label='Batch count',
@@ -74,7 +85,15 @@ class DrawModal(Modal):
         draw_object.negative_prompt = self.children[1].value
 
         try:
-            draw_object.seed = int(self.children[2].value)
+            seed = self.children[2].value.lower()
+            if 'v' in seed:
+                class simple_init_image:
+                    url: str
+                draw_object.init_image = simple_init_image()
+                draw_object.init_image.url = self.message.attachments[0].url
+                draw_object.seed = int(seed.replace('v', ''))
+            else:
+                draw_object.seed = int(seed)
         except:
             draw_object.seed = -1
 
@@ -86,7 +105,7 @@ class DrawModal(Modal):
 
         try:
             split_str = self.children[4].value.split('|')
-            draw_object.steps = int(split_str[0])
+            draw_object.steps = max(1, int(split_str[0]))
             draw_object.guidance_scale = max(1.0, float(split_str[1]))
             if draw_object.init_image: draw_object.strength = max(0.0, min(1.0, float(split_str[2])))
         except:
@@ -113,18 +132,48 @@ class DrawView(View):
         emoji="🖋")
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         try:
-            if self.input_object:
-                await interaction.response.send_modal(DrawModal(self.input_object))
+            if interaction.message == None:
+                message = await interaction.original_response()
             else:
-                if interaction.message == None:
-                    message = await interaction.original_response()
-                else:
-                    message = interaction.message
+                message = interaction.message
 
+            if self.input_object:
+                await interaction.response.send_modal(DrawModal(self.input_object, message))
+            else:
                 if '``/dream ' in message.content:
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
-                    await interaction.response.send_modal(DrawModal(input_object))
+                    await interaction.response.send_modal(DrawModal(input_object, message))
+
+                else:
+                    # button.disabled = True
+                    await interaction.response.edit_message(view=self)
+                    await interaction.followup.send('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30)
+        except Exception as e:
+            print('re-prompt failed')
+            print(f'{e}\n{traceback.print_exc()}')
+            # button.disabled = True
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(f're-prompt failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
+
+    # the 🖋 button will allow a new prompt and keep same parameters for everything else
+    @discord.ui.button(
+        custom_id="button_re-prompt",
+        emoji="🖋")
+    async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
+        try:
+            if interaction.message == None:
+                message = await interaction.original_response()
+            else:
+                message = interaction.message
+
+            if self.input_object:
+                await interaction.response.send_modal(DrawModal(self.input_object, message))
+            else:
+                if '``/dream ' in message.content:
+                    command = self.find_between(message.content, '``/dream ', '``')
+                    input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    await interaction.response.send_modal(DrawModal(input_object, message))
 
                 else:
                     # button.disabled = True

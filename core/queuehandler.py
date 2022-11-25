@@ -204,21 +204,30 @@ def process_upload_queue():
             print(f'Upload failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
 
 def get_guild(ctx: discord.ApplicationContext | discord.Interaction | discord.Message):
-    if type(ctx) is discord.ApplicationContext:
-        return '% s' % ctx.guild_id
-    elif type(ctx) is discord.Interaction:
-        return '% s' % ctx.guild.id
-    elif type(ctx) is discord.Message:
-        return '% s' % ctx.guild.id
-    else:
+    try:
+        if type(ctx) is discord.ApplicationContext:
+            if ctx.guild_id:
+                return '% s' % ctx.guild_id
+            else:
+                return 'private'
+        elif type(ctx) is discord.Interaction:
+            return '% s' % ctx.guild.id
+        elif type(ctx) is discord.Message:
+            return '% s' % ctx.guild.id
+        else:
+            return 'private'
+    except:
         return 'private'
 
 def get_user(ctx: discord.ApplicationContext | discord.Interaction | discord.Message):
-    if type(ctx) is discord.ApplicationContext:
-        return ctx.author
-    elif type(ctx) is discord.Interaction:
-        return ctx.user
-    elif type(ctx) is discord.Message:
-        return ctx.author
-    else:
+    try:
+        if type(ctx) is discord.ApplicationContext:
+            return ctx.author
+        elif type(ctx) is discord.Interaction:
+            return ctx.user
+        elif type(ctx) is discord.Message:
+            return ctx.author
+        else:
+            return ctx.author
+    except:
         return None

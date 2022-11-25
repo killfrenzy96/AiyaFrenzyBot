@@ -80,7 +80,7 @@ class UpscaleCog(commands.Cog):
         guild = queuehandler.get_guild(ctx)
         user = queuehandler.get_user(ctx)
 
-        print(f'Upscale Request -- {user.name}#{user.discriminator}')
+        print(f'Upscale Request -- {user.name}#{user.discriminator} -- {guild}')
 
         has_image = True
         #url *will* override init image for compatibility, can be changed here

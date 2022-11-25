@@ -260,7 +260,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     prompt = prompt.lstrip(' ')
                     break
 
-        print(f'Dream Request -- {user.name}#{user.discriminator}')
+        print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
 
         if seed == -1: seed = random.randint(0, 0xFFFFFFFF)
 
