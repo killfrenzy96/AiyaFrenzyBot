@@ -1,15 +1,16 @@
 import asyncio
 import discord
 import traceback
+import time
 from threading import Thread
 
 #the queue object for txt2image and img2img
 class DrawObject:
     def __init__(self, cog, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_image, copy_command, batch_count, style, facefix, tiling, clip_skip, simple_prompt, script, view,
-                 payload = None):
+                 strength, init_image, copy_command, batch_count, style, facefix, tiling, clip_skip, simple_prompt, script,
+                 view = None, payload = None):
         self.cog = cog
-        self.ctx: discord.ApplicationContext = ctx
+        self.ctx: discord.ApplicationContext | discord.Interaction | discord.Message = ctx
         self.prompt: str = prompt
         self.negative_prompt: str = negative_prompt
         self.data_model: str = data_model
@@ -34,8 +35,8 @@ class DrawObject:
 
 #the queue object for extras - upscale
 class UpscaleObject:
-    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view,
-                 payload = None):
+    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command,
+                 view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.resize: float = resize
@@ -49,8 +50,8 @@ class UpscaleObject:
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
-    def __init__(self, cog, ctx, init_image, copy_command, view,
-                 payload = None):
+    def __init__(self, cog, ctx, init_image, copy_command,
+                 view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.init_image: discord.Attachment = init_image
@@ -67,6 +68,7 @@ class GlobalQueue:
     queue_lowest: list[DrawObject | UpscaleObject | IdentifyObject] = []
 
     queues: list[list[DrawObject | UpscaleObject | IdentifyObject]] = [queue_high, queue_medium, queue_low, queue_lowest]
+    queue_length = 0
 
 # get estimate of the compute cost of a dream
 def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
@@ -153,6 +155,7 @@ def process_queue():
         if queue:
             queue_object = queue.pop(0)
             try:
+                # print(f'Dream started: {queue_object.seed} - {time.time()}')
                 queue_object.cog.dream(queue_object)
             except Exception as e:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
@@ -200,3 +203,22 @@ def process_upload_queue():
         except Exception as e:
             print(f'Upload failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
 
+def get_guild(ctx: discord.ApplicationContext | discord.Interaction | discord.Message):
+    if type(ctx) is discord.ApplicationContext:
+        return '% s' % ctx.guild_id
+    elif type(ctx) is discord.Interaction:
+        return '% s' % ctx.guild.id
+    elif type(ctx) is discord.Message:
+        return '% s' % ctx.guild.id
+    else:
+        return 'private'
+
+def get_user(ctx: discord.ApplicationContext | discord.Interaction | discord.Message):
+    if type(ctx) is discord.ApplicationContext:
+        return ctx.author
+    elif type(ctx) is discord.Interaction:
+        return ctx.user
+    elif type(ctx) is discord.Message:
+        return ctx.author
+    else:
+        return None

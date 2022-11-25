@@ -1,253 +1,276 @@
 import csv
 import discord
 import random
+import copy
+import traceback
 from discord.ui import InputText, Modal, View
 
 from core import queuehandler
 from core import settings
 from core import stablecog
 
-'''
-The input_tuple index reference
-input_tuple[0] = ctx
-[1] = prompt
-[2] = negative_prompt
-[3] = data_model
-[4] = steps
-[5] = width
-[6] = height
-[7] = guidance_scale
-[8] = sampler
-[9] = seed
-[10] = strength
-[11] = init_image
-[12] = count
-[13] = style
-[14] = facefix
-[15] = clip_skip
-[16] = simple_prompt
-'''
-
 #the modal that is used for the 🖋 button
 class DrawModal(Modal):
-    def __init__(self, input_tuple) -> None:
+    def __init__(self, input_object: queuehandler.DrawObject) -> None:
         super().__init__(title="Change Prompt!")
-        self.input_tuple = input_tuple
+        self.input_object = input_object
+
         self.add_item(
             InputText(
-                label='Input your new prompt',
-                value=input_tuple[16],
+                label='Prompt',
+                value=self.input_object.simple_prompt,
                 style=discord.InputTextStyle.long
             )
         )
         self.add_item(
             InputText(
-                label='Input your new negative prompt (optional)',
+                label='Negative prompt (optional)',
                 style=discord.InputTextStyle.long,
-                value=input_tuple[2],
+                value=self.input_object.negative_prompt,
                 required=False
             )
         )
         self.add_item(
             InputText(
-                label='Keep seed? Set to -1 to randomize',
+                label='Seed. Remove to randomize',
                 style=discord.InputTextStyle.short,
-                value=input_tuple[9],
+                value=self.input_object.seed,
                 required=False
             )
         )
+        self.add_item(
+            InputText(
+                label='Batch count',
+                style=discord.InputTextStyle.short,
+                value=self.input_object.batch_count,
+                required=False
+            )
+        )
+        if self.input_object.init_image:
+            self.add_item(
+                InputText(
+                    label='Steps | Guidance Scale | Strength',
+                    style=discord.InputTextStyle.short,
+                    value=f'{self.input_object.steps}|{self.input_object.guidance_scale}|{self.input_object.strength}',
+                    required=False
+                )
+            )
+        else:
+            self.add_item(
+                InputText(
+                    label='Steps | Guidance Scale',
+                    style=discord.InputTextStyle.short,
+                    value=f'{self.input_object.steps}|{self.input_object.guidance_scale}',
+                    required=False
+                )
+            )
 
     async def callback(self, interaction: discord.Interaction):
-        # update the tuple with new prompts
-        new_prompt = list(self.input_tuple)
-        new_prompt[1] = new_prompt[1].replace(new_prompt[16], self.children[0].value)
-        new_prompt[16] = self.children[0].value
-        new_prompt[2] = self.children[1].value
+        draw_object = copy.copy(self.input_object)
 
-        # update the tuple new seed (random if set to -1)
-        new_prompt[9] = self.children[2].value
-        if self.children[2].value == "-1":
-            new_prompt[9] = random.randint(0, 0xFFFFFFFF)
+        draw_object.simple_prompt = self.children[0].value
+        draw_object.prompt = self.input_object.prompt.replace(self.input_object.simple_prompt, self.children[0].value)
 
-        prompt_tuple = tuple(new_prompt)
+        draw_object.negative_prompt = self.children[1].value
 
-        draw_dream = stablecog.StableCog(self)
-        prompt_output = f'\nNew prompt: ``{new_prompt[16]}``'
-        if new_prompt[2] != '':
-            prompt_output = prompt_output + f'\nNew negative prompt: ``{new_prompt[2]}``'
-        if self.children[2].value != self.input_tuple[9]:
-            prompt_output = prompt_output + f'\nNew seed: ``{new_prompt[9]}``'
+        try:
+            draw_object.seed = int(self.children[2].value)
+        except:
+            draw_object.seed = -1
 
-        # check queue again, but now we know user is not in queue
-        if queuehandler.GlobalQueue.dream_thread.is_alive():
-            queuehandler.GlobalQueue.draw_q.append(queuehandler.DrawObject(*prompt_tuple, DrawView(prompt_tuple)))
-            await interaction.response.send_message(f'<@{interaction.user.id}>, redrawing the image!\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}``{prompt_output}')
-        else:
-            await queuehandler.process_dream(draw_dream, queuehandler.DrawObject(*prompt_tuple, DrawView(prompt_tuple)))
-            await interaction.response.send_message(f'<@{interaction.user.id}>, redrawing the image!\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}``{prompt_output}')
+        try:
+            draw_object.batch_count = int(self.children[3].value)
+            draw_object.batch_count = max(1, draw_object.batch_count)
+        except:
+            pass
+
+        try:
+            split_str = self.children[4].value.split('|')
+            draw_object.steps = int(split_str[0])
+            draw_object.guidance_scale = max(1.0, float(split_str[1]))
+            if draw_object.init_image: draw_object.strength = max(0.0, min(1.0, float(split_str[2])))
+        except:
+            pass
+
+        draw_object.ctx = interaction
+        draw_object.payload = None
+        draw_object.view = None
+
+        await stablecog.StableCog(self).dream_object(draw_object)
 
 #creating the view that holds the buttons for /draw output
 class DrawView(View):
-    def __init__(self, input_tuple):
+    def __init__(self, input_tuple: tuple):
         super().__init__(timeout=None)
-        self.input_tuple = input_tuple
+        if type(input_tuple) is stablecog.StableCog:
+            self.input_object = None
+        else:
+            self.input_object = queuehandler.DrawObject(*input_tuple)
 
-    #the 🖋 button will allow a new prompt and keep same parameters for everything else
-    # @discord.ui.button(
-    #     custom_id="button_re-prompt",
-    #     emoji="🖋")
-    async def button_draw(self, button, interaction):
+    # the 🖋 button will allow a new prompt and keep same parameters for everything else
+    @discord.ui.button(
+        custom_id="button_re-prompt",
+        emoji="🖋")
+    async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         try:
-            #check if the /draw output is from the person who requested it
-            if self.message.embeds[0].footer.text == f'{interaction.user.name}#{interaction.user.discriminator}':
-                #if there's room in the queue, open up the modal
-                if queuehandler.GlobalQueue.dream_thread.is_alive():
-                    user_already_in_queue = False
-                    for queue_object in queuehandler.union(queuehandler.GlobalQueue.draw_q,
-                                                           queuehandler.GlobalQueue.upscale_q,
-                                                           queuehandler.GlobalQueue.identify_q):
-                        if queue_object.ctx.author.id == interaction.user.id:
-                            user_already_in_queue = True
-                            break
-                    if user_already_in_queue:
-                        await interaction.response.send_message(content=f"Please wait! You're queued up.", ephemeral=True)
-                    else:
-                        await interaction.response.send_modal(DrawModal(self.input_tuple))
-                else:
-                    await interaction.response.send_modal(DrawModal(self.input_tuple))
+            if self.input_object:
+                await interaction.response.send_modal(DrawModal(self.input_object))
             else:
-                await interaction.response.send_message("You can't use other people's 🖋!", ephemeral=True)
-        except(Exception,):
-            #if interaction fails, assume it's because aiya restarted (breaks buttons)
-            button.disabled = True
-            await interaction.response.edit_message(view=self)
-            await interaction.followup.send("I may have been restarted. This button no longer works.", ephemeral=True)
+                if interaction.message == None:
+                    message = await interaction.original_response()
+                else:
+                    message = interaction.message
 
-    #the 🎲 button will take the same parameters for the image, change the seed, and add a task to the queue
-    # @discord.ui.button(
-    #     custom_id="button_re-roll",
-    #     emoji="🎲")
-    async def button_roll(self, button, interaction):
+                if '``/dream ' in message.content:
+                    command = self.find_between(message.content, '``/dream ', '``')
+                    input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    await interaction.response.send_modal(DrawModal(input_object))
+
+                else:
+                    # button.disabled = True
+                    await interaction.response.edit_message(view=self)
+                    await interaction.followup.send('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30)
+        except Exception as e:
+            print('re-prompt failed')
+            print(f'{e}\n{traceback.print_exc()}')
+            # button.disabled = True
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(f're-prompt failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
+
+    # the 🔁 button will take the same parameters for the image, change the seed, and add a task to the queue
+    @discord.ui.button(
+        custom_id="button_re-roll",
+        emoji="🔁")
+    async def button_roll(self, button: discord.Button, interaction: discord.Interaction):
         try:
-            #check if the /draw output is from the person who requested it
-            # if self.message.embeds[0].footer.text == f'{interaction.user.name}#{interaction.user.discriminator}':
-            if self.message.content.startswith(f'<@{interaction.user.id}>'):
-                #update the tuple with a new seed
-                new_seed = list(self.input_tuple)
-                new_seed[9] = random.randint(0, 0xFFFFFFFF)
-                seed_tuple = tuple(new_seed)
+            #update the tuple with a new seed
+            if self.input_object:
+                draw_object = copy.copy(self.input_object)
+                draw_object.seed = -1
+                draw_object.ctx = interaction
+                draw_object.payload = None
+                draw_object.view = None
 
                 #set up the draw dream and do queue code again for lack of a more elegant solution
-                draw_dream = stablecog.StableCog(self)
+                await stablecog.StableCog(self).dream_object(draw_object)
 
-                draw_object = queuehandler.DrawObject(*seed_tuple, DrawView(seed_tuple))
-                draw_dream.dream_handler(ctx=interaction,
-                    prompt=draw_object.prompt,
-                    negative=draw_object.negative_prompt,
-                    checkpoint=draw_object.data_model,
-                    width=draw_object.width,
-                    height=draw_object.height,
-                    guidance_scale=draw_object.guidance_scale,
-                    steps=draw_object.steps,
-                    sampler=draw_object.sampler,
-                    seed=draw_object.seed,
-                    init_url=draw_object.init_image.url if draw_object.init_image else '',
-                    strength=draw_object.strength,
-                    batch=draw_object.batch_count,
-                    style=draw_object.style,
-                    facefix=draw_object.facefix,
-                    tiling=draw_object.tiling,
-                    script=draw_object.script
-                )
             else:
-                await interaction.response.send_message("You can't use other people's 🎲!", ephemeral=True)
-        except(Exception,):
-            #if interaction fails, assume it's because aiya restarted (breaks buttons)
-            button.disabled = True
+                if interaction.message == None:
+                    message = await interaction.original_response()
+                else:
+                    message = interaction.message
+
+                if '``/dream ' in message.content:
+                    command = self.find_between(message.content, '``/dream ', '``')
+                    await stablecog.StableCog(self).dream_command(interaction, command)
+
+                else:
+                    # button.disabled = True
+                    await interaction.response.edit_message(view=self)
+                    await interaction.followup.send('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30)
+
+        except Exception as e:
+            print('reroll failed')
+            print(f'{e}\n{traceback.print_exc()}')
+            # button.disabled = True
             await interaction.response.edit_message(view=self)
-            await interaction.followup.send("I may have been restarted. This button no longer works.", ephemeral=True)
+            await interaction.followup.send(f're-roll failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
 
     # the 📋 button will let you review the parameters of the generation
     # @discord.ui.button(
     #     custom_id="button_review",
     #     emoji="📋")
-    async def button_review(self, button, interaction):
-        #simpler variable name
-        rev = self.input_tuple
-        try:
-            #the tuple will show the model_full_name. Get the associated display_name and activator_token from it.
-            with open('resources/models.csv', 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f, delimiter='|')
-                for row in reader:
-                    if row['model_full_name'] == rev[3]:
-                        model_name = row['display_name']
-                        activator_token = row['activator_token']
+    # async def button_review(self, button: discord.Button, interaction: discord.Interaction):
+    #     #simpler variable name
+    #     rev = self.input_tuple
+    #     try:
+    #         #the tuple will show the model_full_name. Get the associated display_name and activator_token from it.
+    #         with open('resources/models.csv', 'r', encoding='utf-8') as f:
+    #             reader = csv.DictReader(f, delimiter='|')
+    #             for row in reader:
+    #                 if row['model_full_name'] == rev[3]:
+    #                     model_name = row['display_name']
+    #                     activator_token = row['activator_token']
 
-            #generate the command for copy-pasting, and also add embed fields
-            embed = discord.Embed(title="About the image!", description="")
-            embed.colour = settings.global_var.embed_color
-            embed.add_field(name=f'Prompt', value=f'``{rev[16]}``', inline=False)
-            copy_command = f'/draw prompt:{rev[16]} data_model:{model_name} steps:{rev[4]} width:{rev[5]} height:{rev[6]} guidance_scale:{rev[7]} sampler:{rev[8]} seed:{rev[9]} count:{rev[12]} '
-            if rev[2] != '':
-                copy_command = copy_command + f' negative_prompt:{rev[2]}'
-                embed.add_field(name=f'Negative prompt', value=f'``{rev[2]}``', inline=False)
-            if activator_token:
-                embed.add_field(name=f'Data model', value=f'Display name - ``{model_name}``\nFull name - ``{rev[3]}``\nActivator token - ``{activator_token}``', inline=False)
-            else:
-                embed.add_field(name=f'Data model', value=f'Display name - ``{model_name}``\nFull name - ``{rev[3]}``', inline=False)
-            extra_params = f'Sampling steps: ``{rev[4]}``\nSize: ``{rev[5]}x{rev[6]}``\nClassifier-free guidance scale: ``{rev[7]}``\nSampling method: ``{rev[8]}``\nSeed: ``{rev[9]}``'
-            if rev[11]:
-                #not interested in adding embed fields for strength and init_image
-                copy_command = copy_command + f' strength:{rev[10]} init_url:{rev[11]}'
-            if rev[12] != 1:
-                copy_command = copy_command + f' count:{rev[13]}'
-            if rev[13] != 'None':
-                copy_command = copy_command + f' style:{rev[13]}'
-                extra_params = extra_params + f'\nStyle preset: ``{rev[13]}``'
-            if rev[14] != 'None':
-                copy_command = copy_command + f' facefix:{rev[14]}'
-                extra_params = extra_params + f'\nFace restoration model: ``{rev[14]}``'
-            if rev[15] != 1:
-                copy_command = copy_command + f' clip_skip:{rev[15]}'
-                extra_params = extra_params + f'\nCLIP skip: ``{rev[15]}``'
-            embed.add_field(name=f'Other parameters', value=extra_params, inline=False)
-            embed.add_field(name=f'Command for copying', value=f'``{copy_command}``', inline=False)
+    #         #generate the command for copy-pasting, and also add embed fields
+    #         embed = discord.Embed(title="About the image!", description="")
+    #         embed.colour = settings.global_var.embed_color
+    #         embed.add_field(name=f'Prompt', value=f'``{rev[16]}``', inline=False)
+    #         copy_command = f'/draw prompt:{rev[16]} data_model:{model_name} steps:{rev[4]} width:{rev[5]} height:{rev[6]} guidance_scale:{rev[7]} sampler:{rev[8]} seed:{rev[9]} count:{rev[12]} '
+    #         if rev[2] != '':
+    #             copy_command = copy_command + f' negative_prompt:{rev[2]}'
+    #             embed.add_field(name=f'Negative prompt', value=f'``{rev[2]}``', inline=False)
+    #         if activator_token:
+    #             embed.add_field(name=f'Data model', value=f'Display name - ``{model_name}``\nFull name - ``{rev[3]}``\nActivator token - ``{activator_token}``', inline=False)
+    #         else:
+    #             embed.add_field(name=f'Data model', value=f'Display name - ``{model_name}``\nFull name - ``{rev[3]}``', inline=False)
+    #         extra_params = f'Sampling steps: ``{rev[4]}``\nSize: ``{rev[5]}x{rev[6]}``\nClassifier-free guidance scale: ``{rev[7]}``\nSampling method: ``{rev[8]}``\nSeed: ``{rev[9]}``'
+    #         if rev[11]:
+    #             #not interested in adding embed fields for strength and init_image
+    #             copy_command = copy_command + f' strength:{rev[10]} init_url:{rev[11]}'
+    #         if rev[12] != 1:
+    #             copy_command = copy_command + f' count:{rev[13]}'
+    #         if rev[13] != 'None':
+    #             copy_command = copy_command + f' style:{rev[13]}'
+    #             extra_params = extra_params + f'\nStyle preset: ``{rev[13]}``'
+    #         if rev[14] != 'None':
+    #             copy_command = copy_command + f' facefix:{rev[14]}'
+    #             extra_params = extra_params + f'\nFace restoration model: ``{rev[14]}``'
+    #         if rev[15] != 1:
+    #             copy_command = copy_command + f' clip_skip:{rev[15]}'
+    #             extra_params = extra_params + f'\nCLIP skip: ``{rev[15]}``'
+    #         embed.add_field(name=f'Other parameters', value=extra_params, inline=False)
+    #         embed.add_field(name=f'Command for copying', value=f'``{copy_command}``', inline=False)
 
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        except(Exception,):
-            # if interaction fails, assume it's because aiya restarted (breaks buttons)
-            button.disabled = True
-            await interaction.response.edit_message(view=self)
-            await interaction.followup.send("I may have been restarted. This button no longer works.", ephemeral=True)
+    #         await interaction.response.send_message(embed=embed, ephemeral=True)
+    #     except(Exception,):
+    #         # if interaction fails, assume it's because aiya restarted (breaks buttons)
+    #         button.disabled = True
+    #         await interaction.response.edit_message(view=self)
+    #         await interaction.followup.send("I may have been restarted. This button no longer works.", ephemeral=True)
 
     #the button to delete generated images
-    # @discord.ui.button(
-    #     custom_id="button_x",
-    #     emoji="❌")
-    async def delete(self, button, interaction):
+    @discord.ui.button(
+        custom_id="button_x",
+        emoji="❌")
+    async def delete(self, button: discord.Button, interaction: discord.Interaction):
         try:
-            # if self.message.embeds[0].footer.text == f'{interaction.user.name}#{interaction.user.discriminator}':
-            if self.message.content.startswith(f'<@{interaction.user.id}>'):
+            if interaction.message == None:
+                message = await interaction.original_response()
+            else:
+                message = interaction.message
+
+            if message.content.startswith(f'<@{interaction.user.id}>'):
                 await interaction.message.delete()
             else:
-                await interaction.response.send_message("You can't delete other people's images!", ephemeral=True)
-        except(Exception,):
-                button.disabled = True
-                await interaction.response.edit_message(view=self)
-                await interaction.followup.send("I may have been restarted. This button no longer works.", ephemeral=True)
+                await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)
+        except Exception as e:
+            print('remove failed')
+            print(f'{e}\n{traceback.print_exc()}')
+            # button.disabled = True
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(f'remove failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
 
-#creating the view that holds a button to delete output
+    def find_between(self, s: str, first: str, last: str):
+        try:
+            start = s.index( first ) + len( first )
+            end = s.index( last, start )
+            return s[start:end]
+        except ValueError:
+            return ''
+
+# creating the view that holds a button to delete output
 class DeleteView(View):
-    def __init__(self, user):
+    def __init__(self, user: discord.User):
         super().__init__(timeout=None)
         self.user = user
 
     # @discord.ui.button(
     #     custom_id="button_x",
     #     emoji="❌")
-    async def delete(self, button, interaction):
+    async def delete(self, button: discord.Button, interaction: discord.Interaction):
         if interaction.user.id == self.user:
-            button.disabled = True
+            # button.disabled = True
             await interaction.message.delete()
         else:
-            await interaction.response.send_message("You can't delete other people's images!", ephemeral=True)
+            await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)

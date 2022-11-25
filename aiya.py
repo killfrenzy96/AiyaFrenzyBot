@@ -43,18 +43,18 @@ async def on_ready():
     #because guilds are only known when on_ready, run files check for guilds
     settings.guilds_check(self)
 
-#fallback feature to delete generations if aiya has been restarted
-@self.event
-async def on_message(message: discord.Message):
-    if message.author == self.user:
-        try:
-            if message.content.startswith('<@') and '> ``' in message.content:
-                await message.add_reaction('❌')
-                if '``/dream prompt:' in message.content:
-                    await message.add_reaction('🔁')
-        except(Exception,):
-            pass
+# @self.event
+# async def on_message(message: discord.Message):
+#     if message.author == self.user:
+#         try:
+#             if message.content.startswith('<@') and '> ``' in message.content:
+#                 await message.add_reaction('❌')
+#                 if '``/dream prompt:' in message.content:
+#                     await message.add_reaction('🔁')
+#         except(Exception,):
+#             pass
 
+#fallback feature to delete generations if aiya has been restarted
 @self.event
 async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
     if ctx.user_id == self.user.id:
@@ -105,146 +105,10 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
                         except ValueError:
                             return ''
 
-                    # command = message.embeds[0].fields[0].value
-                    command = '\n\n ' + find_between(message.content, '``/dream ', '``') + '\n\n'
-                    # messageReference = await self.get_channel(ctx.channel_id).fetch_message(message.reference.message_id)
+                    command = find_between(message.content, '``/dream ', '``')
 
-                    dream_ctx = message
-                    dream_ctx.author = user
-
-                    params = [
-                        'prompt',
-                        'negative',
-                        'checkpoint',
-                        'steps',
-                        'width',
-                        'height',
-                        'guidance_scale',
-                        'sampler',
-                        'seed',
-                        'strength',
-                        'init_url',
-                        'batch',
-                        'style',
-                        'facefix',
-                        'tiling',
-                        'clip_skip',
-                        'script'
-                    ]
-
-                    for param in params:
-                        command = command.replace(f' {param}:', f'\n\n{param}\n')
-                    command = command.replace('``', '\n\n')
-
-                    def get_param(param):
-                        result = find_between(command, f'\n{param}\n', '\n\n')
-                        return result
-
-                    prompt = get_param('prompt')
-
-                    negative = get_param('negative')
-
-                    checkpoint = get_param('checkpoint')
-                    if checkpoint == '': checkpoint = 'Default'
-
-                    with open('resources/models.csv', encoding='utf-8') as csv_file:
-                        model_data = list(csv.reader(csv_file, delimiter='|'))
-                        for row in model_data[1:]:
-                            if checkpoint == row[0]: checkpoint = row[1]
-
-                    try:
-                        width = int(get_param('width'))
-                        if width not in [x for x in range(192, 1025, 64)]: width = 512
-                    except:
-                        width = 512
-
-                    try:
-                        height = int(get_param('height'))
-                        if height not in [x for x in range(192, 1025, 64)]: height = 512
-                    except:
-                        height = 512
-
-                    try:
-                        guidance_scale = float(get_param('guidance_scale'))
-                        guidance_scale = max(1.0, guidance_scale)
-                    except:
-                        guidance_scale = 7.0
-
-                    try:
-                        steps = int(get_param('steps'))
-                        steps = max(1, steps)
-                    except:
-                        steps = -1
-
-                    try:
-                        sampler = get_param('sampler')
-                        if sampler not in settings.global_var.sampler_names: sampler = 'Euler a'
-                    except:
-                        sampler = 'Euler a'
-
-                    seed = -1
-
-                    try:
-                        strength = float(get_param('strength'))
-                        strength = max(0.0, min(1.0, strength))
-                    except:
-                        strength = 0.75
-
-                    try:
-                        batch = int(get_param('batch'))
-                        batch = max(1.0, batch)
-                    except:
-                        batch = 1
-
-                    init_url = get_param('init_url')
-                    if init_url == '': init_url = None
-
-                    style = get_param('style')
-                    if style == '': style = 'None'
-
-                    try:
-                        tiling = get_param('tiling')
-                        if tiling.lower() == 'true':
-                            tiling = True
-                        else:
-                            tiling = False
-                    except:
-                        tiling = False
-
-                    try:
-                        facefix = get_param('facefix')
-                        if facefix == '': facefix = 'None'
-                    except:
-                        facefix = 'None'
-
-                    try:
-                        clip_skip = int(get_param('clip_skip'))
-                        clip_skip = max(1.0, clip_skip)
-                    except:
-                        clip_skip = 0
-
-                    script = get_param('script')
-                    if script == '': script = None
-
-                    await stable_cog.dream_handler(ctx=message,
-                        prompt=prompt,
-                        negative=negative,
-                        checkpoint=checkpoint,
-                        width=width,
-                        height=height,
-                        guidance_scale=guidance_scale,
-                        steps=steps,
-                        sampler=sampler,
-                        seed=seed,
-                        init_url=init_url,
-                        strength=strength,
-                        batch=batch,
-                        style=style,
-                        facefix=facefix,
-                        tiling=tiling,
-                        clip_skip=clip_skip,
-                        script=script
-                    )
+                    message.author = user
+                    await stable_cog.dream_command(message, command)
 
 @self.event
 async def on_guild_join(guild: discord.Guild):

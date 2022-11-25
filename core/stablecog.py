@@ -42,6 +42,27 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             style for style in settings.global_var.style_names
         ]
 
+    # a list of parameters, used to sanatize text
+    dream_params = [
+        'prompt',
+        'negative',
+        'checkpoint',
+        'steps',
+        'width',
+        'height',
+        'guidance_scale',
+        'sampler',
+        'seed',
+        'strength',
+        'init_url',
+        'batch',
+        'style',
+        'facefix',
+        'tiling',
+        'clip_skip',
+        'script'
+    ]
+
     @commands.slash_command(name = 'dream', description = 'Create an image')
     @option(
         'prompt',
@@ -183,32 +204,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         data_model: str = checkpoint
         count: int = batch
         # tiling: bool = False
+        copy_command: str = None
 
         # sanatize input strings
-        params = [
-            'prompt',
-            'negative',
-            'checkpoint',
-            'steps',
-            'height',
-            'width',
-            'guidance_scale',
-            'sampler',
-            'seed',
-            'strength',
-            'init_url',
-            'batch',
-            'style',
-            'facefix',
-            'tiling',
-            'clip_skip',
-            'script'
-        ]
-
         def sanatize(input: str):
             if input:
                 input = input.replace('``', ' ')
-                for param in params:
+                for param in self.dream_params:
                     input = input.replace(f' {param}:', f' {param} ')
             return input
 
@@ -217,13 +219,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         style = sanatize(style)
         init_url = sanatize(init_url)
 
+        #get guild id and user
+        guild = queuehandler.get_guild(ctx)
+        user = queuehandler.get_user(ctx)
+
         #update defaults with any new defaults from settingscog
-        if ctx is discord.ApplicationContext:
-            guild = '% s' % ctx.guild_id
-        elif ctx.guild:
-            guild = '% s' % ctx.guild.id
-        else:
-            guild = 'private'
         if negative_prompt == 'unset':
             negative_prompt = settings.read(guild)['negative_prompt']
         if steps == -1:
@@ -251,6 +251,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             reader = csv.DictReader(f, delimiter='|')
             for row in reader:
                 if row['display_name'] == data_model or row['model_full_name'] == data_model:
+                    model_found = True
                     model_name = row['display_name']
                     data_model = row['model_full_name']
                     #look at the model for activator token and prepend prompt with it
@@ -259,7 +260,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     prompt = prompt.lstrip(' ')
                     break
 
-        print(f'Dream Request -- {ctx.author.name}#{ctx.author.discriminator}')
+        print(f'Dream Request -- {user.name}#{user.discriminator}')
 
         if seed == -1: seed = random.randint(0, 0xFFFFFFFF)
 
@@ -291,11 +292,18 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #formatting aiya initial reply
         append_options = ''
 
+        def get_draw_object_args():
+            return (self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed,
+                    strength, init_image, copy_command, count, style, facefix, tiling, clip_skip, simple_prompt, script)
+
         # get estimate of the compute cost of this dream
         def get_dream_cost(width: int, height: int, steps: int, count: int = 1):
-            return queuehandler.get_dream_cost(queuehandler.DrawObject(
-                self, ctx, prompt, negative_prompt, data_model, steps, height, width, guidance_scale, sampler, seed, strength, init_image, None, count, style, facefix, tiling, clip_skip, simple_prompt, script, None
-            ))
+            dream_cost_draw_object = queuehandler.DrawObject(*get_draw_object_args())
+            dream_cost_draw_object.width = width
+            dream_cost_draw_object.height = height
+            dream_cost_draw_object.steps = steps
+            dream_cost_draw_object.batch_count = count
+            return queuehandler.get_dream_cost(dream_cost_draw_object)
         dream_compute_cost = get_dream_cost(width, height, steps, 1)
 
         #get settings
@@ -435,23 +443,19 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             copy_command = copy_command + f' script:{script}'
         print(copy_command)
 
-        #set up tuple of parameters to pass into the Discord view
-        input_tuple = (ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, count, style, facefix, clip_skip, simple_prompt)
-        view = viewhandler.DrawView(input_tuple)
-
         #setup the queue
         content = None
         ephemeral = False
 
         # calculate total cost of queued items
         dream_cost = get_dream_cost(width, height, steps, count)
-        queue_cost = queuehandler.get_user_queue_cost(ctx.author.id)
+        queue_cost = queuehandler.get_user_queue_cost(user.id)
 
         print(f'Estimated total compute cost: {dream_cost + queue_cost}')
 
         if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
             print(f'Dream rejected: Too much in queue already')
-            content = f'<@{ctx.author.id}> Please wait! You have too much queued up.'
+            content = f'<@{user.id}> Please wait! You have too much queued up.'
             ephemeral = True
             append_options = ''
         else:
@@ -460,7 +464,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
             def get_draw_object():
-                queue_object = queuehandler.DrawObject(self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed, strength, init_image, copy_command, 1, style, facefix, tiling, clip_skip, simple_prompt, script, view)
+                args = get_draw_object_args()
+                queue_object = queuehandler.DrawObject(*args)
+                queue_object.batch_count = 1
+
+                #set up tuple of parameters to pass into the Discord view
+                queue_object.view = viewhandler.DrawView(args)
 
                 # create persistent session since we'll need to do a few API calls
                 s = requests.Session()
@@ -555,7 +564,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                     queuehandler.process_dream(self, get_draw_object(), priority, False)
 
-            content = f'<@{ctx.author.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
+            content = f'<@{user.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
             if count > 1: content = content + f' - Batch: ``{count}``'
             content = content + append_options
 
@@ -568,7 +577,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 if type(ctx) is discord.ApplicationContext:
                     await ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after)
                 elif type(ctx) is discord.Interaction:
-                    ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after)
+                    await ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after)
                 else:
                     await ctx.reply(content, delete_after=delete_after)
             except:
@@ -576,6 +585,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
     #generate the image
     def dream(self, queue_object: queuehandler.DrawObject):
+        user = queuehandler.get_user(queue_object.ctx)
+
         try:
             start_time = time.time()
 
@@ -603,14 +614,15 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if settings.global_var.send_model:
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
 
+            if queue_object.init_image is not None:
+                url = f'{settings.global_var.url}/sdapi/v1/img2img'
+            else:
+                url = f'{settings.global_var.url}/sdapi/v1/txt2img'
+            response = s.post(url=url, json=queue_object.payload)
+            queue_object.payload = None
+
             def post_dream():
                 try:
-                    if queue_object.init_image is not None:
-                        url = f'{settings.global_var.url}/sdapi/v1/img2img'
-                    else:
-                        url = f'{settings.global_var.url}/sdapi/v1/txt2img'
-                    response = s.post(url=url, json=queue_object.payload)
-
                     response_data = response.json()
                     end_time = time.time()
 
@@ -650,9 +662,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                         # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
 
-                        # footer_args = dict(text=f'{queue_object.ctx.author.name}#{queue_object.ctx.author.discriminator}')
-                        # if queue_object.ctx.author.avatar is not None:
-                        #     footer_args['icon_url'] = queue_object.ctx.author.avatar.url
+                        # footer_args = dict(text=f'{user.name}#{user.discriminator}')
+                        # if user.avatar is not None:
+                        #     footer_args['icon_url'] = user.avatar.url
                         # embed.set_footer(**footer_args)
 
                         for (pil_image, buffer) in zip(pil_images, buffer_handles):
@@ -660,16 +672,17 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             buffer.seek(0)
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{queue_object.ctx.author.id}>', embed=embed, files=files))
+                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{user.id}>', embed=embed, files=files))
                         queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', files=files, view=queue_object.view
+                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', files=files, view=queue_object.view
                         ))
+                        queue_object.view = None
                 except Exception as e:
                     print('txt2img failed (thread)')
                     print(response)
                     embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
                     queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+                        ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
                     ))
             Thread(target=post_dream, daemon=True).start()
 
@@ -677,8 +690,183 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             print('txt2img failed (main)')
             embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
             queuehandler.process_upload(queuehandler.UploadObject(
-                ctx=queue_object.ctx, content=f'<@{queue_object.ctx.author.id}> ``{queue_object.copy_command}``', embed=embed
+                ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
             ))
+
+    async def dream_object(self, draw_object: queuehandler.DrawObject):
+        if draw_object.init_image:
+            init_url = draw_object.init_image.url
+        else:
+            init_url = None
+
+        await self.dream_handler(ctx=draw_object.ctx,
+            prompt=draw_object.prompt,
+            negative=draw_object.negative_prompt,
+            checkpoint=draw_object.data_model,
+            width=draw_object.width,
+            height=draw_object.height,
+            guidance_scale=draw_object.guidance_scale,
+            steps=draw_object.steps,
+            sampler=draw_object.sampler,
+            seed=draw_object.seed,
+            init_image=draw_object.init_image,
+            init_url=init_url,
+            strength=draw_object.strength,
+            batch=draw_object.batch_count,
+            style=draw_object.style,
+            facefix=draw_object.facefix,
+            tiling=draw_object.tiling,
+            clip_skip=draw_object.clip_skip,
+            script=draw_object.script
+        )
+
+    async def dream_command(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, command: str, randomize_seed = True):
+        queue_object = self.get_draw_object_from_command(command)
+
+        queue_object.ctx = ctx
+        if randomize_seed:
+            queue_object.seed = -1
+
+        await self.dream_object(queue_object)
+
+    def get_draw_object_from_command(self, command: str):
+        def find_between(s: str, first: str, last: str):
+            try:
+                start = s.index(first) + len(first)
+                end = s.index(last, start)
+                return s[start:end]
+            except ValueError:
+                return ''
+
+        command = '\n\n ' + command + '\n\n'
+
+        for param in self.dream_params:
+            command = command.replace(f' {param}:', f'\n\n{param}\n')
+        command = command.replace('``', '\n\n')
+
+        def get_param(param):
+            result = find_between(command, f'\n{param}\n', '\n\n')
+            return result
+
+        prompt = get_param('prompt')
+
+        negative = get_param('negative')
+
+        checkpoint = get_param('checkpoint')
+        if checkpoint == '': checkpoint = 'Default'
+
+        with open('resources/models.csv', encoding='utf-8') as csv_file:
+            model_data = list(csv.reader(csv_file, delimiter='|'))
+            for row in model_data[1:]:
+                if checkpoint == row[0]: checkpoint = row[1]
+
+        try:
+            width = int(get_param('width'))
+            if width not in [x for x in range(192, 1281, 64)]: width = 512
+        except:
+            width = 512
+
+        try:
+            height = int(get_param('height'))
+            if height not in [x for x in range(192, 1281, 64)]: height = 512
+        except:
+            height = 512
+
+        try:
+            guidance_scale = float(get_param('guidance_scale'))
+            guidance_scale = max(1.0, guidance_scale)
+        except:
+            guidance_scale = 7.0
+
+        try:
+            steps = int(get_param('steps'))
+            steps = max(1, steps)
+        except:
+            steps = -1
+
+        try:
+            sampler = get_param('sampler')
+            if sampler not in settings.global_var.sampler_names: sampler = 'unset'
+        except:
+            sampler = 'unset'
+
+        try:
+            seed = int(get_param('seed'))
+        except:
+            seed = -1
+
+        try:
+            strength = float(get_param('strength'))
+            strength = max(0.0, min(1.0, strength))
+        except:
+            strength = 0.75
+
+        try:
+            batch = int(get_param('batch'))
+            batch = max(1, batch)
+        except:
+            batch = 1
+
+        class simple_init_image:
+            url: str
+        init_url = get_param('init_url')
+        if init_url == '':
+            init_image = None
+            init_url = None
+        else:
+            init_image = simple_init_image()
+            init_image.url = init_url
+
+        style = get_param('style')
+        if style == '': style = 'None'
+
+        try:
+            tiling = get_param('tiling')
+            if tiling.lower() == 'true':
+                tiling = True
+            else:
+                tiling = False
+        except:
+            tiling = False
+
+        try:
+            facefix = get_param('facefix')
+            if facefix == '': facefix = 'None'
+        except:
+            facefix = 'None'
+
+        try:
+            clip_skip = int(get_param('clip_skip'))
+            clip_skip = max(1.0, clip_skip)
+        except:
+            clip_skip = 0
+
+        script = get_param('script')
+        if script == '': script = None
+
+        return queuehandler.DrawObject(
+            cog=None,
+            ctx=None,
+            prompt=prompt,
+            negative_prompt=negative,
+            data_model=checkpoint,
+            steps=steps,
+            width=width,
+            height=height,
+            guidance_scale=guidance_scale,
+            sampler=sampler,
+            seed=seed,
+            strength=strength,
+            init_image=init_image,
+            copy_command=None,
+            batch_count=batch,
+            style=style,
+            facefix=facefix,
+            tiling=tiling,
+            clip_skip=clip_skip,
+            simple_prompt=prompt,
+            script=script
+        )
 
 def setup(bot: discord.Bot):
     bot.add_cog(StableCog(bot))
