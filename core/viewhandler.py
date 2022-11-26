@@ -34,7 +34,7 @@ class DrawModal(Modal):
         if self.input_object.init_image:
             self.add_item(
                 InputText(
-                    label='Seed. Remove to randomize. "T" for img2img.',
+                    label='Seed. Remove to randomize. \'T\' for txt2img.',
                     style=discord.InputTextStyle.short,
                     value=self.input_object.seed,
                     required=False
@@ -43,7 +43,7 @@ class DrawModal(Modal):
         else:
             self.add_item(
                 InputText(
-                    label='Seed. Remove to randomize. "V" for img2img.',
+                    label='Seed. Remove to randomize. \'V\' for img2img.',
                     style=discord.InputTextStyle.short,
                     value=self.input_object.seed,
                     required=False
