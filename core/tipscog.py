@@ -48,7 +48,7 @@ class TipsView(View):
                                    "each step. Word order still applies.",
                              inline=False)
         embed_tips.add_field(name="Buttons",
-                             value='🖋 allows you to edit a prompt.\n'
+                             value='🖋 edits the prompt.\n'
                                    '🖼️ creates variations of your image.\n'
                                    '🔁 repeats the same prompt with a new seed.\n'
                                    '❌ deletes your image.',
