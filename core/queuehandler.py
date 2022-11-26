@@ -40,7 +40,7 @@ class DrawObject:
 #the queue object for extras - upscale
 class UpscaleObject:
     def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command,
-                gfpgan, codeformer, upscale_first,
+                 gfpgan, codeformer, upscale_first,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx

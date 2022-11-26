@@ -46,8 +46,13 @@ class TipsView(View):
         embed_tips.add_field(name="Alternating",
                              value="`[word1|word2]`\nWhen generating an image, the AI will alternate between the words for "
                                    "each step. Word order still applies.",
-                             inline=True)
-        embed_tips.set_footer(text='Also, you can react with ❌ to delete your generated images.')
+                             inline=False)
+        embed_tips.add_field(name="Buttons",
+                             value='🖋 allows you to edit a prompt.\n'
+                                   '🖼️ creates variations of your image.\n'
+                                   '🔁 repeats the same prompt with a new seed.\n'
+                                   '❌ deletes your image.',
+                             inline=False)
 
         await interaction.response.edit_message(embed=embed_tips)
 

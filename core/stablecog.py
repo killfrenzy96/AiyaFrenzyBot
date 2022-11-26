@@ -440,7 +440,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             copy_command = copy_command + f' negative:{negative_prompt}'
         if data_model and model_name != 'Default':
             copy_command = copy_command + f' checkpoint:{model_name}'
-        copy_command = copy_command + f' steps:{steps} width:{width} height:{height} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
+        copy_command = copy_command + f' width:{width} height:{height} steps:{steps} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
         if init_image:
             copy_command = copy_command + f' strength:{strength} init_url:{init_image.url}'
         if style != 'None':
@@ -835,8 +835,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         except:
             batch = 1
 
-        class simple_init_image:
-            url: str
+        class simple_init_image: url: str
         init_url = get_param('init_url')
         if init_url == '':
             init_image = None
