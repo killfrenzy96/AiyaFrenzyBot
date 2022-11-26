@@ -53,14 +53,14 @@ class UpscaleCog(commands.Cog):
         str,
         description='The upscaler model to use.',
         required=False,
-        choices=['None', 'Lanczos', 'Nearest', 'LDSR', 'SwinIR_4x', 'ScuNET', 'ScuNET PSNR', '4x_FatalPixels_340000_G', '4x_FuzzyBox', 'lollypop', '4xESRGAN', '4x-UltraSharp', '4x-UniScale_Restore', 'BSRGAN', '4x-UniScaleV2_Soft', '4x-UniScaleV2_Moderate', '4x-UniScale-Balanced [72000g]', '4xBox', '4x-UniScaleV2_Sharp'],
+        choices=settings.global_var.upscaler_names,
     )
     @option(
         'upscaler_2',
         str,
         description='The 2nd upscaler model to use.',
         required=False,
-        choices=['None', 'Lanczos', 'Nearest', 'LDSR', 'SwinIR_4x', 'ScuNET', 'ScuNET PSNR', '4x_FatalPixels_340000_G', '4x_FuzzyBox', 'lollypop', '4xESRGAN', '4x-UltraSharp', '4x-UniScale_Restore', 'BSRGAN', '4x-UniScaleV2_Soft', '4x-UniScaleV2_Moderate', '4x-UniScale-Balanced [72000g]', '4xBox', '4x-UniScaleV2_Sharp'],
+        choices=settings.global_var.upscaler_names,
     )
     @option(
         'upscaler_2_strength',
@@ -90,8 +90,8 @@ class UpscaleCog(commands.Cog):
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
                             resize: float = 4.0,
-                            upscaler_1: str = "SwinIR_4x",
-                            upscaler_2: Optional[str] = "None",
+                            upscaler_1: str = 'R-ESRGAN 4x+',
+                            upscaler_2: Optional[str] = 'None',
                             upscaler_2_strength: Optional[float] = 0.5,
                             gfpgan: Optional[float] = 0.0,
                             codeformer: Optional[float] = 0.0,

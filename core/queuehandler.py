@@ -192,27 +192,35 @@ def process_queue():
                 active_thread = Thread(target=queue_object.cog.dream, args=[queue_object])
                 active_thread.start()
 
-                in_progress = True
-                while in_progress:
-                    time.sleep(0.5)
-                    progress = get_progress()
-                    if progress:
-                        job_count = int(progress['state']['job_count'])
-                        eta = float(progress['eta_relative'])
-                        completed = float(progress['state']['sampling_step']) / float(progress['state']['sampling_steps'])
-                        # print(f'Progress job_count={job_count} eta={eta} completed={completed} active_thread={active_thread.is_alive()} buffer_thread={buffer_thread.is_alive()}')
-                        if active_thread.is_alive() == False or (
-                            job_count != -1 and job_count <= 1 and
-                            ((eta != 0.0 and eta < 3.0) or (eta == 0.0 and completed != 0.0 and completed > 0.5))
-                        ):
-                            # queue up next dream
-                            in_progress = False
+                if type(queue_object) != DrawObject:
+                    active_thread.join()
+                else:
+                    wait = True
+                    while wait:
+                        time.sleep(0.5)
+                        progress = get_progress()
+                        if progress:
+                            job_count = int(progress['state']['job_count'])
+                            eta = float(progress['eta_relative'])
+                            try:
+                                completed = float(progress['state']['sampling_step']) / float(progress['state']['sampling_steps'])
+                            except:
+                                completed = 0.0
+
+                            # print(f'Progress job_count={job_count} eta={eta} completed={completed} active_thread={active_thread.is_alive()} buffer_thread={buffer_thread.is_alive()}')
+                            if active_thread.is_alive() == False or (
+                                job_count != -1 and job_count <= 1 and
+                                ((eta != 0.0 and eta < 3.0) or (eta == 0.0 and completed != 0.0 and completed > 0.5))
+                            ):
+                                # queue up next dream
+                                wait = False
+                                continue
+                            else:
+                                # wait before queueing again
+                                pass
                         else:
-                            # wait before queueing again
-                            pass
-                    else:
-                        print('Warning: WebUI offline. Waiting for WebUI...')
-                        time.sleep(19.0)
+                            print('Warning: WebUI offline. Waiting for WebUI...')
+                            time.sleep(19.0)
             except Exception as e:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
             queue_index = 0

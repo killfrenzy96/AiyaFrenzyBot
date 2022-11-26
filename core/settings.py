@@ -40,6 +40,7 @@ class GlobalVar:
     model_names = {}
     style_names = {}
     facefix_models = []
+    upscaler_names = []
     model_fn_index = 0
     send_model = False
 
@@ -194,6 +195,12 @@ def files_check():
         global_var.style_names[s2['name']] = s2['prompt']
     for s3 in r3.json():
         global_var.facefix_models.append(s3['name'])
+
+    global_var.upscaler_names = [
+        'Lanczos', 'Nearest', 'LDSR', 'SwinIR_4x', 'lollypop',
+        'R-ESRGAN General 4xV3', 'R-ESRGAN General WDN 4xV3', 'R-ESRGAN AnimeVideo',
+        'R-ESRGAN 4x+', 'R-ESRGAN 4x+ Anime6B'
+    ]
 
     if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
 
