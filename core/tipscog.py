@@ -86,11 +86,14 @@ class TipsView(View):
         label="About me")
     async def button_about(self, button, interaction):
 
-        url = 'https://github.com/Kilvoctu/aiyabot'
+        url_frenzy = 'https://github.com/killfrenzy96/aiyabot'
+        url_aiya = 'https://github.com/Kilvoctu/aiyabot'
         url2 = 'https://raw.githubusercontent.com/Kilvoctu/kilvoctu.github.io/master/pics/previewthumb.png'
         embed_about = discord.Embed(title="About me",
                                     description=f"Hi! I'm an open-source Discord bot written in Python.\n"
-                                                f"[My home is here]({url}) if you'd like to check it out!")
+                                                f"This is a fork of aiyabot.\n"
+                                                f"[My home is here]({url_frenzy}) if you want to see :3\n"
+                                                f"[The original aiyabot is here]({url_aiya}) if you'd like to check it out!")
         embed_about.colour = settings.global_var.embed_color
         embed_about.set_thumbnail(url=url2)
         embed_about.set_footer(text='Have a lovely day!', icon_url=url2)
