@@ -59,8 +59,7 @@ To generate an image from text, use the /draw command and include your prompt as
 - /upscale command - resize your image.
 - buttons - certain outputs will contain buttons.
   - 🖋 - edit prompt, then generate a new image with same parameters.
-  - 🎲 - randomize seed, then generate a new image with same parameters.
-  - 📋 - view the generated image's information.
+  - 🔁 - randomize seed, then generate a new image with same parameters.
   - ❌ - deletes the generated image.
 
 ## Notes
