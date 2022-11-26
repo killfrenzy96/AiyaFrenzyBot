@@ -68,13 +68,34 @@ class UpscaleCog(commands.Cog):
         description='The visibility of the 2nd upscaler model. (0.0 to 1.0)',
         required=False,
     )
+    @option(
+        'gfpgan',
+        float,
+        description='The visibility of the GFPGAN face restoration model. (0.0 to 1.0)',
+        required=False,
+    )
+    @option(
+        'codeformer',
+        float,
+        description='The visibility of the codeformer face restoration model. (0.0 to 1.0)',
+        required=False,
+    )
+    @option(
+        'upscale_first',
+        bool,
+        description='Do the upscale before restoring faces. Default: False',
+        required=False,
+    )
     async def dream_handler(self, ctx: discord.ApplicationContext, *,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
                             resize: float = 4.0,
                             upscaler_1: str = "SwinIR_4x",
                             upscaler_2: Optional[str] = "None",
-                            upscaler_2_strength: Optional[float] = 0.5):
+                            upscaler_2_strength: Optional[float] = 0.5,
+                            gfpgan: Optional[float] = 0.0,
+                            codeformer: Optional[float] = 0.0,
+                            upscale_first: Optional[bool] = False):
 
         #get guild id and user
         guild = queuehandler.get_guild(ctx)
@@ -138,13 +159,16 @@ class UpscaleCog(commands.Cog):
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, view)
+                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, gfpgan, codeformer, upscale_first, view)
 
                 #construct a payload
                 payload = {
                     "upscaling_resize": queue_object.resize,
                     "upscaler_1": queue_object.upscaler_1,
-                    "image": 'data:image/png;base64,' + image
+                    "image": 'data:image/png;base64,' + image,
+                    "gfpgan_visibility": queue_object.gfpgan,
+                    "codeformer_visibility": queue_object.codeformer,
+                    "upscale_first": queue_object.upscale_first
                 }
                 if queue_object.upscaler_2 is not None:
                     up2_payload = {
