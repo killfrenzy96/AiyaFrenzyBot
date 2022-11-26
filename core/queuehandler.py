@@ -108,7 +108,8 @@ def get_user_queue_cost(user_id: int):
     queue_cost = 0.0
     queue = GlobalQueue.queue_high + GlobalQueue.queue_medium + GlobalQueue.queue_low + GlobalQueue.queue_lowest
     for queue_object in queue:
-        if queue_object.ctx.author.id == user_id:
+        user = get_user(queue_object)
+        if user and user.id == user_id:
             queue_cost += get_dream_cost(queue_object)
     return queue_cost
 

@@ -9,20 +9,16 @@ class CancelCog(commands.Cog, name='Cancel Cog', description='Cancels all images
 
     @commands.slash_command(name = "cancel", description = "Cancels all images in queue.")
     async def cancel(self, ctx: discord.ApplicationContext):
-        def clear_queue(queue: list[queuehandler.DrawObject]):
-            queue_cleared: int = 0
+        user = queuehandler.get_user(ctx)
+        total_cleared: int = 0
+        for queue in queuehandler.GlobalQueue.queues:
             index = len(queue)
             while index > 0:
                 index -= 1
-                if queue[index].ctx.author.id == ctx.author.id:
+                user_compare = queuehandler.get_user(queue[index].ctx)
+                if user.id == user_compare.id:
                     queue.pop()
-                    queue_cleared += 1
-            return queue_cleared
-
-        total_cleared: int = 0
-        total_cleared += clear_queue(queuehandler.GlobalQueue.queue_high)
-        total_cleared += clear_queue(queuehandler.GlobalQueue.queue)
-        total_cleared += clear_queue(queuehandler.GlobalQueue.queue_low)
+                    total_cleared += 1
 
         embed=discord.Embed()
         embed.add_field(name="Items Cleared", value=f'``{total_cleared}`` dreams cleared from queue', inline=False)
