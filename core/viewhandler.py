@@ -86,13 +86,13 @@ class DrawModal(Modal):
 
         try:
             seed = self.children[2].value.lower()
-            if 'i' in seed:
+            if seed.startswith('i'):
                 class simple_init_image:
                     url: str
                 draw_object.init_image = simple_init_image()
                 draw_object.init_image.url = self.message.attachments[0].url
                 draw_object.seed = int(seed.replace('v', ''))
-            elif 't' in seed:
+            elif seed.startswith('t'):
                 draw_object.init_image = None
                 draw_object.seed = int(seed.replace('t', ''))
             else:
