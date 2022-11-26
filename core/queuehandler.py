@@ -74,7 +74,7 @@ class GlobalQueue:
 def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
     if type(queue_object) is DrawObject:
         dream_compute_cost: float = float(queue_object.batch_count)
-        dream_compute_cost *= max(1.0, queue_object.steps / 20)
+        dream_compute_cost *= queue_object.steps / 20
         dream_compute_cost *= pow(max(1.0, (queue_object.width * queue_object.height) / (512 * 512)), 1.25)
 
         if queue_object.init_image: dream_compute_cost *= max(0.2, queue_object.strength)
