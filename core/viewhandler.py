@@ -34,7 +34,7 @@ class DrawModal(Modal):
         if self.input_object.init_image:
             self.add_item(
                 InputText(
-                    label='Seed. Remove to randomize.',
+                    label='Seed. Remove to randomize. "T" for img2img.',
                     style=discord.InputTextStyle.short,
                     value=self.input_object.seed,
                     required=False
@@ -92,6 +92,9 @@ class DrawModal(Modal):
                 draw_object.init_image = simple_init_image()
                 draw_object.init_image.url = self.message.attachments[0].url
                 draw_object.seed = int(seed.replace('v', ''))
+            elif 't' in seed:
+                draw_object.init_image = None
+                draw_object.seed = int(seed.replace('t', ''))
             else:
                 draw_object.seed = int(seed)
         except:
