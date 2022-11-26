@@ -307,12 +307,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     script)
 
         # get estimate of the compute cost of this dream
-        def get_dream_cost(width: int, height: int, steps: int, count: int = 1):
-            dream_cost_draw_object = queuehandler.DrawObject(*get_draw_object_args())
-            dream_cost_draw_object.width = width
-            dream_cost_draw_object.height = height
-            dream_cost_draw_object.steps = steps
-            dream_cost_draw_object.batch_count = count
+        def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
+            args = get_draw_object_args()
+            dream_cost_draw_object = queuehandler.DrawObject(*args)
+            dream_cost_draw_object.width = _width
+            dream_cost_draw_object.height = _height
+            dream_cost_draw_object.steps = _steps
+            dream_cost_draw_object.batch_count = _count
             return queuehandler.get_dream_cost(dream_cost_draw_object)
         dream_compute_cost = get_dream_cost(width, height, steps, 1)
 

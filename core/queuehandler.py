@@ -75,31 +75,17 @@ class GlobalQueue:
     queues: list[list[DrawObject | UpscaleObject | IdentifyObject]] = [queue_high, queue_medium, queue_low, queue_lowest]
     queue_length = 0
 
+    slow_samplers = ['Huen', 'DPM2', 'DPM2 a', 'DPM++ 2S a', 'DPM2 Karras', 'DPM2 a Karras', 'DPM++ 2S a Karras']
+
 # get estimate of the compute cost of a dream
 def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
     if type(queue_object) is DrawObject:
         dream_compute_cost = float(queue_object.steps) / 20.0
-        dream_compute_cost *= pow(max(1.0, (queue_object.width * queue_object.height) / (512 * 512)), 1.25)
+        dream_compute_cost *= pow(max(1.0, float(queue_object.width * queue_object.height) / float(512 * 512)), 1.25)
         if queue_object.init_image: dream_compute_cost *= max(0.2, queue_object.strength)
-
-        match queue_object.sampler:
-            case 'Huen':
-                dream_compute_cost *= 2.0
-            case 'DPM2':
-                dream_compute_cost *= 2.0
-            case 'DPM2 a':
-                dream_compute_cost *= 2.0
-            case 'DPM++ 2S a':
-                dream_compute_cost *= 2.0
-            case 'DPM2 Karras':
-                dream_compute_cost *= 2.0
-            case 'DPM2 a Karras':
-                dream_compute_cost *= 2.0
-            case 'DPM++ 2S a Karras':
-                dream_compute_cost *= 2.0
-
+        if queue_object.sampler in GlobalQueue.slow_samplers: dream_compute_cost *= 2.0
         dream_compute_cost = max(1.0, dream_compute_cost)
-        dream_compute_cost = float(queue_object.batch_count)
+        dream_compute_cost *= float(queue_object.batch_count)
 
     elif type(queue_object) is UpscaleObject:
         dream_compute_cost = queue_object.resize
