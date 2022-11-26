@@ -19,7 +19,7 @@ This is modified from AIYABOT for my Discord server. The goal of these modificat
 # .env
 TOKEN = put your bot token here
 ```
-- Run the AIYA by running launch.bat (or launch.sh for Linux)
+- Run AIYA by running launch.bat (or launch.sh for Linux)
 
 ## Usage
 
@@ -32,7 +32,7 @@ To generate an image from text, use the /draw command and include your prompt as
 - negative prompts
 - swap model/checkpoint (_see Notes or [wiki](https://github.com/Kilvoctu/aiyabot/wiki/Model-swapping)_)
 - sampling steps
-- width/height (up to 768)
+- width/height (up to 1280)
 - CFG scale
 - sampling method
 - seed
@@ -51,6 +51,7 @@ To generate an image from text, use the /draw command and include your prompt as
   - sampling steps / max steps
   - sampling method
   - batch count / max batch count
+  - high-res fix
   - CLIP skip
 - /identify command - create a caption for your image.
 - /stats command - shows how many /draw commands have been used.

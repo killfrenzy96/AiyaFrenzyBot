@@ -59,6 +59,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         'style',
         'facefix',
         'tiling',
+        'highres_fix',
         'clip_skip',
         'script'
     ]
@@ -169,6 +170,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         required=False,
     )
     @option(
+        'highres_fix',
+        bool,
+        description='Tries to fix issues from generating high-res images. Takes longer!',
+        required=False,
+    )
+    @option(
         'clip_skip',
         int,
         description='Number of last layers of CLIP model to skip',
@@ -197,13 +204,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             style: Optional[str] = 'None',
                             facefix: Optional[str] = 'None',
                             tiling: Optional[bool] = False,
+                            highres_fix: Optional[bool] = False,
                             clip_skip: Optional[int] = 0,
                             script: Optional[str] = None):
 
         negative_prompt: str = negative
         data_model: str = checkpoint
         count: int = batch
-        # tiling: bool = False
         copy_command: str = None
 
         # sanatize input strings
@@ -293,8 +300,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         append_options = ''
 
         def get_draw_object_args():
-            return (self, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed,
-                    strength, init_image, copy_command, count, style, facefix, tiling, clip_skip, simple_prompt, script)
+            return (self, ctx, prompt, negative_prompt, data_model,
+                    steps, width, height, guidance_scale, sampler, seed,
+                    strength, init_image, copy_command, count, style,
+                    facefix, tiling, highres_fix, clip_skip, simple_prompt,
+                    script)
 
         # get estimate of the compute cost of this dream
         def get_dream_cost(width: int, height: int, steps: int, count: int = 1):
@@ -417,6 +427,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
         # if tiling:
         #     append_options = append_options + '\nTiling: ``' + str(tiling) + '``'
+        # if highres_fix:
+        #     append_options = append_options + '\High-res fix: ``' + str(highres_fix) + '``'
         # if clip_skip != 1:
         #     append_options = append_options + f'\nCLIP skip: ``{clip_skip}``'
 
@@ -435,6 +447,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             copy_command = copy_command + f' facefix:{facefix}'
         if tiling:
             copy_command = copy_command + f' tiling:{tiling}'
+        if highres_fix:
+            copy_command = copy_command + f' highres_fix:{highres_fix}'
         if clip_skip != 1:
             copy_command = copy_command + f' clip_skip:{clip_skip}'
         if count > 1:
@@ -495,6 +509,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         queue_object.style
                     ]
                 }
+
+                # update payload is init_img or init_url is used
                 if queue_object.init_image is not None:
                     img_payload = {
                         "init_images": [
@@ -503,6 +519,15 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         "denoising_strength": queue_object.strength
                     }
                     payload.update(img_payload)
+
+                # update payload if high-res fix is used
+                if queue_object.highres_fix:
+                    highres_payload = {
+                        "enable_hr": queue_object.highres_fix,
+                        "denoising_strength": queue_object.strength
+                    }
+                    payload.update(highres_payload)
+
                 # add any options that would go into the override_settings
                 override_settings = {"CLIP_stop_at_last_layers": queue_object.clip_skip}
                 if queue_object.facefix != 'None':
@@ -716,6 +741,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             style=draw_object.style,
             facefix=draw_object.facefix,
             tiling=draw_object.tiling,
+            highres_fix=draw_object.highres_fix,
             clip_skip=draw_object.clip_skip,
             script=draw_object.script
         )
@@ -830,6 +856,15 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             tiling = False
 
         try:
+            highres_fix = get_param('tiling')
+            if highres_fix.lower() == 'true':
+                highres_fix = True
+            else:
+                highres_fix = False
+        except:
+            highres_fix = False
+
+        try:
             facefix = get_param('facefix')
             if facefix == '': facefix = 'None'
         except:
@@ -863,6 +898,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             style=style,
             facefix=facefix,
             tiling=tiling,
+            highres_fix=highres_fix,
             clip_skip=clip_skip,
             simple_prompt=prompt,
             script=script

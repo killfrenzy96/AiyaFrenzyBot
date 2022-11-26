@@ -268,9 +268,12 @@ class DrawView(View):
     #         if rev[14] != 'None':
     #             copy_command = copy_command + f' facefix:{rev[14]}'
     #             extra_params = extra_params + f'\nFace restoration model: ``{rev[14]}``'
-    #         if rev[15] != 1:
-    #             copy_command = copy_command + f' clip_skip:{rev[15]}'
-    #             extra_params = extra_params + f'\nCLIP skip: ``{rev[15]}``'
+    #         if rev[15]:
+    #             copy_command = copy_command + f' enable_hr:{rev[15]}'
+    #             extra_params = extra_params + f'\nHigh-res fix: ``{rev[15]}``'
+    #         if rev[16] != 1:
+    #             copy_command = copy_command + f' clip_skip:{rev[16]}'
+    #             extra_params = extra_params + f'\nCLIP skip: ``{rev[16]}``'
     #         embed.add_field(name=f'Other parameters', value=extra_params, inline=False)
     #         embed.add_field(name=f'Command for copying', value=f'``{copy_command}``', inline=False)
 
