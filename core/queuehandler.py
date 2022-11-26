@@ -2,7 +2,10 @@ import asyncio
 import discord
 import traceback
 import time
+import requests
 from threading import Thread
+
+from core import settings
 
 #the queue object for txt2image and img2img
 class DrawObject:
@@ -143,16 +146,73 @@ def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObjec
     if print_info:
         return queue_length
 
+def get_progress():
+    try:
+        s = requests.Session()
+        if settings.global_var.api_auth:
+            s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
+
+        # send normal payload to webui
+        if settings.global_var.gradio_auth:
+            login_payload = {
+                'username': settings.global_var.username,
+                'password': settings.global_var.password
+            }
+            s.post(settings.global_var.url + '/login', data=login_payload)
+        # else:
+        #     s.post(settings.global_var.url + '/login')
+
+        url = f'{settings.global_var.url}/sdapi/v1/progress'
+        response = s.get(url=url)
+        return response.json()
+    except:
+        return None
 
 def process_queue():
     queue_index = 0
+    active_thread = Thread()
+    buffer_thread = Thread()
+
     while queue_index < len(GlobalQueue.queues):
         queue = GlobalQueue.queues[queue_index]
         if queue:
             queue_object = queue.pop(0)
             try:
-                # print(f'Dream started: {queue_object.seed} - {time.time()}')
-                queue_object.cog.dream(queue_object)
+                # start next dream
+                # queue_object.cog.dream(queue_object)
+
+                # queue up dream while the current one is running
+                if active_thread.is_alive() and buffer_thread.is_alive():
+                    active_thread.join()
+                    active_thread = buffer_thread
+                    buffer_thread = Thread()
+                if active_thread.is_alive():
+                    buffer_thread = active_thread
+
+                active_thread = Thread(target=queue_object.cog.dream, args=[queue_object])
+                active_thread.start()
+
+                in_progress = True
+                while in_progress:
+                    time.sleep(0.5)
+                    progress = get_progress()
+                    if progress:
+                        job_count = int(progress['state']['job_count'])
+                        eta = float(progress['eta_relative'])
+                        completed = float(progress['state']['sampling_step']) / float(progress['state']['sampling_steps'])
+                        # print(f'Progress job_count={job_count} eta={eta} completed={completed} active_thread={active_thread.is_alive()} buffer_thread={buffer_thread.is_alive()}')
+                        if active_thread.is_alive() == False or (
+                            job_count != -1 and job_count <= 1 and
+                            ((eta != 0.0 and eta < 3.0) or (eta == 0.0 and completed != 0.0 and completed > 0.5))
+                        ):
+                            # queue up next dream
+                            in_progress = False
+                        else:
+                            # wait before queueing again
+                            pass
+                    else:
+                        print('Warning: WebUI offline. Waiting for WebUI...')
+                        time.sleep(19.0)
             except Exception as e:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
             queue_index = 0
