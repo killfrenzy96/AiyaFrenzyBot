@@ -43,7 +43,7 @@ class DrawModal(Modal):
         else:
             self.add_item(
                 InputText(
-                    label='Seed. Remove to randomize. \'V\' for img2img.',
+                    label='Seed. Remove to randomize. \'I\' for img2img.',
                     style=discord.InputTextStyle.short,
                     value=self.input_object.seed,
                     required=False
@@ -86,7 +86,7 @@ class DrawModal(Modal):
 
         try:
             seed = self.children[2].value.lower()
-            if 'v' in seed:
+            if 'i' in seed:
                 class simple_init_image:
                     url: str
                 draw_object.init_image = simple_init_image()
