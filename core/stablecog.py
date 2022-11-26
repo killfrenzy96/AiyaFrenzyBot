@@ -217,6 +217,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         def sanatize(input: str):
             if input:
                 input = input.replace('``', ' ')
+                input = input.replace('\n', ' ')
                 for param in self.dream_params:
                     input = input.replace(f' {param}:', f' {param} ')
             return input
