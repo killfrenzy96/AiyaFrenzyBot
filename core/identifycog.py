@@ -59,7 +59,6 @@ class IdentifyCog(commands.Cog):
                 await ctx.send_response('I need an image to identify!', ephemeral=True)
                 has_image = False
 
-        view = viewhandler.DeleteView(user.id)
         #set up the queue if an image was found
         content = None
         ephemeral = False
@@ -75,7 +74,7 @@ class IdentifyCog(commands.Cog):
 
             #creates the upscale object out of local variables
             def get_identify_object():
-                queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, view)
+                queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, viewhandler.DeleteView(user.id))
 
                 #construct a payload
                 payload = {

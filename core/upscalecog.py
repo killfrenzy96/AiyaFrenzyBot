@@ -140,8 +140,6 @@ class UpscaleCog(commands.Cog):
             append_options = append_options + '\nUpscaler 2: ``' + str(upscaler_2) + '``'
             append_options = append_options + ' - Strength: ``' + str(upscaler_2_strength) + '``'
 
-        view = viewhandler.DeleteView(user.id)
-
         #set up the queue if an image was found
         content = None
         ephemeral = False
@@ -159,7 +157,7 @@ class UpscaleCog(commands.Cog):
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, gfpgan, codeformer, upscale_first, view)
+                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
 
                 #construct a payload
                 payload = {

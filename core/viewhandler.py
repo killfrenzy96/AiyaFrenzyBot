@@ -320,12 +320,23 @@ class DeleteView(View):
         super().__init__(timeout=None)
         self.user = user
 
-    # @discord.ui.button(
-    #     custom_id="button_x",
-    #     emoji="❌")
+    @discord.ui.button(
+        custom_id="button_x",
+        emoji="❌")
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
-        if interaction.user.id == self.user:
+        try:
+            if interaction.message == None:
+                message = await interaction.original_response()
+            else:
+                message = interaction.message
+
+            if message.content.startswith(f'<@{interaction.user.id}>'):
+                await interaction.message.delete()
+            else:
+                await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)
+        except Exception as e:
+            print('remove failed')
+            print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
-            await interaction.message.delete()
-        else:
-            await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)
+            await interaction.response.edit_message(view=self)
+            await interaction.followup.send(f'remove failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
