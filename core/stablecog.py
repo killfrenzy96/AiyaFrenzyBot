@@ -785,7 +785,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         def get_param(param):
             result = find_between(command, f'\n{param}\n', '\n\n')
-            return result
+            return result.strip()
 
         prompt = get_param('prompt')
 

@@ -57,25 +57,25 @@ class DrawModal(Modal):
             )
         )
 
-        extra_settings_value = f'batch:{self.input_object.batch_count}'
-        extra_settings_value += f'\nsteps:{self.input_object.steps}'
-        extra_settings_value += f'\nguidance_scale:{self.input_object.guidance_scale}'
+        extra_settings_value = f'batch: {self.input_object.batch_count}'
+        extra_settings_value += f'\nsteps: {self.input_object.steps}'
+        extra_settings_value += f'\nguidance_scale: {self.input_object.guidance_scale}'
 
         if self.input_object.init_image:
             init_url = self.input_object.init_image.url
-            extra_settings_value += f'\nstrength:{self.input_object.strength}'
+            extra_settings_value += f'\nstrength: {self.input_object.strength}'
         else:
             init_url = ''
 
-        extra_settings_value += f'\n\ncheckpoint:{self.input_object.data_model}'
-        extra_settings_value += f'\nwidth:{self.input_object.width}'
-        extra_settings_value += f'\nheight:{self.input_object.height}'
-        extra_settings_value += f'\nstyle:{self.input_object.style}'
-        extra_settings_value += f'\nfacefix:{self.input_object.facefix}'
-        extra_settings_value += f'\ntiling:{self.input_object.tiling}'
-        extra_settings_value += f'\nhighres_fix:{self.input_object.highres_fix}'
-        extra_settings_value += f'\nclip_skip:{self.input_object.clip_skip}'
-        extra_settings_value += f'\nscript:{self.input_object.script}'
+        extra_settings_value += f'\n\ncheckpoint: {self.input_object.data_model}'
+        extra_settings_value += f'\nwidth: {self.input_object.width}'
+        extra_settings_value += f'\nheight: {self.input_object.height}'
+        extra_settings_value += f'\nstyle: {self.input_object.style}'
+        extra_settings_value += f'\nfacefix: {self.input_object.facefix}'
+        extra_settings_value += f'\ntiling: {self.input_object.tiling}'
+        extra_settings_value += f'\nhighres_fix: {self.input_object.highres_fix}'
+        extra_settings_value += f'\nclip_skip: {self.input_object.clip_skip}'
+        extra_settings_value += f'\nscript: {self.input_object.script}'
 
         self.add_item(
             InputText(
