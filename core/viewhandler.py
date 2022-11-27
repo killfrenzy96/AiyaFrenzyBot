@@ -131,7 +131,7 @@ class DrawModal(Modal):
                 if text: commands[index] = text.split(':')[0]
 
             command_draw_object = stable_cog.get_draw_object_from_command(command.replace('\n', ' '))
-            if 'checkpoint' in commands:        draw_object.data_model      = command_draw_object.data_model
+            if 'checkpoint' in commands:        draw_object.model_name      = command_draw_object.model_name
             if 'width' in commands:             draw_object.width           = command_draw_object.width
             if 'height' in commands:            draw_object.height          = command_draw_object.height
             if 'steps' in commands:             draw_object.steps           = command_draw_object.steps
