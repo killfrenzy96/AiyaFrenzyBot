@@ -3,11 +3,26 @@ import discord
 import random
 import copy
 import traceback
+import time
 from discord.ui import InputText, Modal, View
 
 from core import queuehandler
 from core import settings
 from core import stablecog
+
+user_last_delete: dict = {}
+
+def confirm_user_delete(user_id: int):
+    try:
+        return (time.time() - float(user_last_delete[str(user_id)])) > 30.0
+    except:
+        return True
+
+def update_user_delete(user_id: int):
+    user_last_delete_update = {
+        f'{user_id}': time.time()
+    }
+    user_last_delete.update(user_last_delete_update)
 
 #the modal that is used for the 🖋 button
 class DrawModal(Modal):
@@ -119,6 +134,39 @@ class DrawModal(Modal):
         draw_object.payload = None
 
         await stablecog.StableCog(self).dream_object(draw_object)
+
+# create the view to confirm the deletion of an image
+class DeleteModal(Modal):
+    def __init__(self, message: discord.Message) -> None:
+        super().__init__(title="Confirm Delete")
+        self.message = message
+
+        self.add_item(
+            InputText(
+                label='Confirmation',
+                style=discord.InputTextStyle.short,
+                value='Press submit to delete this image.',
+                required=False
+            )
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        try:
+            if not self.message.content.startswith(f'<@{interaction.user.id}>'):
+                await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)
+                return
+
+            await interaction.message.delete()
+            await interaction.response.defer()
+            update_user_delete(interaction.user.id)
+
+        except Exception as e:
+            print('delete failed')
+            print(f'{e}\n{traceback.print_exc()}')
+            # button.disabled = True
+            # await interaction.response.edit_message(view=self)
+            await interaction.response.defer()
+            await interaction.followup.send(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
 
 #creating the view that holds the buttons for /draw output
 class DrawView(View):
@@ -277,15 +325,22 @@ class DrawView(View):
             else:
                 message = interaction.message
 
-            if message.content.startswith(f'<@{interaction.user.id}>'):
-                await interaction.message.delete()
-            else:
+            if not message.content.startswith(f'<@{interaction.user.id}>'):
                 await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)
+                return
+
+            if confirm_user_delete(interaction.user.id):
+                await interaction.response.send_modal(DeleteModal(message))
+            else:
+                await interaction.message.delete()
+                update_user_delete(interaction.user.id)
+
         except Exception as e:
             print('delete failed')
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
-            await interaction.response.edit_message(view=self)
+            # await interaction.response.edit_message(view=self)
+            await interaction.response.defer()
             await interaction.followup.send(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
 
 
@@ -314,13 +369,20 @@ class DeleteView(View):
             else:
                 message = interaction.message
 
-            if message.content.startswith(f'<@{interaction.user.id}>'):
-                await interaction.message.delete()
-            else:
+            if not message.content.startswith(f'<@{interaction.user.id}>'):
                 await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)
+                return
+
+            if confirm_user_delete(interaction.user.id):
+                await interaction.response.send_modal(DeleteModal(message))
+            else:
+                await interaction.message.delete()
+                update_user_delete(interaction.user.id)
+
         except Exception as e:
             print('delete failed')
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
-            await interaction.response.edit_message(view=self)
+            # await interaction.response.edit_message(view=self)
+            await interaction.response.defer()
             await interaction.followup.send(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30)
