@@ -174,10 +174,13 @@ class DeleteModal(Modal):
     async def callback(self, interaction: discord.Interaction):
         loop = asyncio.get_event_loop()
         try:
-            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                loop.create_task(interaction.response.defer())
-                loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
-                return
+            try:
+                if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                    loop.create_task(interaction.response.defer())
+                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    return
+            except:
+                pass
 
             if not self.message.content.startswith(f'<@{interaction.user.id}>'):
                 loop.create_task(interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30))
@@ -215,10 +218,13 @@ class DrawView(View):
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_event_loop()
         try:
-            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                loop.create_task(interaction.response.defer())
-                loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
-                return
+            try:
+                if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                    loop.create_task(interaction.response.defer())
+                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    return
+            except:
+                pass
 
             if interaction.message == None:
                 message = await interaction.original_response()
@@ -256,10 +262,13 @@ class DrawView(View):
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_event_loop()
         try:
-            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                loop.create_task(interaction.response.defer())
-                loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
-                return
+            try:
+                if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                    loop.create_task(interaction.response.defer())
+                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    return
+            except:
+                pass
 
             if interaction.message == None:
                 message = await interaction.original_response()
@@ -317,10 +326,13 @@ class DrawView(View):
     async def button_reroll(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_event_loop()
         try:
-            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                loop.create_task(interaction.response.defer())
-                loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
-                return
+            try:
+                if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                    loop.create_task(interaction.response.defer())
+                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    return
+            except:
+                pass
 
             # get input object
             if self.input_object:
@@ -366,10 +378,13 @@ class DrawView(View):
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_event_loop()
         try:
-            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                loop.create_task(interaction.response.defer())
-                loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
-                return
+            try:
+                if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                    loop.create_task(interaction.response.defer())
+                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    return
+            except:
+                pass
 
             if interaction.message == None:
                 message = await interaction.original_response()
@@ -416,10 +431,13 @@ class DeleteView(View):
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_event_loop()
         try:
-            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                loop.create_task(interaction.response.defer())
-                loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
-                return
+            try:
+                if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                    loop.create_task(interaction.response.defer())
+                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    return
+            except:
+                pass
 
             if interaction.message == None:
                 message = await interaction.original_response()
