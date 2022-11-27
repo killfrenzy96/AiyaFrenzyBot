@@ -57,42 +57,45 @@ class DrawModal(Modal):
             )
         )
 
+        extra_settings_value = f'batch:{self.input_object.batch_count}'
+        extra_settings_value += f'\nsteps:{self.input_object.steps}'
+        extra_settings_value += f'\nguidance_scale:{self.input_object.guidance_scale}'
+
         if self.input_object.init_image:
-            self.add_item(
-                InputText(
-                    label='Init URL. \'C\' uses current image.',
-                    style=discord.InputTextStyle.short,
-                    value=self.input_object.init_image.url,
-                    required=False
-                )
-            )
-            self.add_item(
-                InputText(
-                    label='Batch | Steps | Guidance Scale | Strength',
-                    style=discord.InputTextStyle.short,
-                    value=f'{self.input_object.batch_count}|{self.input_object.steps}|{self.input_object.guidance_scale}|{self.input_object.strength}',
-                    required=False
-                )
-            )
+            init_url = self.input_object.init_image.url
+            extra_settings_value += f'\nstrength:{self.input_object.strength}'
         else:
-            self.add_item(
-                InputText(
-                    label='Init URL. \'C\' uses current image.',
-                    style=discord.InputTextStyle.short,
-                    value='',
-                    required=False
-                )
+            init_url = ''
+
+        extra_settings_value += f'\n\ncheckpoint:{self.input_object.data_model}'
+        extra_settings_value += f'\nwidth:{self.input_object.width}'
+        extra_settings_value += f'\nheight:{self.input_object.height}'
+        extra_settings_value += f'\nstyle:{self.input_object.style}'
+        extra_settings_value += f'\nfacefix:{self.input_object.facefix}'
+        extra_settings_value += f'\ntiling:{self.input_object.tiling}'
+        extra_settings_value += f'\nhighres_fix:{self.input_object.highres_fix}'
+        extra_settings_value += f'\nclip_skip:{self.input_object.clip_skip}'
+        extra_settings_value += f'\nscript:{self.input_object.script}'
+
+        self.add_item(
+            InputText(
+                label='Init URL. \'C\' uses current image.',
+                style=discord.InputTextStyle.short,
+                value=init_url,
+                required=False
             )
-            self.add_item(
-                InputText(
-                    label='Batch | Steps | Guidance Scale',
-                    style=discord.InputTextStyle.short,
-                    value=f'{self.input_object.batch_count}|{self.input_object.steps}|{self.input_object.guidance_scale}',
-                    required=False
-                )
+        )
+        self.add_item(
+            InputText(
+                label='Extra settings',
+                style=discord.InputTextStyle.long,
+                value=extra_settings_value,
+                required=False
             )
+        )
 
     async def callback(self, interaction: discord.Interaction):
+        stable_cog = stablecog.StableCog(self)
         draw_object = copy.copy(self.input_object)
 
         draw_object.simple_prompt = self.children[0].value
@@ -121,11 +124,26 @@ class DrawModal(Modal):
             pass
 
         try:
-            split_str = self.children[4].value.split('|')
-            draw_object.batch_count = max(1, int(split_str[0]))
-            draw_object.steps = max(1, int(split_str[1]))
-            draw_object.guidance_scale = max(1.0, float(split_str[2]))
-            if draw_object.init_image: draw_object.strength = max(0.0, min(1.0, float(split_str[3])))
+            # reconstruct command from modal
+            command = self.children[4].value
+            commands = command.split('\n')
+            for index, text in enumerate(commands):
+                if text: commands[index] = text.split(':')[0]
+
+            command_draw_object = stable_cog.get_draw_object_from_command(command.replace('\n', ' '))
+            if 'checkpoint' in commands:        draw_object.data_model      = command_draw_object.data_model
+            if 'width' in commands:             draw_object.width           = command_draw_object.width
+            if 'height' in commands:            draw_object.height          = command_draw_object.height
+            if 'steps' in commands:             draw_object.steps           = command_draw_object.steps
+            if 'guidance_scale' in commands:    draw_object.guidance_scale  = command_draw_object.guidance_scale
+            if 'strength' in commands:          draw_object.strength        = command_draw_object.strength
+            if 'style' in commands:             draw_object.style           = command_draw_object.style
+            if 'facefix' in commands:           draw_object.facefix         = command_draw_object.facefix
+            if 'tiling' in commands:            draw_object.tiling          = command_draw_object.tiling
+            if 'highres_fix' in commands:       draw_object.highres_fix     = command_draw_object.highres_fix
+            if 'clip_skip' in commands:         draw_object.clip_skip       = command_draw_object.clip_skip
+            if 'batch' in commands:             draw_object.batch_count     = command_draw_object.batch_count
+            if 'script' in commands:            draw_object.script          = command_draw_object.script
         except:
             pass
 
@@ -133,7 +151,7 @@ class DrawModal(Modal):
         draw_object.view = None
         draw_object.payload = None
 
-        await stablecog.StableCog(self).dream_object(draw_object)
+        await stable_cog.dream_object(draw_object)
 
 # create the view to confirm the deletion of an image
 class DeleteModal(Modal):

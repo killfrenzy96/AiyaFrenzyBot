@@ -64,6 +64,18 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         'script'
     ]
 
+    scripts = [
+        'preset steps',
+        'preset guidance_scale',
+        'preset clip_skip',
+        'increment steps +5',
+        'increment steps +1',
+        'increment guidance_scale +2',
+        'increment guidance_scale +1',
+        'increment guidance_scale +0.1',
+        'increment clip_skip +1'
+    ]
+
     @commands.slash_command(name = 'dream', description = 'Create an image')
     @option(
         'prompt',
@@ -187,7 +199,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         str,
         description='Generates image batches using a script.',
         required=False,
-        choices = ['preset steps', 'preset guidance_scale', 'preset clip_skip', 'increment steps +5', 'increment steps +1', 'increment guidance_scale +2', 'increment guidance_scale +1', 'increment guidance_scale +0.1', 'increment clip_skip +1']
+        choices=scripts
     )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, *,
                             prompt: str, negative: str = 'unset',
@@ -259,7 +271,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             reader = csv.DictReader(f, delimiter='|')
             for row in reader:
                 if row['display_name'] == data_model or row['model_full_name'] == data_model:
-                    model_found = True
                     model_name = row['display_name']
                     data_model = row['model_full_name']
                     #look at the model for activator token and prepend prompt with it
@@ -781,22 +792,21 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         negative = get_param('negative')
 
         checkpoint = get_param('checkpoint')
-        if checkpoint == '': checkpoint = 'Default'
-
-        with open('resources/models.csv', encoding='utf-8') as csv_file:
-            model_data = list(csv.reader(csv_file, delimiter='|'))
-            for row in model_data[1:]:
-                if checkpoint == row[0]: checkpoint = row[1]
+        if checkpoint not in settings.global_var.model_names: checkpoint = 'Default'
 
         try:
             width = int(get_param('width'))
-            if width not in [x for x in range(192, 1281, 64)]: width = 512
+            if width not in [x for x in range(192, 1281, 64)]:
+                width = int(width / 64) * 64
+                if width not in [x for x in range(192, 1281, 64)]: width = 512
         except:
             width = 512
 
         try:
             height = int(get_param('height'))
-            if height not in [x for x in range(192, 1281, 64)]: height = 512
+            if height not in [x for x in range(192, 1281, 64)]:
+                height = int(height / 64) * 64
+                if height not in [x for x in range(192, 1281, 64)]: height = 512
         except:
             height = 512
 
@@ -845,7 +855,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             init_image.url = init_url
 
         style = get_param('style')
-        if style == '': style = 'None'
+        if style not in settings.global_var.style_names: style = 'None'
 
         try:
             tiling = get_param('tiling')
@@ -867,18 +877,18 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         try:
             facefix = get_param('facefix')
-            if facefix == '': facefix = 'None'
+            if facefix not in settings.global_var.facefix_models: facefix = 'None'
         except:
             facefix = 'None'
 
         try:
             clip_skip = int(get_param('clip_skip'))
-            clip_skip = max(1.0, clip_skip)
+            clip_skip = max(0, min(12, clip_skip))
         except:
             clip_skip = 0
 
         script = get_param('script')
-        if script == '': script = None
+        if script not in self.scripts: script = None
 
         return queuehandler.DrawObject(
             cog=None,
