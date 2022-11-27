@@ -312,7 +312,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         append_options = ''
 
         def get_draw_object_args():
-            return (self, ctx, prompt, negative_prompt, data_model,
+            return (self, ctx, prompt, negative_prompt, model_name, data_model,
                     steps, width, height, guidance_scale, sampler, seed,
                     strength, init_image, copy_command, count, style,
                     facefix, tiling, highres_fix, clip_skip, simple_prompt,
@@ -740,7 +740,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         await self.dream_handler(ctx=draw_object.ctx,
             prompt=draw_object.prompt,
             negative=draw_object.negative_prompt,
-            checkpoint=draw_object.data_model,
+            checkpoint=draw_object.model_name,
             width=draw_object.width,
             height=draw_object.height,
             guidance_scale=draw_object.guidance_scale,
@@ -895,6 +895,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             ctx=None,
             prompt=prompt,
             negative_prompt=negative,
+            model_name=checkpoint,
             data_model=checkpoint,
             steps=steps,
             width=width,

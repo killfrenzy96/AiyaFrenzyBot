@@ -67,7 +67,7 @@ class DrawModal(Modal):
         else:
             init_url = ''
 
-        extra_settings_value += f'\n\ncheckpoint: {self.input_object.data_model}'
+        extra_settings_value += f'\n\ncheckpoint: {self.input_object.model_name}'
         extra_settings_value += f'\nwidth: {self.input_object.width}'
         extra_settings_value += f'\nheight: {self.input_object.height}'
         extra_settings_value += f'\nstyle: {self.input_object.style}'

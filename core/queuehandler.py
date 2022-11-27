@@ -9,13 +9,14 @@ from core import settings
 
 #the queue object for txt2image and img2img
 class DrawObject:
-    def __init__(self, cog, ctx, prompt, negative_prompt, data_model, steps, width, height, guidance_scale, sampler, seed,
+    def __init__(self, cog, ctx, prompt, negative_prompt, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
                  strength, init_image, copy_command, batch_count, style, facefix, tiling, highres_fix, clip_skip, simple_prompt, script,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext | discord.Interaction | discord.Message = ctx
         self.prompt: str = prompt
         self.negative_prompt: str = negative_prompt
+        self.model_name: str = model_name
         self.data_model: str = data_model
         self.steps: int = steps
         self.width: int = width
