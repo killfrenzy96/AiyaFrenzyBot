@@ -6,7 +6,7 @@ A Discord bot interface for Stable Diffusion
 
 # Modifications
 
-This is modified from AIYABOT for my Discord server. The goal of these modifications is to focus on using the bot as a tool to make refined images rather than one off generations.
+This is modified from AIYABOT for my Discord server. The goal of these modifications is to focus on using the bot as a tool to make refined images rather than one off generations. I have also removed many sources of delay which allows this bot to generate images significantly faster, especially if multiple people are using the bot.
 
 ## Setup requirements
 
@@ -23,7 +23,7 @@ TOKEN = put your bot token here
 
 ## Usage
 
-To generate an image from text, use the /draw command and include your prompt as the query.
+To generate an image from text, use the /dream command and include your prompt as the query.
 
 <img src=https://raw.githubusercontent.com/Kilvoctu/kilvoctu.github.io/master/pics/preview2.png>
 
@@ -41,24 +41,18 @@ To generate an image from text, use the /draw command and include your prompt as
 - batch count
 - Web UI styles
 - face restoration
+- tiling
 - CLIP skip
 
 #### Bonus features
 
-- /settings command - set per-server defaults for the following (_see Notes!_):
-  - negative prompts
-  - model/checkpoint
-  - sampling steps / max steps
-  - sampling method
-  - batch count / max batch count
-  - high-res fix
-  - CLIP skip
 - /identify command - create a caption for your image.
 - /stats command - shows how many /dream commands have been used.
 - /tips command - basic tips for writing prompts.
 - /upscale command - resize your image.
 - buttons - certain outputs will contain buttons.
   - 🖋 - edit prompt, then generate a new image with same parameters.
+  - 🖼️ - create variation by sending the image to img2img.
   - 🔁 - randomize seed, then generate a new image with same parameters.
   - ❌ - deletes the generated image.
 
