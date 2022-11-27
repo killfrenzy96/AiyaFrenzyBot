@@ -36,11 +36,13 @@ class GlobalVar:
     gradio_auth = False
     api_user: Optional[str] = None
     api_pass: Optional[str] = None
-    sampler_names = []
+    sampler_names: list[str] = []
     model_names = {}
+    model_tokens = {}
     style_names = {}
-    facefix_models = []
-    upscaler_names = []
+    facefix_models: list[str] = []
+    upscaler_names: list[str] = []
+    messages: list[str] = []
     model_fn_index = 0
     send_model = False
 
@@ -152,6 +154,12 @@ def files_check():
         model_data = list(csv.reader(csv_file, delimiter='|'))
         for row in model_data[1:]:
             global_var.model_names[row[0]] = row[1]
+            global_var.model_tokens[row[0]] = row[2]
+
+    with open('resources/messages.csv') as csv_file:
+        message_data = list(csv.reader(csv_file, delimiter='|'))
+        for row in message_data:
+            global_var.messages.append(row[0])
 
     #if directory in DIR doesn't exist, create it
     dir_exists = os.path.exists(global_var.dir)
@@ -180,29 +188,29 @@ def files_check():
     else:
         s.post(global_var.url + '/login')
 
-    r = s.get(global_var.url + "/sdapi/v1/samplers")
-    r2 = s.get(global_var.url + "/sdapi/v1/prompt-styles")
     r3 = s.get(global_var.url + "/sdapi/v1/face-restorers")
-    for s1 in r.json():
+
+    for sampler in s.get(global_var.url + "/sdapi/v1/samplers").json():
         try:
-            global_var.sampler_names.append(s1['name'])
+            global_var.sampler_names.append(sampler['name'])
         except(Exception,):
             # throw in last exception error for anything that wasn't caught earlier
             print("Can't connect to API for some reason!"
                   "Please check your .env URL or credentials.")
             os.system("pause")
-    for s2 in r2.json():
-        global_var.style_names[s2['name']] = s2['prompt']
-    for s3 in r3.json():
-        global_var.facefix_models.append(s3['name'])
+    if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
+
+    for style in s.get(global_var.url + "/sdapi/v1/prompt-styles").json():
+        global_var.style_names[style['name']] = style['prompt']
+
+    for facefix_model in s.get(global_var.url + "/sdapi/v1/face-restorers").json():
+        global_var.facefix_models.append(facefix_model['name'])
 
     global_var.upscaler_names = [
         'Lanczos', 'Nearest', 'LDSR', 'SwinIR_4x', 'lollypop',
         'R-ESRGAN General 4xV3', 'R-ESRGAN General WDN 4xV3', 'R-ESRGAN AnimeVideo',
         'R-ESRGAN 4x+', 'R-ESRGAN 4x+ Anime6B'
     ]
-
-    if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
 
 def guilds_check(self):
     #guild settings files. has to be done after on_ready

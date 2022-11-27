@@ -266,18 +266,18 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 settings.global_var.send_model = True
 
             simple_prompt = prompt
-            #take selected data_model and get model_name, then update data_model with the full name
-            with open('resources/models.csv', 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f, delimiter='|')
-                for row in reader:
-                    if row['display_name'] == data_model or row['model_full_name'] == data_model:
-                        model_name = row['display_name']
-                        data_model = row['model_full_name']
-                        #look at the model for activator token and prepend prompt with it
-                        prompt = row['activator_token'] + " " + prompt
-                        #if there's no activator token, remove the extra blank space
-                        prompt = prompt.lstrip(' ')
-                        break
+            for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
+                print(f'{display_name} = {full_name}')
+                if display_name == data_model or full_name == data_model:
+                    #take selected data_model and get model_name, then update data_model with the full name
+                    model_name = display_name
+                    data_model = full_name
+
+                    #look at the model for activator token and prepend prompt with it
+                    token = settings.global_var.model_tokens[display_name]
+                    prompt = token + ' ' + prompt
+                    #if there's no activator token, remove the extra blank space
+                    prompt = prompt.lstrip(' ')
 
             print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
 
@@ -298,18 +298,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     await ctx.send_response('URL image not found!\nI will do my best without it!')
 
             #increment number of times command is used
-            with open('resources/stats.txt', 'r') as f:
-                data = list(map(int, f.readlines()))
-            data[0] = data[0] + 1
-            with open('resources/stats.txt', 'w') as f:
-                f.write('\n'.join(str(x) for x in data))
-
-            #random messages for aiya to say
-            with open('resources/messages.csv') as csv_file:
-                message_data = list(csv.reader(csv_file, delimiter='|'))
-                message_row_count = len(message_data) - 1
-                for row in message_data:
-                    self.wait_message.append( row[0] )
+            def increment_stats():
+                with open('resources/stats.txt', 'r') as f:
+                    data = list(map(int, f.readlines()))
+                data[0] = data[0] + 1
+                with open('resources/stats.txt', 'w') as f:
+                    f.write('\n'.join(str(x) for x in data))
+            Thread(target=increment_stats, daemon=True).start()
 
             #formatting aiya initial reply
             append_options = ''
@@ -612,7 +607,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                         queuehandler.process_dream(self, get_draw_object(), priority, False)
 
-                content = f'<@{user.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
+                content = f'<@{user.id}> {settings.global_var.messages[random.randint(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
                 if count > 1: content = content + f' - Batch: ``{count}``'
                 content = content + append_options
         except Exception as e:

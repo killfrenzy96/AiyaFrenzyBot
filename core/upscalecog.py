@@ -127,13 +127,6 @@ class UpscaleCog(commands.Cog):
         filename, file_ext = splitext(basename(disassembled.path))
         self.file_name = filename
 
-        #random messages for aiya to say
-        with open('resources/messages.csv') as csv_file:
-            message_data = list(csv.reader(csv_file, delimiter='|'))
-            message_row_count = len(message_data) - 1
-            for row in message_data:
-                self.wait_message.append( row[0] )
-
         #formatting aiya initial reply
         append_options = ''
         if upscaler_2:
@@ -196,7 +189,7 @@ class UpscaleCog(commands.Cog):
                 # queuehandler.GlobalQueue.upscale_q.append(upscale_object)
                 queue_length = queuehandler.process_dream(self, upscale_object, priority)
                 # await ctx.send_response(f'<@{user.id}>, {self.wait_message[random.randint(0, message_row_count)]}\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}`` - Scale: ``{resize}``x - Upscaler: ``{upscaler_1}``{append_options}')
-                content = f'<@{user.id}> {self.wait_message[random.randint(0, message_row_count)]} Queue: ``{queue_length}``'
+                content = f'<@{user.id}> {settings.global_var.messages[random.randint(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
 
         if content:
             if ephemeral:
