@@ -111,7 +111,9 @@ class UpscaleCog(commands.Cog):
                 has_image = False
             else:
                 try:
-                    init_image = requests.get(init_url)
+                    loop = asyncio.get_event_loop()
+                    image_future = loop.run_in_executor(None, requests.get, init_url)
+                    init_image = await image_future
                 except(Exception,):
                     await ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True)
                     has_image = False
@@ -146,7 +148,14 @@ class UpscaleCog(commands.Cog):
 
             image = None
             if init_image is not None:
-                image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+                try:
+                    image = base64.b64encode(init_image.content).decode('utf-8')
+                except:
+                    loop = asyncio.get_event_loop()
+                    image_future = loop.run_in_executor(None, requests.get, init_image.url)
+                    image_response = await image_future
+                    image = base64.b64encode(image_response.content).decode('utf-8')
+                    # image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
             #creates the upscale object out of local variables
             def get_upscale_object():
