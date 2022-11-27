@@ -34,84 +34,90 @@ class IdentifyCog(commands.Cog):
     async def dream_handler(self, ctx: discord.ApplicationContext, *,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str]):
-        #get guild id and user
-        guild = queuehandler.get_guild(ctx)
-        user = queuehandler.get_user(ctx)
+        try:
+            #get guild id and user
+            guild = queuehandler.get_guild(ctx)
+            user = queuehandler.get_user(ctx)
 
-        print(f'Identify Request -- {user.name}#{user.discriminator} -- {guild}')
+            print(f'Identify Request -- {user.name}#{user.discriminator} -- {guild}')
 
-        has_image = True
-        #url *will* override init image for compatibility, can be changed here
-        if init_url:
-            if init_url.startswith('https://cdn.discordapp.com/') == False:
-                await ctx.send_response('Only URL images from the Discord CDN are allowed!')
-                has_image = False
-            else:
-                try:
-                    loop = asyncio.get_event_loop()
-                    image_future = loop.run_in_executor(None, requests.get, init_url)
-                    init_image = await image_future
-                except(Exception,):
-                    await ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True)
+            has_image = True
+            #url *will* override init image for compatibility, can be changed here
+            if init_url:
+                if init_url.startswith('https://cdn.discordapp.com/') == False:
+                    await ctx.send_response('Only URL images from the Discord CDN are allowed!')
+                    has_image = False
+                else:
+                    try:
+                        loop = asyncio.get_event_loop()
+                        image_future = loop.run_in_executor(None, requests.get, init_url)
+                        init_image = await image_future
+                    except(Exception,):
+                        await ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True)
+                        has_image = False
+
+            #fail if no image is provided
+            if init_url is None:
+                if init_image is None:
+                    await ctx.send_response('I need an image to identify!', ephemeral=True)
                     has_image = False
 
-        #fail if no image is provided
-        if init_url is None:
-            if init_image is None:
-                await ctx.send_response('I need an image to identify!', ephemeral=True)
-                has_image = False
+            #set up the queue if an image was found
+            content = None
+            ephemeral = False
 
-        #set up the queue if an image was found
-        content = None
-        ephemeral = False
+            if has_image:
+                #log the command
+                copy_command = f'/identify init_url:{init_image.url}'
+                print(copy_command)
 
-        if has_image:
-            #log the command
-            copy_command = f'/identify init_url:{init_image.url}'
-            print(copy_command)
+                image = None
+                if init_image is not None:
+                    try:
+                        image = base64.b64encode(init_image.content).decode('utf-8')
+                    except:
+                        loop = asyncio.get_event_loop()
+                        image_future = loop.run_in_executor(None, requests.get, init_image.url)
+                        image_response = await image_future
+                        image = base64.b64encode(image_response.content).decode('utf-8')
+                        # image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
-            image = None
-            if init_image is not None:
-                try:
-                    image = base64.b64encode(init_image.content).decode('utf-8')
-                except:
-                    loop = asyncio.get_event_loop()
-                    image_future = loop.run_in_executor(None, requests.get, init_image.url)
-                    image_response = await image_future
-                    image = base64.b64encode(image_response.content).decode('utf-8')
-                    # image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+                #creates the upscale object out of local variables
+                def get_identify_object():
+                    queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, viewhandler.DeleteView(user.id))
 
-            #creates the upscale object out of local variables
-            def get_identify_object():
-                queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, viewhandler.DeleteView(user.id))
+                    #construct a payload
+                    payload = {
+                        "image": 'data:image/png;base64,' + image
+                    }
 
-                #construct a payload
-                payload = {
-                    "image": 'data:image/png;base64,' + image
-                }
+                    queue_object.payload = payload
+                    return queue_object
 
-                queue_object.payload = payload
-                return queue_object
+                identify_object = get_identify_object()
+                dream_cost = queuehandler.get_dream_cost(identify_object)
+                queue_cost = queuehandler.get_user_queue_cost(user.id)
 
-            identify_object = get_identify_object()
-            dream_cost = queuehandler.get_dream_cost(identify_object)
-            queue_cost = queuehandler.get_user_queue_cost(user.id)
-
-            if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
-                content = f'<@{user.id}> Please wait! You have too much queued up.'
-                ephemeral = True
-            else:
-                if guild == 'private':
-                    priority: str = 'lowest'
-                elif queue_cost == 0.0:
-                    priority: str = 'high'
+                if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
+                    content = f'<@{user.id}> Please wait! You have too much queued up.'
+                    ephemeral = True
                 else:
-                    priority: str = 'medium'
+                    if guild == 'private':
+                        priority: str = 'lowest'
+                    elif queue_cost == 0.0:
+                        priority: str = 'high'
+                    else:
+                        priority: str = 'medium'
 
-                # queuehandler.GlobalQueue.identify_q.append(identify_object)
-                queue_length = queuehandler.process_dream(self, identify_object, priority)
-                # await ctx.send_response(f'<@{user.id}>, I\'m identifying the image!\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}``')
-                content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
+                    # queuehandler.GlobalQueue.identify_q.append(identify_object)
+                    queue_length = queuehandler.process_dream(self, identify_object, priority)
+                    # await ctx.send_response(f'<@{user.id}>, I\'m identifying the image!\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}``')
+                    content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
+        except Exception as e:
+            print('identify failed')
+            print(f'{e}\n{traceback.print_exc()}')
+            content = f'identify failed\n{e}\n{traceback.print_exc()}'
+            ephemeral = True
 
         if content:
             if ephemeral:
