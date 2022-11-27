@@ -79,7 +79,10 @@ class GlobalQueue:
     queues: list[list[DrawObject | UpscaleObject | IdentifyObject]] = [queue_high, queue_medium, queue_low, queue_lowest]
     queue_length = 0
 
-    slow_samplers = ['Huen', 'DPM2', 'DPM2 a', 'DPM++ 2S a', 'DPM2 Karras', 'DPM2 a Karras', 'DPM++ 2S a Karras']
+    slow_samplers = [
+        'Huen', 'DPM2', 'DPM2 a', 'DPM++ 2S a',
+        'DPM2 Karras', 'DPM2 a Karras', 'DPM++ 2S a Karras',
+        'DPM++ SDE', 'DPM++ SDE Karras']
 
 # get estimate of the compute cost of a dream
 def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
