@@ -65,6 +65,9 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
         if channel == None:
             channel = await self.fetch_channel(ctx.channel_id)
 
+        if channel.permissions_for(self.user).use_application_commands == False:
+            return
+
         message: discord.Message = await channel.fetch_message(ctx.message_id)
 
         author = message.author
@@ -84,11 +87,17 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
         if channel == None:
             channel = await self.fetch_channel(ctx.channel_id)
 
+        if channel.permissions_for(self.user).use_application_commands == False:
+            return
+
         message: discord.Message = await channel.fetch_message(ctx.message_id)
 
         user = ctx.member
         if user == None:
             user = await self.fetch_user(ctx.user_id)
+
+        if channel.permissions_for(self.user).use_application_commands == False:
+            return
 
         # message = await self.get_channel(ctx.channel_id).fetch_message(ctx.message_id)
 

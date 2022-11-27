@@ -170,6 +170,11 @@ class DeleteModal(Modal):
 
     async def callback(self, interaction: discord.Interaction):
         try:
+            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                await interaction.response.defer()
+                await interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30)
+                return
+
             if not self.message.content.startswith(f'<@{interaction.user.id}>'):
                 await interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30)
                 return
@@ -205,6 +210,11 @@ class DrawView(View):
         emoji="🖋")
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         try:
+            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                await interaction.response.defer()
+                await interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30)
+                return
+
             if interaction.message == None:
                 message = await interaction.original_response()
             else:
@@ -240,6 +250,11 @@ class DrawView(View):
         emoji="🖼️")
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
         try:
+            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                await interaction.response.defer()
+                await interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30)
+                return
+
             if interaction.message == None:
                 message = await interaction.original_response()
             else:
@@ -295,6 +310,11 @@ class DrawView(View):
         emoji="🔁")
     async def button_reroll(self, button: discord.Button, interaction: discord.Interaction):
         try:
+            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                await interaction.response.defer()
+                await interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30)
+                return
+
             # get input object
             if self.input_object:
                 input_object = self.input_object
@@ -338,6 +358,11 @@ class DrawView(View):
         emoji="❌")
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         try:
+            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                await interaction.response.defer()
+                await interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30)
+                return
+
             if interaction.message == None:
                 message = await interaction.original_response()
             else:
@@ -382,6 +407,11 @@ class DeleteView(View):
         emoji="❌")
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         try:
+            if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
+                await interaction.response.defer()
+                await interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30)
+                return
+
             if interaction.message == None:
                 message = await interaction.original_response()
             else:
