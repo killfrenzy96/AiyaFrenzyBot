@@ -71,7 +71,8 @@ class DrawModal(Modal):
         extra_settings_value += f'\nwidth: {self.input_object.width}'
         extra_settings_value += f'\nheight: {self.input_object.height}'
         extra_settings_value += f'\nstyle: {self.input_object.style}'
-        extra_settings_value += f'\nfacefix: {self.input_object.facefix}'
+
+        extra_settings_value += f'\n\nfacefix: {self.input_object.facefix}'
         extra_settings_value += f'\ntiling: {self.input_object.tiling}'
         extra_settings_value += f'\nhighres_fix: {self.input_object.highres_fix}'
         extra_settings_value += f'\nclip_skip: {self.input_object.clip_skip}'
