@@ -267,7 +267,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
             simple_prompt = prompt
             for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
-                print(f'{display_name} = {full_name}')
                 if display_name == data_model or full_name == data_model:
                     #take selected data_model and get model_name, then update data_model with the full name
                     model_name = display_name
