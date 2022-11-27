@@ -290,7 +290,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     return
 
                 try:
-                    init_image = requests.get(init_url)
+                    # init_image = requests.get(init_url)
+                    loop = asyncio.get_event_loop()
+                    image_future = loop.run_in_executor(None, requests.get, init_url)
+                    init_image = await image_future
                 except(Exception,):
                     await ctx.send_response('URL image not found!\nI will do my best without it!')
 
@@ -488,11 +491,14 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             else:
                 image = None
                 if init_image is not None:
-                    loop = asyncio.get_event_loop()
-                    image_future = loop.run_in_executor(None, requests.get, init_image.url)
-                    image_response = await image_future
-                    image = base64.b64encode(image_response.content).decode('utf-8')
-                    # image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
+                    try:
+                        image = base64.b64encode(init_image.content).decode('utf-8')
+                    except:
+                        loop = asyncio.get_event_loop()
+                        image_future = loop.run_in_executor(None, requests.get, init_image.url)
+                        image_response = await image_future
+                        image = base64.b64encode(image_response.content).decode('utf-8')
+                        # image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
                 def get_draw_object():
                     args = get_draw_object_args()
