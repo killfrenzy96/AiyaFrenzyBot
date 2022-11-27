@@ -225,6 +225,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             count: int = batch
             copy_command: str = None
 
+            loop = asyncio.get_event_loop()
+
             # sanatize input strings
             def sanatize(input: str):
                 if input:
@@ -285,16 +287,15 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             #url *will* override init image for compatibility, can be changed here
             if init_url:
                 if init_url.startswith('https://cdn.discordapp.com/') == False:
-                    await ctx.send_response('Only URL images from the Discord CDN are allowed!')
+                    loop.create_task(ctx.send_response('Only URL images from the Discord CDN are allowed!'))
                     return
 
                 try:
                     # init_image = requests.get(init_url)
-                    loop = asyncio.get_event_loop()
                     image_future = loop.run_in_executor(None, requests.get, init_url)
                     init_image = await image_future
                 except(Exception,):
-                    await ctx.send_response('URL image not found!\nI will do my best without it!')
+                    loop.create_task(ctx.send_response('URL image not found!\nI will do my best without it!'))
 
             #increment number of times command is used
             def increment_stats():
@@ -622,13 +623,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 delete_after = 120
             try:
                 if type(ctx) is discord.ApplicationContext:
-                    await ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after)
+                    loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
                 elif type(ctx) is discord.Interaction:
-                    await ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after)
+                    loop.create_task(ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after))
                 else:
-                    await ctx.reply(content, delete_after=delete_after)
+                    loop.create_task(ctx.reply(content, delete_after=delete_after))
             except:
-                await ctx.channel.send(content, delete_after=delete_after)
+                loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     #generate the image
     def dream(self, queue_object: queuehandler.DrawObject):
@@ -746,7 +747,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         else:
             init_url = None
 
-        await self.dream_handler(ctx=draw_object.ctx,
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.dream_handler(ctx=draw_object.ctx,
             prompt=draw_object.prompt,
             negative=draw_object.negative_prompt,
             checkpoint=draw_object.model_name,
@@ -766,7 +768,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             highres_fix=draw_object.highres_fix,
             clip_skip=draw_object.clip_skip,
             script=draw_object.script
-        )
+        ))
 
     async def dream_command(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, command: str, randomize_seed = True):
         queue_object = self.get_draw_object_from_command(command)
@@ -775,7 +777,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         if randomize_seed:
             queue_object.seed = -1
 
-        await self.dream_object(queue_object)
+        loop = asyncio.get_event_loop()
+        loop.create_task(self.dream_object(queue_object))
 
     def get_draw_object_from_command(self, command: str):
         def find_between(s: str, first: str, last: str):

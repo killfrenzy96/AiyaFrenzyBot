@@ -97,6 +97,8 @@ class UpscaleCog(commands.Cog):
                             codeformer: Optional[float] = 0.0,
                             upscale_first: Optional[bool] = False):
         try:
+            loop = asyncio.get_event_loop()
+
             #get guild id and user
             guild = queuehandler.get_guild(ctx)
             user = queuehandler.get_user(ctx)
@@ -107,21 +109,20 @@ class UpscaleCog(commands.Cog):
             #url *will* override init image for compatibility, can be changed here
             if init_url:
                 if init_url.startswith('https://cdn.discordapp.com/') == False:
-                    await ctx.send_response('Only URL images from the Discord CDN are allowed!')
+                    loop.create_task(ctx.send_response('Only URL images from the Discord CDN are allowed!'))
                     has_image = False
                 else:
                     try:
-                        loop = asyncio.get_event_loop()
                         image_future = loop.run_in_executor(None, requests.get, init_url)
                         init_image = await image_future
                     except(Exception,):
-                        await ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True)
+                        loop.create_task(ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True))
                         has_image = False
 
             #fail if no image is provided
             if init_url is None:
                 if init_image is None:
-                    await ctx.send_response('I need an image to upscale!', ephemeral=True)
+                    loop.create_task(ctx.send_response('I need an image to upscale!', ephemeral=True))
                     has_image = False
 
             #pull the name from the image
@@ -151,7 +152,6 @@ class UpscaleCog(commands.Cog):
                     try:
                         image = base64.b64encode(init_image.content).decode('utf-8')
                     except:
-                        loop = asyncio.get_event_loop()
                         image_future = loop.run_in_executor(None, requests.get, init_image.url)
                         image_response = await image_future
                         image = base64.b64encode(image_response.content).decode('utf-8')
@@ -211,9 +211,9 @@ class UpscaleCog(commands.Cog):
             else:
                 delete_after = 120
             try:
-                await ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after)
+                loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
             except:
-                await ctx.channel.send(content, delete_after=delete_after)
+                loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     #generate the image
     def dream(self, queue_object: queuehandler.UpscaleObject):

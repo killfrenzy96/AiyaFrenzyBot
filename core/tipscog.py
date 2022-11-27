@@ -1,4 +1,5 @@
 import discord
+import asyncio
 from discord.ext import commands
 from discord.ui import View
 
@@ -13,6 +14,7 @@ class TipsView(View):
         custom_id="button_tips",
         label="Quick tips")
     async def button_tips(self, button, interaction):
+        loop = asyncio.get_event_loop()
 
         embed_tips = discord.Embed(title="Quick Tips", description="")
         embed_tips.colour = settings.global_var.embed_color
@@ -54,12 +56,13 @@ class TipsView(View):
                                    '❌ deletes your image.',
                              inline=False)
 
-        await interaction.response.edit_message(embed=embed_tips)
+        loop.create_task(interaction.response.edit_message(embed=embed_tips))
 
     @discord.ui.button(
         custom_id="button_styles",
         label="Styles list")
     async def button_style(self, button, interaction):
+        loop = asyncio.get_event_loop()
 
         style_list = ''
         for key, value in settings.global_var.style_names.items():
@@ -69,12 +72,13 @@ class TipsView(View):
         embed_styles = discord.Embed(title="Styles list", description=style_list)
         embed_styles.colour = settings.global_var.embed_color
 
-        await interaction.response.edit_message(embed=embed_styles)
+        loop.create_task(interaction.response.edit_message(embed=embed_styles))
 
     @discord.ui.button(
         custom_id="button_model",
         label="Models list")
     async def button_model(self, button, interaction):
+        loop = asyncio.get_event_loop()
 
         model_list = ''
         for key, value in settings.global_var.model_names.items():
@@ -84,12 +88,13 @@ class TipsView(View):
         embed_model = discord.Embed(title="Models list", description=model_list)
         embed_model.colour = settings.global_var.embed_color
 
-        await interaction.response.edit_message(embed=embed_model)
+        loop.create_task(interaction.response.edit_message(embed=embed_model))
 
     @discord.ui.button(
         custom_id="button_about",
         label="About me")
     async def button_about(self, button, interaction):
+        loop = asyncio.get_event_loop()
 
         url_frenzy = 'https://github.com/killfrenzy96/aiyabot'
         url_aiya = 'https://github.com/Kilvoctu/aiyabot'
@@ -103,7 +108,7 @@ class TipsView(View):
         embed_about.set_thumbnail(url=url2)
         embed_about.set_footer(text='Have a lovely day!', icon_url=url2)
 
-        await interaction.response.edit_message(embed=embed_about)
+        loop.create_task(interaction.response.edit_message(embed=embed_about))
 
 class TipsCog(commands.Cog):
     def __init__(self, bot):
@@ -115,10 +120,12 @@ class TipsCog(commands.Cog):
 
     @commands.slash_command(name="tips", description="Some quick tips for generating images!")
     async def tips(self, ctx):
+        loop = asyncio.get_event_loop()
+
         first_embed = discord.Embed(title='Select a button!')
         first_embed.colour = settings.global_var.embed_color
 
-        await ctx.respond(embed=first_embed, view=TipsView(), ephemeral=True)
+        loop.create_task(ctx.respond(embed=first_embed, view=TipsView(), ephemeral=True))
 
 
 def setup(bot):
