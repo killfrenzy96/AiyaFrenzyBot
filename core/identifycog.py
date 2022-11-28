@@ -124,9 +124,10 @@ class IdentifyCog(commands.Cog):
                 delete_after = 30
             else:
                 delete_after = 120
-            try:
+
+            if type(ctx) is discord.ApplicationContext:
                 loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
-            except:
+            else:
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     def dream(self, queue_object: queuehandler.IdentifyObject):

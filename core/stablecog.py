@@ -621,14 +621,14 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 delete_after = 30
             else:
                 delete_after = 120
-            try:
-                if type(ctx) is discord.ApplicationContext:
-                    loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
-                elif type(ctx) is discord.Interaction:
-                    loop.create_task(ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after))
-                else:
-                    loop.create_task(ctx.reply(content, delete_after=delete_after))
-            except:
+
+            if type(ctx) is discord.ApplicationContext:
+                loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
+            elif type(ctx) is discord.Interaction:
+                loop.create_task(ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after))
+            elif type(ctx) is discord.Message:
+                loop.create_task(ctx.reply(content, delete_after=delete_after))
+            else:
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     #generate the image

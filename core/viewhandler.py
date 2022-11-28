@@ -176,8 +176,7 @@ class DeleteModal(Modal):
         try:
             try:
                 if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
                     return
             except:
                 pass
@@ -186,8 +185,8 @@ class DeleteModal(Modal):
                 loop.create_task(interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30))
                 return
 
-            loop.create_task(interaction.message.delete())
             loop.create_task(interaction.response.defer())
+            loop.create_task(interaction.message.delete())
             update_user_delete(interaction.user.id)
 
         except Exception as e:
@@ -195,8 +194,7 @@ class DeleteModal(Modal):
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
             # await interaction.response.edit_message(view=self)
-            loop.create_task(interaction.response.defer())
-            loop.create_task(interaction.followup.send(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+            loop.create_task(interaction.response.send_message(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
 
 #creating the view that holds the buttons for /draw output
 class DrawView(View):
@@ -220,8 +218,7 @@ class DrawView(View):
         try:
             try:
                 if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
                     return
             except:
                 pass
@@ -240,8 +237,7 @@ class DrawView(View):
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
                 else:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                     return
 
             loop.create_task(interaction.response.send_modal(DrawModal(input_object, message)))
@@ -251,8 +247,7 @@ class DrawView(View):
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
             # await interaction.response.edit_message(view=self)
-            loop.create_task(interaction.response.defer())
-            loop.create_task(interaction.followup.send(f're-prompt failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+            loop.create_task(interaction.response.send_message(f're-prompt failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
 
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
@@ -264,8 +259,7 @@ class DrawView(View):
         try:
             try:
                 if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
                     return
             except:
                 pass
@@ -278,8 +272,7 @@ class DrawView(View):
             # obtain URL for the original image
             url = message.attachments[0].url
             if not url:
-                loop.create_task(interaction.response.defer())
-                loop.create_task(interaction.followup.send('The image seems to be missing. This button no longer works.', ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('The image seems to be missing. This button no longer works.', ephemeral=True, delete_after=30))
                 return
 
             class simple_init_image: url: str
@@ -295,8 +288,7 @@ class DrawView(View):
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
                 else:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                     return
 
             # setup draw object to send to the stablecog
@@ -315,8 +307,7 @@ class DrawView(View):
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
             # await interaction.response.edit_message(view=self)
-            loop.create_task(interaction.response.defer())
-            loop.create_task(interaction.followup.send(f're-roll failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+            loop.create_task(interaction.response.send_message(f're-roll failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
 
 
     # the 🔁 button will take the same parameters for the image, change the seed, and add a task to the queue
@@ -328,8 +319,7 @@ class DrawView(View):
         try:
             try:
                 if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
                     return
             except:
                 pass
@@ -348,8 +338,7 @@ class DrawView(View):
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
                 else:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                     return
 
             # setup draw object to send to the stablecog
@@ -367,8 +356,7 @@ class DrawView(View):
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
             # await interaction.response.edit_message(view=self)
-            loop.create_task(interaction.response.defer())
-            loop.create_task(interaction.followup.send(f're-roll failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+            loop.create_task(interaction.response.send_message(f're-roll failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
 
 
     #the button to delete generated images
@@ -380,8 +368,7 @@ class DrawView(View):
         try:
             try:
                 if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
                     return
             except:
                 pass
@@ -406,8 +393,7 @@ class DrawView(View):
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
             # await interaction.response.edit_message(view=self)
-            loop.create_task(interaction.response.defer())
-            loop.create_task(interaction.followup.send(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+            loop.create_task(interaction.response.send_message(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
 
 
     def find_between(self, s: str, first: str, last: str):
@@ -433,8 +419,7 @@ class DeleteView(View):
         try:
             try:
                 if interaction.channel.permissions_for(interaction.user).use_application_commands == False:
-                    loop.create_task(interaction.response.defer())
-                    loop.create_task(interaction.followup.send('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
+                    loop.create_task(interaction.response.send_message('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
                     return
             except:
                 pass
@@ -459,5 +444,4 @@ class DeleteView(View):
             print(f'{e}\n{traceback.print_exc()}')
             # button.disabled = True
             # await interaction.response.edit_message(view=self)
-            loop.create_task(interaction.response.defer())
-            loop.create_task(interaction.followup.send(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+            loop.create_task(interaction.response.send_message(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
