@@ -25,7 +25,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
     def __init__(self, bot):
         self.wait_message: list[str] = []
         self.bot: discord.Bot = bot
-        self.send_model = False
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -256,16 +255,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 sampler = settings.read(guild)['sampler']
             if clip_skip == 0:
                 clip_skip = settings.read(guild)['clip_skip']
-
-            #if a model is not selected, do nothing
-            model_name = 'Default'
-            settings.global_var.send_model = False
-            if data_model is None:
-                data_model = settings.read(guild)['data_model']
-                if data_model != '':
-                    settings.global_var.send_model = True
-            else:
-                settings.global_var.send_model = True
 
             simple_prompt = prompt
             for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
@@ -528,7 +517,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         ]
                     }
 
-                    # update payload is init_img or init_url is used
+                    # update payload if init_img or init_url is used
                     if queue_object.init_image is not None:
                         img_payload = {
                             "init_images": [
@@ -644,11 +633,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if settings.global_var.api_auth:
                 s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
-            # construct a payload for data model
-            model_payload = {
-                "sd_model_checkpoint": queue_object.data_model
-            }
-
             # send normal payload to webui
             if settings.global_var.gradio_auth:
                 login_payload = {
@@ -660,7 +644,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             #     s.post(settings.global_var.url + '/login')
 
             # only send model payload if one is defined
-            if settings.global_var.send_model:
+            if queue_object.data_model:
+                model_payload = {
+                    "sd_model_checkpoint": queue_object.data_model
+                }
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
 
             if queue_object.init_image is not None:

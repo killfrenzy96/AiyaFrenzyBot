@@ -44,7 +44,6 @@ class GlobalVar:
     upscaler_names: list[str] = []
     messages: list[str] = []
     model_fn_index = 0
-    send_model = False
 
 
 global_var = GlobalVar()
