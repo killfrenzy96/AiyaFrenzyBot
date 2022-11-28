@@ -473,10 +473,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             ephemeral = False
 
             # calculate total cost of queued items
-            dream_cost = get_dream_cost(width, height, steps, count)
-            queue_cost = queuehandler.get_user_queue_cost(user.id)
+            dream_cost = round(get_dream_cost(width, height, steps, count), 2)
+            queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
 
-            print(f'Estimated total compute cost: {dream_cost + queue_cost}')
+            print(f'Estimated total compute cost -- Dream: {dream_cost} Queue: {queue_cost} Total: {dream_cost + queue_cost}')
 
             if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
                 print(f'Dream rejected: Too much in queue already')
