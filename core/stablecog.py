@@ -220,7 +220,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             script: Optional[str] = None):
         try:
             negative_prompt: str = negative
-            data_model: str = checkpoint
+            model_name: str = checkpoint
             count: int = batch
             copy_command: str = None
 
@@ -245,6 +245,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             user = queuehandler.get_user(ctx)
 
             #update defaults with any new defaults from settingscog
+            if not model_name:
+                model_name = settings.read(guild)['data_model']
             if negative_prompt == 'unset':
                 negative_prompt = settings.read(guild)['negative_prompt']
             if steps == -1:
@@ -257,8 +259,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 clip_skip = settings.read(guild)['clip_skip']
 
             simple_prompt = prompt
+            data_model: str = ''
             for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
-                if display_name == data_model or full_name == data_model:
+                if display_name == model_name or full_name == model_name:
                     #take selected data_model and get model_name, then update data_model with the full name
                     model_name = display_name
                     data_model = full_name
