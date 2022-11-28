@@ -568,9 +568,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 if count == 1:
                     if guild == 'private':
                         priority: str = 'lowest'
-                    # if user does not have a dream in process, they get high priority
-                    elif queue_cost == 0.0:
+                    elif queue_cost == 0.0: # if user does not have a dream in process, they get high priority
                         priority: str = 'high'
+                    elif dream_cost + queue_cost > setting_max_compute: # if user user has a lot in queue, they get low priority
+                        priority: str = 'low'
                     else:
                         priority: str = 'medium'
 
