@@ -79,7 +79,7 @@ class Minigame:
             similarity = SequenceMatcher(None, prompt, guess).ratio()
 
             if prompt in guess or similarity > 0.9:
-                content = f'<@{user.id}> has guessed the answer! The prompt was ``{self.prompt}``.\nIt took ``{self.guess_count}`` guesses and ``{self.image_count}`` to get this answer.\nPress 🖋️ or 🖼️ to continue the minigame.'
+                content = f'<@{user.id}> has guessed the answer! The prompt was ``{self.prompt}``.\nIt took ``{self.guess_count}`` guesses and ``{self.image_count}`` images to get this answer.\nPress 🖋️ or 🖼️ to continue the minigame.'
                 ephemeral = False
                 await self.stop()
             elif similarity > 0.8:
