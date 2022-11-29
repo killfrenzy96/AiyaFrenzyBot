@@ -11,7 +11,7 @@ class CancelCog(commands.Cog, name='Cancel Cog', description='Cancels all images
 
     @commands.slash_command(name = "cancel", description = "Cancels all images in queue.")
     async def cancel(self, ctx: discord.ApplicationContext):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             user = queuehandler.get_user(ctx)
             total_cleared: int = 0

@@ -81,7 +81,7 @@ class DrawModal(Modal):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
 
@@ -159,7 +159,7 @@ class DeleteModal(Modal):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
 
@@ -190,7 +190,7 @@ class DrawView(View):
         custom_id="button_re-prompt",
         emoji="🖋")
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)
@@ -218,7 +218,7 @@ class DrawView(View):
         custom_id="button_image-variation",
         emoji="🖼️")
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)
@@ -261,7 +261,7 @@ class DrawView(View):
         custom_id="button_re-roll",
         emoji="🔁")
     async def button_reroll(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
 
@@ -297,7 +297,7 @@ class DrawView(View):
         custom_id="button_x",
         emoji="❌")
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)
@@ -313,11 +313,7 @@ class DrawView(View):
                 update_user_delete(interaction.user.id)
 
         except Exception as e:
-            print('delete failed')
-            print(f'{e}\n{traceback.print_exc()}')
-            # button.disabled = True
-            # await interaction.response.edit_message(view=self)
-            loop.create_task(interaction.response.send_message(f'delete failed\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+            print_exception('delete failed', e, interaction, loop)
 
     def find_between(self, s: str, first: str, last: str):
         try:
@@ -337,7 +333,7 @@ class DrawExtendedView(DrawView):
         custom_id="button_giveup",
         emoji="🏳️")
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.', ephemeral=True, delete_after=30))
         return
 
@@ -347,7 +343,7 @@ class DrawExtendedView(DrawView):
         emoji="⌨️",
         row=2)
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.', ephemeral=True, delete_after=30))
         return
 
@@ -361,7 +357,7 @@ class DeleteView(View):
         custom_id="button_x",
         emoji="❌")
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)

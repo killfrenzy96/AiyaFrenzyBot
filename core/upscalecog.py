@@ -95,7 +95,7 @@ class UpscaleCog(commands.Cog):
                             codeformer: Optional[float] = 0.0,
                             upscale_first: Optional[bool] = False):
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
 
             #get guild id and user
             guild = queuehandler.get_guild(ctx)

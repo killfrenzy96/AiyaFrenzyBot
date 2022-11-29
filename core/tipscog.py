@@ -14,7 +14,7 @@ class TipsView(View):
         custom_id="button_tips",
         label="Quick tips")
     async def button_tips(self, button, interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         embed_tips = discord.Embed(title="Quick Tips", description="")
         embed_tips.colour = settings.global_var.embed_color
@@ -62,7 +62,7 @@ class TipsView(View):
         custom_id="button_styles",
         label="Styles list")
     async def button_style(self, button, interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         style_list = ''
         for key, value in settings.global_var.style_names.items():
@@ -78,7 +78,7 @@ class TipsView(View):
         custom_id="button_model",
         label="Models list")
     async def button_model(self, button, interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         model_list = ''
         for key, value in settings.global_var.model_names.items():
@@ -94,7 +94,7 @@ class TipsView(View):
         custom_id="button_about",
         label="About me")
     async def button_about(self, button, interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         url_frenzy = 'https://github.com/killfrenzy96/aiyabot'
         url_aiya = 'https://github.com/Kilvoctu/aiyabot'
@@ -120,7 +120,7 @@ class TipsCog(commands.Cog):
 
     @commands.slash_command(name="tips", description="Some quick tips for generating images!")
     async def tips(self, ctx):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         first_embed = discord.Embed(title='Select a button!')
         first_embed.colour = settings.global_var.embed_color

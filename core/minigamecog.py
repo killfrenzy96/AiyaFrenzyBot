@@ -435,7 +435,7 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
                            hard_mode: Optional[bool] = False,
                            batch: Optional[int] = 2):
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             host = queuehandler.get_user(ctx)
             guild = queuehandler.get_guild(ctx)
 
@@ -460,7 +460,7 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
     # This is disabled. It would require extra intents that's not neccessary for the primary function of this bot.
     # @commands.Cog.listener()
     # async def on_message(self, message: discord.Message):
-    #     loop = asyncio.get_event_loop()
+    #     loop = asyncio.get_running_loop()
     #     if message.author.id == self.bot.user.id:
     #         return
 
@@ -484,7 +484,7 @@ class MinigameView(View):
         custom_id="button_image-variation",
         emoji="🖼️")
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
@@ -514,7 +514,7 @@ class MinigameView(View):
         custom_id="button_re-prompt",
         emoji="🖋️")
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
@@ -543,7 +543,7 @@ class MinigameView(View):
         custom_id="button_giveup",
         emoji="🏳️")
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
@@ -573,7 +573,7 @@ class MinigameView(View):
         custom_id="button_x",
         emoji="❌")
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
             message = await viewhandler.get_message(interaction)
@@ -598,7 +598,7 @@ class MinigameView(View):
         emoji="⌨️",
         row=2)
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
@@ -652,7 +652,7 @@ class MinigameEditModal(Modal):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
@@ -705,7 +705,7 @@ class MinigameAnswerModal(Modal):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 

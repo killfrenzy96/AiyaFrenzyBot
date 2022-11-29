@@ -34,7 +34,7 @@ class IdentifyCog(commands.Cog):
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str]):
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
 
             #get guild id and user
             guild = queuehandler.get_guild(ctx)

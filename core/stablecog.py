@@ -745,7 +745,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             ))
 
     async def dream_object(self, draw_object: queuehandler.DrawObject):
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         loop.create_task(self.dream_handler(ctx=draw_object.ctx,
             prompt=draw_object.prompt,
             negative=draw_object.negative_prompt,
