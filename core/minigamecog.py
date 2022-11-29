@@ -150,7 +150,7 @@ class Minigame:
     async def give_up(self, ctx: discord.ApplicationContext | discord.Interaction):
         loop = asyncio.get_running_loop()
 
-        content = f'<@{self.host.id}> has given up. The answer was ``{self.prompt}``.\nPress 🖋️ or 🖼️ to continue the minigame.'
+        content = f'<@{self.host.id}> has given up. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
 
         if type(ctx) is discord.ApplicationContext:
             loop.create_task(ctx.send_response(content=content))
