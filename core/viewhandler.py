@@ -328,6 +328,29 @@ class DrawView(View):
             return ''
 
 
+class DrawExtendedView(DrawView):
+    def __init__(self, input_tuple: tuple | queuehandler.DrawObject):
+        super().__init__(input_tuple)
+
+    # the 🏳️ ends the game and reveals the answer
+    @discord.ui.button(
+        custom_id="button_giveup",
+        emoji="🏳️")
+    async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
+        loop = asyncio.get_event_loop()
+        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.', ephemeral=True, delete_after=30))
+        return
+
+    # guess prompt button
+    @discord.ui.button(
+        custom_id="button_guess-prompt",
+        emoji="⌨️",
+        row=2)
+    async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
+        loop = asyncio.get_event_loop()
+        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.', ephemeral=True, delete_after=30))
+        return
+
 # creating the view that holds a button to delete output
 class DeleteView(View):
     def __init__(self, user: discord.User):

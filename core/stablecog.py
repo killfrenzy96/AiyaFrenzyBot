@@ -26,7 +26,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.bot.add_view(viewhandler.DrawView(self))
+        self.bot.add_view(viewhandler.DrawExtendedView(self))
 
     #pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
     def model_autocomplete(self: discord.AutocompleteContext):
