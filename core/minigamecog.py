@@ -140,7 +140,7 @@ class Minigame:
         if ephemeral:
             delete_after = 30
         else:
-            delete_after = None
+            delete_after = 120
 
         if type(ctx) is discord.ApplicationContext:
             loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
@@ -150,12 +150,17 @@ class Minigame:
     async def give_up(self, ctx: discord.ApplicationContext | discord.Interaction):
         loop = asyncio.get_running_loop()
 
-        content = f'<@{self.host.id}> has given up. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
+        if self.running == False:
+            content = f'You have already given up. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
+            ephemeral = True
+        else:
+            content = f'<@{self.host.id}> has given up. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
+            ephemeral = False
 
         if type(ctx) is discord.ApplicationContext:
-            loop.create_task(ctx.send_response(content=content))
+            loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral))
         elif type(ctx) is discord.Interaction:
-            loop.create_task(ctx.response.send_message(content=content))
+            loop.create_task(ctx.response.send_message(content=content, ephemeral=ephemeral))
 
         await self.stop()
 
