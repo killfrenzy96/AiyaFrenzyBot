@@ -1,5 +1,4 @@
 import base64
-import csv
 import discord
 import io
 import random
@@ -8,7 +7,6 @@ import time
 import traceback
 import asyncio
 from threading import Thread
-from asyncio import AbstractEventLoop
 from discord import option
 from discord.ext import commands
 from os.path import splitext, basename

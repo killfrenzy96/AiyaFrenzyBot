@@ -1,6 +1,4 @@
-import csv
 import discord
-import random
 import copy
 import traceback
 import time
@@ -8,7 +6,6 @@ import asyncio
 from discord.ui import InputText, Modal, View
 
 from core import queuehandler
-from core import settings
 from core import stablecog
 
 
@@ -336,7 +333,6 @@ class DeleteView(View):
     def __init__(self, user: discord.User):
         super().__init__(timeout=None)
         self.user = user
-        loop = asyncio.get_event_loop()
 
     @discord.ui.button(
         custom_id="button_x",

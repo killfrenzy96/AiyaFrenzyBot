@@ -1,6 +1,5 @@
 import base64
 import contextlib
-import csv
 import discord
 import io
 import random
@@ -9,7 +8,6 @@ import time
 import traceback
 import asyncio
 from threading import Thread
-from asyncio import AbstractEventLoop
 from PIL import Image, PngImagePlugin
 from discord import option
 from discord.ext import commands

@@ -4,7 +4,6 @@ import traceback
 import requests
 import asyncio
 from threading import Thread
-from asyncio import AbstractEventLoop
 from discord import option
 from discord.ext import commands
 from typing import Optional
