@@ -278,7 +278,7 @@ class Minigame:
             priority = 'lowest'
         else:
             priority = 'medium'
-        queuehandler.process_dream(self, draw_object, 'medium')
+        queuehandler.process_dream(self, draw_object, priority)
 
         # while game_iteration == self.game_iteration:
         #     await asyncio.sleep(0.1)
