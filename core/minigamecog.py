@@ -273,6 +273,11 @@ class Minigame:
             payload.update(img_payload)
 
         draw_object.payload = payload
+
+        if self.guild == 'private':
+            priority = 'lowest'
+        else:
+            priority = 'medium'
         queuehandler.process_dream(self, draw_object, 'medium')
 
         # while game_iteration == self.game_iteration:
