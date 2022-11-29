@@ -43,31 +43,47 @@ class IdentifyCog(commands.Cog):
 
             print(f'Identify Request -- {user.name}#{user.discriminator} -- {guild}')
 
-            has_image = True
-            #url *will* override init image for compatibility, can be changed here
-            if init_url:
-                if init_url.startswith('https://cdn.discordapp.com/') == False:
-                    loop.create_task(ctx.send_response('Only URL images from the Discord CDN are allowed!'))
-                    has_image = False
-                else:
-                    try:
-                        image_future = loop.run_in_executor(None, requests.get, init_url)
-                        init_image = await image_future
-                    except(Exception,):
-                        loop.create_task(ctx.send_response('URL image not found!\nI have nothing to work with...', ephemeral=True))
-                        has_image = False
+            # get input image
+            image: str = None
+            image_validated = False
+            if init_url or init_image:
+                if not init_url and init_image:
+                    init_url = init_image.url
 
+                if init_url.startswith('https://cdn.discordapp.com/') == False:
+                    print(f'Dream rejected: Image is not from the Discord CDN.')
+                    content = 'Only URL images from the Discord CDN are allowed!'
+                    ephemeral = True
+                    image_validated = False
+
+                try:
+                    # reject URL downloads larger than 10MB
+                    url_head = await loop.run_in_executor(None, requests.head, init_url)
+                    url_size = int(url_head.headers.get('content-length', -1))
+                    if url_size > 10 * 1024 * 1024:
+                        print(f'Dream rejected: Image too large.')
+                        content = 'URL image is too large! Please make the download size smaller.'
+                        ephemeral = True
+                        image_validated = False
+                    else:
+                        # download and encode the image
+                        image_data = await loop.run_in_executor(None, requests.get, init_url)
+                        image = base64.b64encode(image_data.content).decode('utf-8')
+                        image_validated = True
+                except:
+                    content = 'URL image not found! Please check the image URL.'
+                    ephemeral = True
+                    image_validated = False
             #fail if no image is provided
-            if init_url is None:
-                if init_image is None:
-                    loop.create_task(ctx.send_response('I need an image to identify!', ephemeral=True))
-                    has_image = False
+            if image_validated == False:
+                content = 'I need an image to identify!'
+                ephemeral = True
 
             #set up the queue if an image was found
             content = None
             ephemeral = False
 
-            if has_image:
+            if image_validated:
                 #log the command
                 copy_command = f'/identify init_url:{init_image.url}'
                 print(copy_command)
@@ -77,8 +93,7 @@ class IdentifyCog(commands.Cog):
                     try:
                         image = base64.b64encode(init_image.content).decode('utf-8')
                     except:
-                        image_future = loop.run_in_executor(None, requests.get, init_image.url)
-                        image_response = await image_future
+                        image_response = await loop.run_in_executor(None, requests.get, init_image.url)
                         image = base64.b64encode(image_response.content).decode('utf-8')
                         # image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 

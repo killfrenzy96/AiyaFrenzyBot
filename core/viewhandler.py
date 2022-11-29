@@ -49,8 +49,8 @@ class DrawModal(Modal):
         extra_settings_value += f'\nsteps: {self.input_object.steps}'
         extra_settings_value += f'\nguidance_scale: {self.input_object.guidance_scale}'
 
-        if self.input_object.init_image:
-            init_url = self.input_object.init_image.url
+        if self.input_object.init_url:
+            init_url = self.input_object.init_url
             extra_settings_value += f'\nstrength: {self.input_object.strength}'
         else:
             init_url = ''
@@ -103,16 +103,14 @@ class DrawModal(Modal):
 
             try:
                 if self.children[3].value.lower().startswith('c'):
-                    url = self.message.attachments[0].url
+                    init_url = self.message.attachments[0].url
                 else:
-                    url = self.children[3].value
+                    init_url = self.children[3].value
 
-                if url:
-                    class simple_init_image: url: str
-                    draw_object.init_image = simple_init_image()
-                    draw_object.init_image.url = url
+                if init_url:
+                    draw_object.init_url = init_url
                 else:
-                    draw_object.init_image = None
+                    draw_object.init_url = None
             except:
                 pass
 
@@ -229,14 +227,10 @@ class DrawView(View):
             message = await get_message(interaction)
 
             # obtain URL for the original image
-            url = message.attachments[0].url
-            if not url:
+            init_url = message.attachments[0].url
+            if not init_url:
                 loop.create_task(interaction.response.send_message('The image seems to be missing. This button no longer works.', ephemeral=True, delete_after=30))
                 return
-
-            class simple_init_image: url: str
-            init_image = simple_init_image()
-            init_image.url = url
 
             # get input object
             if self.input_object:
@@ -256,7 +250,7 @@ class DrawView(View):
             draw_object.ctx = interaction
             draw_object.view = None
             draw_object.payload = None
-            draw_object.init_image = init_image
+            draw_object.init_url = init_url
 
             # run stablecog dream using draw object
             loop.create_task(stablecog.StableCog(self).dream_object(draw_object))

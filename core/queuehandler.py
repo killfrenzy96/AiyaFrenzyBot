@@ -10,7 +10,7 @@ from core import settings
 #the queue object for txt2image and img2img
 class DrawObject:
     def __init__(self, cog, ctx, prompt, negative_prompt, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_image, copy_command, batch_count, style, facefix, tiling, highres_fix, clip_skip, simple_prompt, script,
+                 strength, init_url, copy_command, batch_count, style, facefix, tiling, highres_fix, clip_skip, simple_prompt, script,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext | discord.Interaction | discord.Message = ctx
@@ -25,7 +25,7 @@ class DrawObject:
         self.sampler: str = sampler
         self.seed: int = seed
         self.strength: float = strength
-        self.init_image: discord.Attachment = init_image
+        self.init_url: str = init_url
         self.copy_command: str = copy_command
         self.batch_count: int = batch_count
         self.style: str = style
@@ -40,13 +40,13 @@ class DrawObject:
 
 #the queue object for extras - upscale
 class UpscaleObject:
-    def __init__(self, cog, ctx, resize, init_image, upscaler_1, upscaler_2, upscaler_2_strength, copy_command,
+    def __init__(self, cog, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, copy_command,
                  gfpgan, codeformer, upscale_first,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.resize: float = resize
-        self.init_image: discord.Attachment = init_image
+        self.init_url: str = init_url
         self.upscaler_1: str = upscaler_1
         self.upscaler_2: str = upscaler_2
         self.upscaler_2_strength: float = upscaler_2_strength
@@ -59,11 +59,11 @@ class UpscaleObject:
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
-    def __init__(self, cog, ctx, init_image, copy_command,
+    def __init__(self, cog, ctx, init_url, copy_command,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
-        self.init_image: discord.Attachment = init_image
+        self.init_url: str = init_url
         self.copy_command: str = copy_command
         self.view: discord.ui.View = view
         self.payload = payload
@@ -92,7 +92,7 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
         if queue_object.sampler in GlobalQueue.slow_samplers: dream_compute_cost *= 2.0
         if queue_object.highres_fix: dream_compute_cost_add = dream_compute_cost
         dream_compute_cost *= pow(max(1.0, float(queue_object.width * queue_object.height) / float(512 * 512)), 1.25)
-        if queue_object.init_image: dream_compute_cost *= max(0.2, queue_object.strength)
+        if queue_object.init_url: dream_compute_cost *= max(0.2, queue_object.strength)
         dream_compute_cost += dream_compute_cost_add
         dream_compute_cost = max(1.0, dream_compute_cost)
         dream_compute_cost *= float(queue_object.batch_count)
