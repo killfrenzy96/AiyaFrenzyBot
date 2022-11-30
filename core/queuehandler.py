@@ -81,7 +81,7 @@ class GlobalQueue:
     queue_length = 0
 
     slow_samplers = [
-        'Huen', 'DPM2', 'DPM2 a', 'DPM++ 2S a',
+        'Heun', 'DPM2', 'DPM2 a', 'DPM++ 2S a',
         'DPM2 Karras', 'DPM2 a Karras', 'DPM++ 2S a Karras',
         'DPM++ SDE', 'DPM++ SDE Karras']
 

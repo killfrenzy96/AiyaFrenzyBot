@@ -273,12 +273,13 @@ class Minigame:
             "n_iter": draw_object.batch_count
         }
 
-        if init_url:
+        if init_url and self.image_base64:
             # update payload if image_base64 is available
+            images: list[str] = []
+            for image in self.image_base64:
+                images.append('data:image/png;base64,' + image)
             img_payload = {
-                "init_images": [
-                    'data:image/png;base64,' + self.image_base64[random.randrange(0, len(self.image_base64))]
-                ],
+                "init_images": images,
                 "denoising_strength": draw_object.strength
             }
             payload.update(img_payload)
@@ -368,8 +369,52 @@ class Minigame:
             else:
                 url = f'{settings.global_var.url}/sdapi/v1/txt2img'
 
-            response = s.post(url=url, json=queue_object.payload)
-            response_data = response.json()
+            if queue_object.init_url:
+                # workaround for batched init_images payload not working correctly on AUTOMATIC1111
+                images: list[str] = queue_object.payload['init_images']
+                payloads: list[dict] = []
+                threads: list[Thread] = []
+                responses: list[requests.Response] = []
+
+                queue_object.payload['init_images'] = []
+
+                for index, image in enumerate(images):
+                    new_payload = {}
+                    new_payload.update(queue_object.payload)
+                    new_payload['init_images'] = [image]
+                    new_payload['seed'] = int(new_payload['seed']) + index
+                    new_payload['n_iter'] = 1
+                    payloads.append(new_payload)
+                    responses.append(None)
+
+                def img2img(thread_index, thread_payload):
+                    responses[thread_index] = s.post(url=url, json=thread_payload)
+
+                for index, payload in enumerate(payloads):
+                    thread = Thread(target=img2img, args=[index, payload], daemon=True)
+                    threads.append(thread)
+
+                for thread in threads:
+                    thread.start()
+
+                for thread in threads:
+                    thread.join()
+
+                response: requests.Response = None
+                response_data = None
+                for response_fragment in responses:
+                    response_fragment_data = response_fragment.json()
+                    if response_data == None:
+                        response_data = response_fragment_data
+                    else:
+                        response_data['images'].append(response_fragment_data['images'][0])
+                #end of workaround
+            else:
+                # do normal batched payload
+                response = s.post(url=url, json=queue_object.payload)
+                response_data = response.json()
+
+            queue_object.payload = None
 
             self.game_iteration += 1
 

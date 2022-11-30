@@ -170,6 +170,7 @@ class IdentifyCog(commands.Cog):
 
             if queue_object.model == 'combined':
                 payloads: list[dict] = []
+                threads: list[Thread] = []
                 responses: list[requests.Response] = []
                 for model in settings.global_var.identify_models:
                     new_payload = {}
@@ -179,11 +180,20 @@ class IdentifyCog(commands.Cog):
                     }
                     new_payload.update(model_payload)
                     payloads.append(new_payload)
+                    responses.append(None)
 
-                for payload in payloads:
-                    responses.append(s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=payload))
+                def interrogate(thread_index, thread_payload):
+                    responses[thread_index] = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=thread_payload)
 
-                responses
+                for index, payload in enumerate(payloads):
+                    thread = Thread(target=interrogate, args=[index, payload], daemon=True)
+                    threads.append(thread)
+
+                for thread in threads:
+                    thread.start()
+
+                for thread in threads:
+                    thread.join()
 
                 def post_dream():
                     try:
