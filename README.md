@@ -11,7 +11,7 @@ This is modified from AIYABOT for my Discord server. The goal of these modificat
 ## Setup requirements
 
 - Set up [AUTOMATIC1111's Stable Diffusion AI Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
-  - AIYA is currently tested on commit `828438b4a190759807f9054932cae3a8b880ddf1` of the Web UI.
+  - AIYA is currently tested on commit `4b3c5bc24bffdf429c463a465763b3077fe55eb8` of the Web UI.
 - Run the Web UI as local host with api (`COMMANDLINE_ARGS= --listen --api`).
 - Clone this repo.
 - Create a text file in your cloned repo called ".env", formatted like so:
