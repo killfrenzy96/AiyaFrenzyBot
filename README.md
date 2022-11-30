@@ -46,6 +46,7 @@ To generate an image from text, use the /dream command and include your prompt a
 
 #### Bonus features
 
+- /minigame command - play a little prompt guessing game with stable diffusion.
 - /identify command - create a caption for your image.
 - /stats command - shows how many /dream commands have been used.
 - /tips command - basic tips for writing prompts.
