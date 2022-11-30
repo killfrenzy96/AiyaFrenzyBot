@@ -189,7 +189,7 @@ class Minigame:
             init_url = None
 
         # insertert negative prompt to reduce chance of AI from getting stuck drawing text
-        negative_prompt = '[[text, word, written, watermark]]'
+        negative_prompt = 'text, word, written, watermark'
 
         # generate text output
         words = prompt.split(' ')
