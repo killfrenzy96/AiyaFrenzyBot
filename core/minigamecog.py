@@ -709,24 +709,6 @@ class MinigameEditModal(Modal):
             )
         )
 
-        self.add_item(
-            InputText(
-                label='Hard Mode. \'H\' for hard. \'E\' for easy.',
-                value=hard_mode,
-                style=discord.InputTextStyle.short,
-                required=False
-            )
-        )
-
-        self.add_item(
-            InputText(
-                label='Batch',
-                value=minigame.batch,
-                style=discord.InputTextStyle.short,
-                required=False
-            )
-        )
-
     async def callback(self, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -748,19 +730,6 @@ class MinigameEditModal(Modal):
             else:
                 self.minigame.reveal_prompt = False
                 prompt = None
-
-            hard_mode = self.children[1].value
-            if hard_mode.lower() == 'h':
-                self.minigame.hard_mode = True
-            elif hard_mode.lower() == 'e':
-                self.minigame.hard_mode = False
-
-            try:
-                batch = int(self.children[2].value)
-                batch = max(1, min(3, batch))
-                self.minigame.batch = batch
-            except:
-                pass
 
             # run stablecog dream using draw object
             await self.minigame.stop()
