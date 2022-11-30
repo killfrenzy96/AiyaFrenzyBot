@@ -620,6 +620,16 @@ class MinigameView(View):
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
+            # only allow interaction for the host
+            if self.minigame.running == False:
+                content = f'<@{interaction.user.id}> This game is over. '
+                if interaction.user.id == self.minigame.host.id:
+                    content += 'Press 🖋️ or 🖼️ to continue the minigame.'
+                else:
+                    content += f'Please start a new game or ask {self.minigame.host.name} to keep going.'
+                loop.create_task(interaction.response.send_message(content, ephemeral=True, delete_after=30))
+                return
+
             loop.create_task(interaction.response.send_modal(MinigameAnswerModal(self, self.minigame)))
 
         except Exception as e:
