@@ -183,10 +183,7 @@ class Minigame:
                 prompt = prompt.lstrip(' ')
 
         if self.image_base64:
-            if self.hard_mode:
-                guidance_scale = round(3.0 + random.random() * 4.0, 2)
-            else:
-                guidance_scale = round(4.0 + random.random() * 4.0, 2)
+            guidance_scale = round(4.0 + random.random() * 4.0, 2)
             init_url = 'dummy'
         else:
             # start with a nonsense image
@@ -234,7 +231,7 @@ class Minigame:
             guidance_scale=guidance_scale,
             sampler=settings.read(self.guild)['sampler'],
             seed=random.randint(0, 0xFFFFFFFF),
-            strength=round(0.7 + random.random() * 0.3, 2),
+            strength=round(0.65 + random.random() * 0.3, 2),
             init_url=init_url,
             copy_command=copy_command,
             batch_count=self.batch,
