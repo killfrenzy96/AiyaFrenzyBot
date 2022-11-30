@@ -43,6 +43,7 @@ class GlobalVar:
     style_names = {}
     facefix_models: list[str] = []
     upscaler_names: list[str] = []
+    identify_models: list[str] = []
     messages: list[str] = []
     model_fn_index = 0
 
@@ -208,7 +209,7 @@ def files_check():
 
     # a way to grab upscalers - if AUTOMATIC1111 provides a better way, this should be updated
     config = s.get(global_var.url + "/config/").json()
-    if config['components']:
+    try:
         for item in config['components']:
             try:
                 if item['props']:
@@ -216,6 +217,11 @@ def files_check():
                         global_var.upscaler_names = item['props']['choices']
             except:
                 pass
+    except:
+        print('Warning: Could not read config. Upscalers will be missing.')
+
+    # get interrogate models
+    global_var.identify_models = ['clip', 'deepdanbooru']
 
 
 def guilds_check(self):

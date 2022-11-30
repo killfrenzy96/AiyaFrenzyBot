@@ -30,9 +30,17 @@ class IdentifyCog(commands.Cog):
         description='The URL image to identify. This overrides init_image!',
         required=False,
     )
+    @option(
+        'model',
+        str,
+        description='Select the model for interrogation',
+        required=False,
+        choices=settings.global_var.identify_models,
+    )
     async def dream_handler(self, ctx: discord.ApplicationContext, *,
                             init_image: Optional[discord.Attachment] = None,
-                            init_url: Optional[str]):
+                            init_url: Optional[str] = None,
+                            model: Optional[str] = None):
         try:
             loop = asyncio.get_running_loop()
 
@@ -41,6 +49,9 @@ class IdentifyCog(commands.Cog):
             user = queuehandler.get_user(ctx)
 
             print(f'Identify Request -- {user.name}#{user.discriminator} -- {guild}')
+
+            if model == None:
+                model = settings.global_var.identify_models[0]
 
             # get input image
             image: str = None
@@ -84,7 +95,7 @@ class IdentifyCog(commands.Cog):
 
             if image_validated:
                 #log the command
-                copy_command = f'/identify init_url:{init_url}'
+                copy_command = f'/identify init_url:{init_url} model:{model}'
                 print(copy_command)
 
                 #creates the upscale object out of local variables
@@ -93,7 +104,8 @@ class IdentifyCog(commands.Cog):
 
                     #construct a payload
                     payload = {
-                        "image": 'data:image/png;base64,' + image
+                        "image": 'data:image/png;base64,' + image,
+                        "model": model
                     }
 
                     queue_object.payload = payload
