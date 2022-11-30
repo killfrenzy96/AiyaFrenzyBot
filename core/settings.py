@@ -206,11 +206,17 @@ def files_check():
     for facefix_model in s.get(global_var.url + "/sdapi/v1/face-restorers").json():
         global_var.facefix_models.append(facefix_model['name'])
 
-    global_var.upscaler_names = [
-        'Lanczos', 'Nearest', 'LDSR', 'SwinIR_4x', 'lollypop',
-        'R-ESRGAN General 4xV3', 'R-ESRGAN General WDN 4xV3', 'R-ESRGAN AnimeVideo',
-        'R-ESRGAN 4x+', 'R-ESRGAN 4x+ Anime6B'
-    ]
+    # a way to grab upscalers - if AUTOMATIC1111 provides a better way, this should be updated
+    config = s.get(global_var.url + "/config/").json()
+    if config['components']:
+        for item in config['components']:
+            try:
+                if item['props']:
+                    if item['props']['label'] == 'Upscaler':
+                        global_var.upscaler_names = item['props']['choices']
+            except:
+                pass
+
 
 def guilds_check(self):
     #guild settings files. has to be done after on_ready
