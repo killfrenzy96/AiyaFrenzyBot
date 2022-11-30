@@ -84,17 +84,8 @@ class IdentifyCog(commands.Cog):
 
             if image_validated:
                 #log the command
-                copy_command = f'/identify init_url:{init_image.url}'
+                copy_command = f'/identify init_url:{init_url}'
                 print(copy_command)
-
-                image = None
-                if init_image is not None:
-                    try:
-                        image = base64.b64encode(init_image.content).decode('utf-8')
-                    except:
-                        image_response = await loop.run_in_executor(None, requests.get, init_image.url)
-                        image = base64.b64encode(image_response.content).decode('utf-8')
-                        # image = base64.b64encode(requests.get(init_image.url, stream=True).content).decode('utf-8')
 
                 #creates the upscale object out of local variables
                 def get_identify_object():
