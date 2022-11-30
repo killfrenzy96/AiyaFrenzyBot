@@ -120,6 +120,9 @@ class Minigame:
                 self.host = user
                 if prompt == None:
                     prompt = 'unset'
+                    self.reveal_prompt = False
+                else:
+                    self.reveal_prompt = True
 
             if prompt == 'unset' or not self.prompt:
                 prompt = self.sanatize(prompt)
