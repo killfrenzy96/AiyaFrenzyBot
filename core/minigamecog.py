@@ -192,7 +192,7 @@ class Minigame:
             init_url = None
 
         # insertert negative prompt to reduce chance of AI from getting stuck drawing text
-        negative_prompt = 'text, word, written, watermark'
+        negative_prompt = '[[[[[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]]]]]'
 
         # generate text output
         words = prompt.split(' ')
@@ -254,6 +254,7 @@ class Minigame:
         # construct a payload
         payload = {
             "prompt": draw_object.prompt,
+            "negative_prompt": draw_object.negative_prompt,
             "steps": draw_object.steps,
             "width": draw_object.width,
             "height": draw_object.height,
