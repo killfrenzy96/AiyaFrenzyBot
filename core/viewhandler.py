@@ -191,6 +191,7 @@ class DrawView(View):
         emoji="🖋")
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
+        print('edit pressed')
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)
@@ -211,7 +212,6 @@ class DrawView(View):
 
         except Exception as e:
             print_exception('re-prompt failed', e, interaction, loop)
-
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
@@ -398,7 +398,7 @@ def check_interaction_permission(interaction: discord.Interaction, loop: asyncio
             loop.create_task(interaction.response.send_message('You do not have permission to interact with this channel.', ephemeral=True, delete_after=30))
             return False
     except:
-        return False
+        return True
 
 async def get_message(interaction: discord.Interaction):
     if interaction.message == None:
