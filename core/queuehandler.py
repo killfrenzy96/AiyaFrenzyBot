@@ -59,12 +59,13 @@ class UpscaleObject:
 
 #the queue object for identify (interrogate)
 class IdentifyObject:
-    def __init__(self, cog, ctx, init_url, copy_command,
+    def __init__(self, cog, ctx, init_url, model, copy_command,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.init_url: str = init_url
         self.copy_command: str = copy_command
+        self.model: str = model
         self.view: discord.ui.View = view
         self.payload = payload
 

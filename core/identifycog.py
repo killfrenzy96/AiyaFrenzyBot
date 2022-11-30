@@ -100,13 +100,19 @@ class IdentifyCog(commands.Cog):
 
                 #creates the upscale object out of local variables
                 def get_identify_object():
-                    queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, viewhandler.DeleteView(user.id))
+                    queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, model, viewhandler.DeleteView(user.id))
 
                     #construct a payload
                     payload = {
                         "image": 'data:image/png;base64,' + image,
                         "model": model
                     }
+
+                    if model:
+                        model_payload = {
+                            "model": model
+                        }
+                        payload.update(model_payload)
 
                     queue_object.payload = payload
                     return queue_object
@@ -164,6 +170,8 @@ class IdentifyCog(commands.Cog):
                     s.post(settings.global_var.url + '/login', data=login_payload)
                 # else:
                 #     s.post(settings.global_var.url + '/login')
+
+
 
             response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
             queue_object.payload = None
