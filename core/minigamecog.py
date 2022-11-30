@@ -229,7 +229,7 @@ class Minigame:
             guidance_scale=guidance_scale,
             sampler=settings.read(self.guild)['sampler'],
             seed=random.randint(0, 0xFFFFFFFF),
-            strength=0.55 + random.random() * 0.25,
+            strength=0.6 + random.random() * 0.4,
             init_url=init_url,
             copy_command=copy_command,
             batch_count=self.batch,
@@ -483,37 +483,6 @@ class MinigameView(View):
         self.minigame = minigame
         self.input_object = input_object
 
-    # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
-    @discord.ui.button(
-        label="More Images",
-        custom_id="button_image-variation",
-        emoji="🖼️")
-    async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_running_loop()
-        try:
-            if viewhandler.check_interaction_permission(interaction, loop) == False: return
-
-            # obtain URL for the original image
-            if not self.minigame:
-                loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
-                return
-
-            # only allow interaction for the host
-            if self.minigame.host.id != interaction.user.id:
-                loop.create_task(interaction.response.send_message(f'Only {self.minigame.host.name} may create new variations.', ephemeral=True, delete_after=30))
-                return
-
-            # only allow interaction with the latest post
-            if self.minigame.last_view != self:
-                loop.create_task(interaction.response.send_message('You may only interact with the latest image from the minigame.', ephemeral=True, delete_after=30))
-                return
-
-            # run stablecog dream using draw object
-            loop.create_task(self.minigame.next_image_variation(interaction, None))
-
-        except Exception as e:
-            viewhandler.print_exception('send to img2img failed', e, interaction, loop)
-
     # the 🖋️ button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
         custom_id="button_re-prompt",
@@ -595,6 +564,38 @@ class MinigameView(View):
 
         except Exception as e:
             viewhandler.print_exception('delete failed', e, interaction, loop)
+
+    # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
+    @discord.ui.button(
+        label="More Images",
+        custom_id="button_image-variation",
+        emoji="🖼️",
+        row=2)
+    async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if viewhandler.check_interaction_permission(interaction, loop) == False: return
+
+            # obtain URL for the original image
+            if not self.minigame:
+                loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                return
+
+            # only allow interaction for the host
+            if self.minigame.host.id != interaction.user.id:
+                loop.create_task(interaction.response.send_message(f'Only {self.minigame.host.name} may create new variations.', ephemeral=True, delete_after=30))
+                return
+
+            # only allow interaction with the latest post
+            if self.minigame.last_view != self:
+                loop.create_task(interaction.response.send_message('You may only interact with the latest image from the minigame.', ephemeral=True, delete_after=30))
+                return
+
+            # run stablecog dream using draw object
+            loop.create_task(self.minigame.next_image_variation(interaction, None))
+
+        except Exception as e:
+            viewhandler.print_exception('send to img2img failed', e, interaction, loop)
 
     # guess prompt button
     @discord.ui.button(

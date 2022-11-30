@@ -191,7 +191,6 @@ class DrawView(View):
         emoji="🖋")
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
-        print('edit pressed')
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)
