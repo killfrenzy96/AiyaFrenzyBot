@@ -65,11 +65,7 @@ class Minigame:
         user = queuehandler.get_user(ctx)
 
         if self.running == False:
-            content = f'<@{user.id}> This game is over. '
-            if user.id == self.host.id:
-                content += 'Press 🖋️ or 🖼️ to continue the minigame.'
-            else:
-                content += f'Please start a new game or ask {self.host.name} to keep going.'
+            content = f'<@{user.id}> This game is over. Press 🖋️ or 🖼️ to continue the minigame.'
             ephemeral = True
         else:
             prompt = self.prompt.lower()
@@ -104,15 +100,16 @@ class Minigame:
 
     async def next_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str = 'unset'):
         loop = asyncio.get_running_loop()
+        user = queuehandler.get_user(ctx)
 
-        print(f'Minigame Request -- {self.host.name}#{self.host.discriminator} -- {self.guild}')
+        print(f'Minigame Request -- {user.name}#{user.discriminator} -- {self.guild}')
 
         dream_cost = 2.0
-        queue_cost = round(queuehandler.get_user_queue_cost(self.host.id), 2)
+        queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
 
         if dream_cost + queue_cost > settings.read(self.guild)['max_compute']:
             print(f'Minigame rejected: Too much in queue already')
-            content = f'<@{self.host.id}> Please wait! You have too much queued up.'
+            content = f'<@{user.id}> Please wait! You have too much queued up.'
             ephemeral = True
         else:
             if self.running == False:
@@ -120,6 +117,7 @@ class Minigame:
                 self.restarting = True
                 self.guess_count = 0
                 self.image_count = 0
+                self.host = user
                 if prompt == None:
                     prompt = 'unset'
 
@@ -510,7 +508,7 @@ class MinigameView(View):
                 return
 
             # only allow interaction for the host
-            if self.minigame.host.id != interaction.user.id:
+            if self.minigame.running and self.minigame.host.id != interaction.user.id:
                 loop.create_task(interaction.response.send_message(f'Only {self.minigame.host.name} may configure the minigame.', ephemeral=True, delete_after=30))
                 return
 
@@ -594,7 +592,7 @@ class MinigameView(View):
                 return
 
             # only allow interaction for the host
-            if self.minigame.host.id != interaction.user.id:
+            if self.minigame.running and self.minigame.host.id != interaction.user.id:
                 loop.create_task(interaction.response.send_message(f'Only {self.minigame.host.name} may create new variations.', ephemeral=True, delete_after=30))
                 return
 
@@ -622,11 +620,7 @@ class MinigameView(View):
 
             # only allow interaction for the host
             if self.minigame.running == False:
-                content = f'<@{interaction.user.id}> This game is over. '
-                if interaction.user.id == self.minigame.host.id:
-                    content += 'Press 🖋️ or 🖼️ to continue the minigame.'
-                else:
-                    content += f'Please start a new game or ask {self.minigame.host.name} to keep going.'
+                content = f'<@{interaction.user.id}> This game is over. Press 🖋️ or 🖼️ to continue the minigame.'
                 loop.create_task(interaction.response.send_message(content, ephemeral=True, delete_after=30))
                 return
 
@@ -687,6 +681,11 @@ class MinigameEditModal(Modal):
             # obtain URL for the original image
             if not self.minigame:
                 loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                return
+
+            # only allow interaction for the host
+            if self.minigame.running and self.minigame.host.id != interaction.user.id:
+                loop.create_task(interaction.response.send_message(f'Only {self.minigame.host.name} may configure the minigame.', ephemeral=True, delete_after=30))
                 return
 
             prompt = self.children[0].value
