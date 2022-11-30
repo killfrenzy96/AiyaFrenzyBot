@@ -200,6 +200,7 @@ def files_check():
                   "Please check your .env URL or credentials.")
             os.system("pause")
     if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
+    if 'PLMS' in global_var.sampler_names: global_var.sampler_names.remove('PLMS')
 
     for style in s.get(global_var.url + "/sdapi/v1/prompt-styles").json():
         global_var.style_names[style['name']] = style['prompt']

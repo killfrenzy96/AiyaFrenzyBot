@@ -218,7 +218,7 @@ class UpscaleCog(commands.Cog):
                         # queuehandler.GlobalQueue.upscale_q.append(upscale_object)
                         queue_length = queuehandler.process_dream(self, upscale_object, priority)
                         # await ctx.send_response(f'<@{user.id}>, {self.wait_message[random.randint(0, message_row_count)]}\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}`` - Scale: ``{resize}``x - Upscaler: ``{upscaler_1}``{append_options}')
-                        content = f'<@{user.id}> {settings.global_var.messages[random.randint(0, len(settings.global_var.messages) - 1)]} Queue: ``{queue_length}``'
+                        content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
 
         except Exception as e:
             print('upscale failed')

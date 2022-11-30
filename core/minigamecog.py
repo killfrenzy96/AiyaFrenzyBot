@@ -133,7 +133,7 @@ class Minigame:
             content = f'<@{self.host.id}> '
             if self.game_iteration == 0:
                 content += 'Your minigame is starting... '
-            content += settings.global_var.messages[random.randint(0, len(settings.global_var.messages) - 1)]
+            content += settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]
             ephemeral = False
 
             queue_length = await self.get_image_variation(ctx, self.prompt)
@@ -191,6 +191,11 @@ class Minigame:
             guidance_scale = 1.0
             init_url = None
 
+        # randomize sampler
+        steps = settings.read(self.guild)['default_steps']
+        sampler = settings.global_var.sampler_names[random.randrange(0, len(settings.global_var.sampler_names))]
+        if sampler in queuehandler.GlobalQueue.slow_samplers: steps = int(steps / 2)
+
         # insertert negative prompt to reduce chance of AI from getting stuck drawing text
         negative_prompt = '[[[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]]]'
 
@@ -226,13 +231,13 @@ class Minigame:
             negative_prompt=negative_prompt,
             model_name='Default',
             data_model=data_model,
-            steps=settings.read(self.guild)['default_steps'],
+            steps=steps,
             width=512,
             height=512,
             guidance_scale=guidance_scale,
-            sampler=settings.read(self.guild)['sampler'],
+            sampler=sampler,
             seed=random.randint(0, 0xFFFFFFFF),
-            strength=round(0.65 + random.random() * 0.3, 2),
+            strength=round(0.65 + random.random() * 0.35, 2),
             init_url=init_url,
             copy_command=copy_command,
             batch_count=self.batch,
@@ -246,7 +251,7 @@ class Minigame:
             view=None
         )
 
-        print(f'prompt: {prompt} negative_prompt:{negative_prompt} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
+        print(f'prompt: {prompt} negative_prompt:{negative_prompt} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
 
         draw_object.view = MinigameView(self, draw_object)
         self.last_view = draw_object.view
@@ -272,7 +277,7 @@ class Minigame:
             # update payload if image_base64 is available
             img_payload = {
                 "init_images": [
-                    'data:image/png;base64,' + self.image_base64[random.randint(0, len(self.image_base64) - 1)]
+                    'data:image/png;base64,' + self.image_base64[random.randrange(0, len(self.image_base64))]
                 ],
                 "denoising_strength": draw_object.strength
             }

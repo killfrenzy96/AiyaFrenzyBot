@@ -605,7 +605,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                             queuehandler.process_dream(self, get_draw_object(), priority, False)
 
-                    content = f'<@{user.id}> {settings.global_var.messages[random.randint(0, len(settings.global_var.messages) - 1)]} Queue: ``{queue_length}``'
+                    content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
                     if count > 1: content = content + f' - Batch: ``{count}``'
                     content = content + append_options
 
