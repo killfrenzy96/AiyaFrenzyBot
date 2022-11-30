@@ -197,7 +197,7 @@ class Minigame:
         if sampler in queuehandler.GlobalQueue.slow_samplers: steps = int(steps / 2)
 
         # insertert negative prompt to reduce chance of AI from getting stuck drawing text
-        negative_prompt = '[[[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]]]'
+        negative_prompt = '[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]'
 
         # generate text output
         words = prompt.split(' ')
