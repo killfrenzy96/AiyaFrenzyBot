@@ -297,7 +297,12 @@ class Minigame:
             # hard mode includes an adjective and a noun
             adjectives_path = 'resources/minigame-adjectives.csv'
 
-            random_adjective = self.get_random_word(adjectives_path)
+            # random chance of having 2 nouns
+            if random.randrange(1, 2) == 1:
+                random_adjective = self.get_random_word(adjectives_path)
+            else:
+                random_adjective = self.get_random_word(nouns_path)
+
             random_noun = self.get_random_word(nouns_path)
 
             # take care of rare edge case
