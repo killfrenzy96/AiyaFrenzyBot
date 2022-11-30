@@ -193,11 +193,8 @@ class Minigame:
             guidance_scale = 1.0
             init_url = None
 
-        # chance of inserterting 'text' as a negative prompt to prevent the AI from getting stuck drawing text
-        if random.randrange(1, 5) == 1:
-            negative_prompt = 'text'
-        else:
-            negative_prompt = None
+        # insertert negative prompt to reduce chance of AI from getting stuck drawing text
+        negative_prompt = '[[text, word, written, watermark]]'
 
         # generate text output
         words = prompt.split(' ')
@@ -237,7 +234,7 @@ class Minigame:
             guidance_scale=guidance_scale,
             sampler=settings.read(self.guild)['sampler'],
             seed=random.randint(0, 0xFFFFFFFF),
-            strength=round(0.6 + random.random() * 0.4, 2),
+            strength=round(0.7 + random.random() * 0.3, 2),
             init_url=init_url,
             copy_command=copy_command,
             batch_count=self.batch,
