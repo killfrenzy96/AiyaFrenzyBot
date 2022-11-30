@@ -184,17 +184,23 @@ class Minigame:
 
         if self.image_base64:
             if self.hard_mode:
-                guidance_scale = random.randrange(3.0, 8.0)
+                guidance_scale = float(random.randrange(3, 8))
             else:
-                guidance_scale = random.randrange(5.0, 9.0)
+                guidance_scale = float(random.randrange(5, 9))
             init_url = 'dummy'
         else:
-            # start with a nonsence image
+            # start with a nonsense image
             guidance_scale = 1.0
             init_url = None
 
-        words = prompt.split(' ')
+        # chance of inserterting 'text' as a negative prompt to prevent the AI from getting stuck drawing text
+        if random.randrange(1, 5) == 1:
+            negative_prompt = 'text'
+        else:
+            negative_prompt = None
 
+        # generate text output
+        words = prompt.split(' ')
         copy_command = f'Minigame ID ``{self.id}``\n'
 
         if len(words) > 1:
@@ -217,11 +223,12 @@ class Minigame:
         else:
             copy_command += f' Guess the prompt. {random_message}'
 
+        # create draw object
         draw_object = queuehandler.DrawObject(
             cog=self,
             ctx=ctx,
             prompt=prompt,
-            negative_prompt=None,
+            negative_prompt=negative_prompt,
             model_name='Default',
             data_model=data_model,
             steps=settings.read(self.guild)['default_steps'],
@@ -243,6 +250,8 @@ class Minigame:
             script=None,
             view=None
         )
+
+        print(f'prompt: {prompt} negative_prompt:{negative_prompt} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
 
         draw_object.view = MinigameView(self, draw_object)
         self.last_view = draw_object.view
