@@ -35,12 +35,12 @@ class IdentifyCog(commands.Cog):
         str,
         description='Select the model for interrogation',
         required=False,
-        choices=settings.global_var.identify_models,
+        choices=['combined'] + settings.global_var.identify_models,
     )
     async def dream_handler(self, ctx: discord.ApplicationContext, *,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str] = None,
-                            model: Optional[str] = None):
+                            model: Optional[str] = 'combined'):
         try:
             loop = asyncio.get_running_loop()
 
@@ -49,9 +49,6 @@ class IdentifyCog(commands.Cog):
             user = queuehandler.get_user(ctx)
 
             print(f'Identify Request -- {user.name}#{user.discriminator} -- {guild}')
-
-            if model == None:
-                model = settings.global_var.identify_models[0]
 
             # get input image
             image: str = None
@@ -100,7 +97,7 @@ class IdentifyCog(commands.Cog):
 
                 #creates the upscale object out of local variables
                 def get_identify_object():
-                    queue_object = queuehandler.IdentifyObject(self, ctx, init_image, copy_command, model, viewhandler.DeleteView(user.id))
+                    queue_object = queuehandler.IdentifyObject(self, ctx, init_url, model, copy_command, viewhandler.DeleteView(user.id))
 
                     #construct a payload
                     payload = {
@@ -171,34 +168,69 @@ class IdentifyCog(commands.Cog):
                 # else:
                 #     s.post(settings.global_var.url + '/login')
 
+            if queue_object.model == 'combined':
+                payloads: list[dict] = []
+                responses: list[requests.Response] = []
+                for model in settings.global_var.identify_models:
+                    new_payload = {}
+                    new_payload.update(queue_object.payload)
+                    model_payload = {
+                        'model': model
+                    }
+                    new_payload.update(model_payload)
+                    payloads.append(new_payload)
 
+                for payload in payloads:
+                    responses.append(s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=payload))
 
-            response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
-            queue_object.payload = None
+                responses
 
-            def post_dream():
-                try:
-                    response_data = response.json()
+                def post_dream():
+                    try:
+                        content: str = ''
+                        for index, response in enumerate(responses):
+                            response_data = response.json()
+                            if index > 0: content += ', '
+                            content += response_data.get('caption')
 
-                    # post to discord
-                    # embed = discord.Embed()
-                    # embed.set_image(url=queue_object.init_image.url)
-                    # embed.colour = settings.global_var.embed_color
-                    # embed.add_field(name=f'I think this is', value=f'``{response_data.get("caption")}``', inline=False)
-                    # event_loop.create_task(
-                    #     queue_object.ctx.channel.send(content=f'<@{user.id}>', embed=embed))
-                    queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``\nI think this is ``{response_data.get("caption")}``', view=queue_object.view
-                    ))
-                    queue_object.view = None
-                except Exception as e:
-                    print('identify failed (thread)')
-                    print(response)
-                    embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
-                    queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
-                    ))
-            Thread(target=post_dream, daemon=True).start()
+                        content = content.encode('utf-8').decode('unicode_escape')
+                        content = content.replace('\\(', '(')
+                        content = content.replace('\\)', ')')
+                        content = content.replace('_', ' ')
+
+                        content = f'<@{user.id}> ``{queue_object.copy_command}``\nI think this is ``{content}``'
+
+                        queuehandler.process_upload(queuehandler.UploadObject(
+                            ctx=queue_object.ctx, content=content, view=queue_object.view
+                        ))
+                        queue_object.view = None
+                    except Exception as e:
+                        print('identify failed (thread)')
+                        print(response)
+                        embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
+                        queuehandler.process_upload(queuehandler.UploadObject(
+                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
+                        ))
+                Thread(target=post_dream, daemon=True).start()
+            else:
+                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
+                queue_object.payload = None
+
+                def post_dream():
+                    try:
+                        response_data = response.json()
+                        queuehandler.process_upload(queuehandler.UploadObject(
+                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``\nI think this is ``{response_data.get("caption")}``', view=queue_object.view
+                        ))
+                        queue_object.view = None
+                    except Exception as e:
+                        print('identify failed (thread)')
+                        print(response)
+                        embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
+                        queuehandler.process_upload(queuehandler.UploadObject(
+                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
+                        ))
+                Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             print('identify failed (main)')

@@ -64,8 +64,8 @@ class IdentifyObject:
         self.cog = cog
         self.ctx: discord.ApplicationContext = ctx
         self.init_url: str = init_url
-        self.copy_command: str = copy_command
         self.model: str = model
+        self.copy_command: str = copy_command
         self.view: discord.ui.View = view
         self.payload = payload
 
@@ -101,8 +101,9 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
     elif type(queue_object) is UpscaleObject:
         dream_compute_cost = queue_object.resize
 
-    else:
+    elif type(queue_object) is IdentifyObject:
         dream_compute_cost = 1.0
+        if queue_object.model == 'combined': dream_compute_cost *= len(settings.global_var.identify_models)
 
     return dream_compute_cost
 
