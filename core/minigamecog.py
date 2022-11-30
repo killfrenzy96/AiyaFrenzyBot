@@ -281,6 +281,9 @@ class Minigame:
 
         draw_object.payload = payload
 
+        #increment number of images generated
+        settings.increment_stats(self.batch)
+
         if self.guild == 'private':
             priority = 'lowest'
         else:

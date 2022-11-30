@@ -274,15 +274,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
             if seed == -1: seed = random.randint(0, 0xFFFFFFFF)
 
-            #increment number of times command is used
-            def increment_stats():
-                with open('resources/stats.txt', 'r') as f:
-                    data = list(map(int, f.readlines()))
-                data[0] = data[0] + 1
-                with open('resources/stats.txt', 'w') as f:
-                    f.write('\n'.join(str(x) for x in data))
-            Thread(target=increment_stats, daemon=True).start()
-
             #formatting aiya initial reply
             append_options = ''
 
@@ -497,6 +488,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         image_validated = False
 
                 if image_validated:
+                    #increment number of images generated
+                    settings.increment_stats(count)
+
                     # create draw object
                     def get_draw_object():
                         args = get_draw_object_args()

@@ -5,6 +5,7 @@ import os
 import requests
 import time
 from typing import Optional
+from threading import Thread
 
 self = discord.Bot()
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -240,3 +241,13 @@ def guilds_check(self):
     else:
         print(f'Setting up settings for DMs, called None.json')
         build("None")
+
+#increment number of images generated
+def increment_stats(count: int = 1):
+    def run():
+        with open('resources/stats.txt', 'r') as f:
+            data = list(map(int, f.readlines()))
+        data[0] = data[0] + count
+        with open('resources/stats.txt', 'w') as f:
+            f.write('\n'.join(str(x) for x in data))
+    Thread(target=run, daemon=True).start()
