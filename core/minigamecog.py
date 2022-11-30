@@ -135,7 +135,8 @@ class Minigame:
             content += settings.global_var.messages[random.randint(0, len(settings.global_var.messages) - 1)]
             ephemeral = False
 
-            loop.create_task(self.get_image_variation(ctx, self.prompt))
+            queue_length = await self.get_image_variation(ctx, self.prompt)
+            content += f' Queue: ``{queue_length}``'
 
         if ephemeral:
             delete_after = 30
@@ -196,17 +197,10 @@ class Minigame:
 
         copy_command = f'Minigame ID ``{self.id}``\n'
 
-        random_message = await loop.run_in_executor(None, self.get_random_word, 'resources/minigame-messages.csv')
-        if self.restarting:
-            copy_command += f'> This is a new prompt. {random_message}'
-            self.restarting = False
-        else:
-            copy_command += f'> Guess the prompt. {random_message}'
-
         if len(words) > 1:
-            copy_command += f'\n> ``({len(words)} words'
+            copy_command += f'``({len(words)} words'
         else:
-            copy_command += '\n> ``(1 word'
+            copy_command += '``(1 word'
 
         for index, word in enumerate(words):
             if index == 0:
@@ -215,6 +209,13 @@ class Minigame:
                 copy_command += f' + {len(word)} letters'
 
         copy_command += ')``'
+
+        random_message = await loop.run_in_executor(None, self.get_random_word, 'resources/minigame-messages.csv')
+        if self.restarting:
+            copy_command += f' This is a new prompt. {random_message}'
+            self.restarting = False
+        else:
+            copy_command += f' Guess the prompt. {random_message}'
 
         draw_object = queuehandler.DrawObject(
             cog=self,
@@ -278,7 +279,7 @@ class Minigame:
             priority = 'lowest'
         else:
             priority = 'medium'
-        queuehandler.process_dream(self, draw_object, priority)
+        return queuehandler.process_dream(self, draw_object, priority)
 
         # while game_iteration == self.game_iteration:
         #     await asyncio.sleep(0.1)
