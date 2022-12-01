@@ -203,6 +203,9 @@ class DrawView(View):
                 if '``/dream ' in message.content:
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                elif '> Minigame ID ``' in message.content:
+                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
+                    return
                 else:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                     return
@@ -236,6 +239,9 @@ class DrawView(View):
                 if '``/dream ' in message.content:
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                elif '> Minigame ID ``' in message.content:
+                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
+                    return
                 else:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                     return
@@ -273,6 +279,9 @@ class DrawView(View):
                 if '``/dream ' in message.content:
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                elif '> Minigame ID ``' in message.content:
+                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
+                    return
                 else:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                     return
@@ -333,7 +342,7 @@ class DrawExtendedView(DrawView):
         emoji="🏳️")
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
-        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.', ephemeral=True, delete_after=30))
+        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
         return
 
     # guess prompt button
@@ -343,7 +352,7 @@ class DrawExtendedView(DrawView):
         row=2)
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
-        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.', ephemeral=True, delete_after=30))
+        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
         return
 
 # creating the view that holds a button to delete output
