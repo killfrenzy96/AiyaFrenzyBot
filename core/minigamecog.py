@@ -184,7 +184,7 @@ class Minigame:
                 prompt = prompt.lstrip(' ')
 
         if self.image_base64:
-            guidance_scale = round(4.0 + random.random() * 4.0, 2)
+            guidance_scale = round(4.0 + random.random() * 8.0, 2)
             init_url = 'dummy'
         else:
             # start with a nonsense image
