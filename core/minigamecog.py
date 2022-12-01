@@ -741,7 +741,7 @@ class MinigameEditModal(Modal):
 
 class MinigameAnswerModal(Modal):
     def __init__(self, view: MinigameView, minigame: Minigame) -> None:
-        super().__init__(title="Change Prompt!")
+        super().__init__(title="Guess Prompt")
         self.view = view
         self.minigame = minigame
 
