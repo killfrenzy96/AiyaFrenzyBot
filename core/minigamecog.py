@@ -252,7 +252,6 @@ class Minigame:
             tiling=False,
             highres_fix=False,
             clip_skip=1,
-            token=token,
             script=None,
             view=None
         )
@@ -264,7 +263,7 @@ class Minigame:
 
         # construct a payload
         payload_prompt = draw_object.prompt
-        if draw_object.token: payload_prompt = f'{draw_object.token}, {payload_prompt}'
+        if token: payload_prompt = f'{token}, {payload_prompt}'
 
         payload = {
             "prompt": payload_prompt,

@@ -502,7 +502,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                         # construct a payload
                         payload_prompt = queue_object.prompt
-                        if queue_object.token: payload_prompt = f'{queue_object.token}, {payload_prompt}'
+                        if token: payload_prompt = f'{token}, {payload_prompt}'
 
                         payload = {
                             "prompt": payload_prompt,
@@ -782,13 +782,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         checkpoint = get_param('checkpoint')
         if checkpoint not in settings.global_var.model_names: checkpoint = 'Default'
 
-        token: str = ''
-        for (display_name, full_name) in settings.global_var.model_names.items():
-            if display_name == checkpoint or full_name == checkpoint:
-                #take selected data_model and get model_name, then update data_model with the full name
-                checkpoint = display_name
-                token = settings.global_var.model_tokens[display_name]
-
         try:
             width = int(get_param('width'))
             if width not in [x for x in range(192, 1281, 64)]:
@@ -902,7 +895,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             tiling=tiling,
             highres_fix=highres_fix,
             clip_skip=clip_skip,
-            token=token,
             script=script
         )
 
