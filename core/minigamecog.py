@@ -263,7 +263,7 @@ class Minigame:
 
         # construct a payload
         payload_prompt = draw_object.prompt
-        if token: payload_prompt = f'{token} {payload_prompt}'
+        if token: payload_prompt = f'{token} ((({payload_prompt})))'
 
         payload = {
             "prompt": payload_prompt,
