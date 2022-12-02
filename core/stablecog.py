@@ -276,8 +276,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 return (self, ctx, prompt, negative_prompt, model_name, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
                         strength, init_url, copy_command, count, style,
-                        facefix, tiling, highres_fix, clip_skip, token,
-                        script)
+                        facefix, tiling, highres_fix, clip_skip, script)
 
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
