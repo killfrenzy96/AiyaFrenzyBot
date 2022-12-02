@@ -495,7 +495,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     def get_draw_object():
                         args = get_draw_object_args()
                         queue_object = queuehandler.DrawObject(*args)
-                        queue_object.batch_count = 1
+                        # queue_object.batch_count = 1
 
                         #set up tuple of parameters to pass into the Discord view
                         queue_object.view = viewhandler.DrawView(queue_object)
@@ -519,7 +519,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             "seed_resize_from_w": 0,
                             "denoising_strength": None,
                             "tiling": queue_object.tiling,
-                            "n_iter": queue_object.batch_count,
+                            "n_iter": 1,
                             "styles": [
                                 queue_object.style
                             ]
