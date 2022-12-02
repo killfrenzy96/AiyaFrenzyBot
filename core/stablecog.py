@@ -501,7 +501,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                         # construct a payload
                         payload_prompt = queue_object.prompt
-                        if token: payload_prompt = f'{token}, {payload_prompt}'
+                        if token: payload_prompt = f'{token} {payload_prompt}'
 
                         payload = {
                             "prompt": payload_prompt,
