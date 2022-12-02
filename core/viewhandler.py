@@ -274,7 +274,7 @@ class DrawView(View):
                 if '``/dream ' in message.content:
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
-                elif '> Minigame ID ``' in message.content:
+                elif '``/minigame ' in message.content:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                     return
                 else:

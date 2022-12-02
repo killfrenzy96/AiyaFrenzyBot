@@ -32,6 +32,8 @@ class Minigame:
         self.minigame_id: int = None
         self.reveal_prompt: bool = False
         self.prompt: str = None
+        self.model_name: str = None
+        self.data_model: str = None
         self.hard_mode: bool = False
         self.game_iteration: int = 0
         self.batch: int = 1
@@ -201,7 +203,15 @@ class Minigame:
 
         # generate text output
         words = prompt.split(' ')
-        copy_command = f'Minigame ID ``{self.id}``\n'
+        copy_command = f'``/minigame'
+
+        if self.model_name != 'Default':
+            copy_command += f' checkpoint:{self.model_name}'
+
+        if self.hard_mode == True:
+            copy_command += f' checkpoint:{self.hard_mode}'
+
+        copy_command += f' batch:{self.batch}``\n'
 
         if len(words) > 1:
             copy_command += f'``({len(words)} words'
@@ -251,7 +261,7 @@ class Minigame:
             view=None
         )
 
-        print(f'prompt: {prompt} negative_prompt:{negative_prompt} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
+        print(f'prompt: {prompt} negative_prompt:{negative_prompt} checkpoint:{self.model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
 
         draw_object.view = MinigameView(self, draw_object)
         self.last_view = draw_object.view
@@ -357,10 +367,9 @@ class Minigame:
             #     s.post(settings.global_var.url + '/login')
 
             # construct a payload for data model
-            data_model = settings.global_var.model_names['Default']
-            if data_model:
+            if self.data_model:
                 model_payload = {
-                    "sd_model_checkpoint": settings.global_var.model_names['Default']
+                    "sd_model_checkpoint": self.data_model
                 }
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
 
@@ -480,11 +489,20 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
     def __init__(self, bot):
         self.bot: discord.Bot = bot
 
+    @commands.slash_command(name = 'minigame', description = 'Starts a minigame where you guess the prompt from a picture.')
     @option(
         'prompt',
         str,
         description='The starting prompt. If provdided, you will handle the prompts instead of me.',
         required=False,
+    )
+    @option(
+        'checkpoint',
+        str,
+        description='Select the data model for image generation',
+        required=False,
+        # autocomplete=discord.utils.basic_autocomplete(model_autocomplete),
+        choices=settings.global_var.model_names,
     )
     @option(
         'hard_mode',
@@ -498,12 +516,14 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
         description='The number of images to generate. This is "Batch count", not "Batch size".',
         required=False,
     )
-    @commands.slash_command(name = 'minigame', description = 'Starts a minigame where you guess the prompt from a picture.')
     async def draw_handler(self, ctx: discord.ApplicationContext, *,
                            prompt: Optional[str] = None,
+                           checkpoint: Optional[str] = None,
                            hard_mode: Optional[bool] = False,
                            batch: Optional[int] = 2):
         try:
+            model_name: str = checkpoint
+
             loop = asyncio.get_running_loop()
             host = queuehandler.get_user(ctx)
             guild = queuehandler.get_guild(ctx)
@@ -515,6 +535,18 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
             minigame.prompt = prompt
             minigame.hard_mode = hard_mode
             minigame.batch = max(1, min(3, batch))
+
+            if not model_name:
+                model_name = settings.read(guild)['data_model']
+
+            data_model: str = ''
+            for (display_name, full_name) in settings.global_var.model_names.items():
+                if display_name == model_name or full_name == model_name:
+                    model_name = display_name
+                    data_model = full_name
+
+            minigame.model_name = model_name
+            minigame.data_model = data_model
 
             if prompt:
                 minigame.reveal_prompt = True

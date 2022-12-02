@@ -258,7 +258,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
             simple_prompt = prompt
             data_model: str = ''
-            for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
+            for (display_name, full_name) in settings.global_var.model_names.items():
                 if display_name == model_name or full_name == model_name:
                     #take selected data_model and get model_name, then update data_model with the full name
                     model_name = display_name
