@@ -204,8 +204,8 @@ class IdentifyCog(commands.Cog):
                             content += response_data.get('caption')
 
                         content = content.encode('utf-8').decode('unicode_escape')
-                        content = content.replace('\\(', '(')
-                        content = content.replace('\\)', ')')
+                        content = content.replace('\\(', '')
+                        content = content.replace('\\)', '')
                         content = content.replace('_', ' ')
 
                         content = f'<@{user.id}> ``{queue_object.copy_command}``\nI think this is ``{content}``'
