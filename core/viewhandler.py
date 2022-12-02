@@ -19,7 +19,7 @@ class DrawModal(Modal):
         self.add_item(
             InputText(
                 label='Prompt',
-                value=self.input_object.simple_prompt,
+                value=self.input_object.prompt,
                 style=discord.InputTextStyle.long
             )
         )
@@ -88,8 +88,7 @@ class DrawModal(Modal):
             stable_cog = stablecog.StableCog(self)
             draw_object = copy.copy(self.input_object)
 
-            draw_object.simple_prompt = self.children[0].value
-            draw_object.prompt = self.input_object.prompt.replace(self.input_object.simple_prompt, self.children[0].value)
+            draw_object.prompt = self.children[0].value
 
             draw_object.negative_prompt = self.children[1].value
 

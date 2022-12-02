@@ -171,19 +171,15 @@ class Minigame:
     async def get_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str):
         loop = asyncio.get_running_loop()
 
-        model_name: str = 'Default'
-        data_model: str = ''
+        model_name: str = self.model_name
+        data_model: str = self.data_model
+        token: str = ''
         for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
             if display_name == model_name or full_name == model_name:
                 #take selected data_model and get model_name, then update data_model with the full name
                 model_name = display_name
                 data_model = full_name
-
-                #look at the model for activator token and prepend prompt with it
                 token = settings.global_var.model_tokens[display_name]
-                prompt = token + ' ' + prompt
-                #if there's no activator token, remove the extra blank space
-                prompt = prompt.lstrip(' ')
 
         if self.image_base64:
             guidance_scale = round(4.0 + random.random() * 8.0, 2)
@@ -205,11 +201,11 @@ class Minigame:
         words = prompt.split(' ')
         copy_command = f'``/minigame'
 
-        if self.model_name != 'Default':
-            copy_command += f' checkpoint:{self.model_name}'
+        if model_name != 'Default':
+            copy_command += f' checkpoint:{model_name}'
 
         if self.hard_mode == True:
-            copy_command += f' checkpoint:{self.hard_mode}'
+            copy_command += f' hard_mode:{self.hard_mode}'
 
         copy_command += f' batch:{self.batch}``\n'
 
@@ -239,7 +235,7 @@ class Minigame:
             ctx=ctx,
             prompt=prompt,
             negative_prompt=negative_prompt,
-            model_name='Default',
+            model_name=model_name,
             data_model=data_model,
             steps=steps,
             width=512,
@@ -256,19 +252,22 @@ class Minigame:
             tiling=False,
             highres_fix=False,
             clip_skip=1,
-            simple_prompt=prompt,
+            token=token,
             script=None,
             view=None
         )
 
-        print(f'prompt: {prompt} negative_prompt:{negative_prompt} checkpoint:{self.model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
+        print(f'prompt: {prompt} negative_prompt:{negative_prompt} checkpoint:{model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
 
         draw_object.view = MinigameView(self, draw_object)
         self.last_view = draw_object.view
 
         # construct a payload
+        payload_prompt = draw_object.prompt
+        if draw_object.token: payload_prompt = f'{draw_object.token}, {payload_prompt}'
+
         payload = {
-            "prompt": draw_object.prompt,
+            "prompt": payload_prompt,
             "negative_prompt": draw_object.negative_prompt,
             "steps": draw_object.steps,
             "width": draw_object.width,
@@ -367,9 +366,9 @@ class Minigame:
             #     s.post(settings.global_var.url + '/login')
 
             # construct a payload for data model
-            if self.data_model:
+            if queue_object.data_model:
                 model_payload = {
-                    "sd_model_checkpoint": self.data_model
+                    "sd_model_checkpoint": queue_object.data_model
                 }
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
 

@@ -10,7 +10,7 @@ from core import settings
 #the queue object for txt2image and img2img
 class DrawObject:
     def __init__(self, cog, ctx, prompt, negative_prompt, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_url, copy_command, batch_count, style, facefix, tiling, highres_fix, clip_skip, simple_prompt, script,
+                 strength, init_url, copy_command, batch_count, style, facefix, tiling, highres_fix, clip_skip, token, script,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext | discord.Interaction | discord.Message = ctx
@@ -33,7 +33,7 @@ class DrawObject:
         self.tiling: bool = tiling
         self.highres_fix: bool = highres_fix
         self.clip_skip: int = clip_skip
-        self.simple_prompt: str = simple_prompt
+        self.token: str = token
         self.script: str = script
         self.view: discord.ui.View = view
         self.payload = payload

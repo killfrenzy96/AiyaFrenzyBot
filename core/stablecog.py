@@ -256,19 +256,14 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if clip_skip == 0:
                 clip_skip = settings.read(guild)['clip_skip']
 
-            simple_prompt = prompt
             data_model: str = ''
+            token: str = ''
             for (display_name, full_name) in settings.global_var.model_names.items():
                 if display_name == model_name or full_name == model_name:
                     #take selected data_model and get model_name, then update data_model with the full name
                     model_name = display_name
                     data_model = full_name
-
-                    #look at the model for activator token and prepend prompt with it
                     token = settings.global_var.model_tokens[display_name]
-                    prompt = token + ' ' + prompt
-                    #if there's no activator token, remove the extra blank space
-                    prompt = prompt.lstrip(' ')
 
             print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
 
@@ -281,7 +276,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 return (self, ctx, prompt, negative_prompt, model_name, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
                         strength, init_url, copy_command, count, style,
-                        facefix, tiling, highres_fix, clip_skip, simple_prompt,
+                        facefix, tiling, highres_fix, clip_skip, token,
                         script)
 
             # get estimate of the compute cost of this dream
@@ -412,7 +407,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             #     append_options = append_options + f'\nCLIP skip: ``{clip_skip}``'
 
             #log the command
-            copy_command = f'/dream prompt:{simple_prompt}'
+            copy_command = f'/dream prompt:{prompt}'
             if negative_prompt != '':
                 copy_command = copy_command + f' negative:{negative_prompt}'
             if data_model and model_name != 'Default':
@@ -506,8 +501,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
                         # construct a payload
+                        payload_prompt = queue_object.prompt
+                        if queue_object.token: payload_prompt = f'{queue_object.token}, {payload_prompt}'
+
                         payload = {
-                            "prompt": queue_object.prompt,
+                            "prompt": payload_prompt,
                             "negative_prompt": queue_object.negative_prompt,
                             "steps": queue_object.steps,
                             "width": queue_object.width,
@@ -698,20 +696,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     with contextlib.ExitStack() as stack:
                         buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
 
-                        # embed = discord.Embed()
-                        # embed.colour = settings.global_var.embed_color
-
-                        # image_count = len(pil_images)
-                        # noun_descriptor = "drawing" if image_count == 1 else f'{image_count} drawings'
-                        # embed.add_field(name=f'My {noun_descriptor} of', value=f'``{queue_object.simple_prompt}``', inline=False)
-
-                        # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
-
-                        # footer_args = dict(text=f'{user.name}#{user.discriminator}')
-                        # if user.avatar is not None:
-                        #     footer_args['icon_url'] = user.avatar.url
-                        # embed.set_footer(**footer_args)
-
                         for (pil_image, buffer) in zip(pil_images, buffer_handles):
                             pil_image.save(buffer, 'PNG')
                             buffer.seek(0)
@@ -797,6 +781,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         checkpoint = get_param('checkpoint')
         if checkpoint not in settings.global_var.model_names: checkpoint = 'Default'
+
+        token: str = ''
+        for (display_name, full_name) in settings.global_var.model_names.items():
+            if display_name == checkpoint or full_name == checkpoint:
+                #take selected data_model and get model_name, then update data_model with the full name
+                checkpoint = display_name
+                token = settings.global_var.model_tokens[display_name]
 
         try:
             width = int(get_param('width'))
@@ -911,7 +902,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             tiling=tiling,
             highres_fix=highres_fix,
             clip_skip=clip_skip,
-            simple_prompt=prompt,
+            token=token,
             script=script
         )
 
