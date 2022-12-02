@@ -176,14 +176,9 @@ class DeleteModal(Modal):
 
 #creating the view that holds the buttons for /draw output
 class DrawView(View):
-    def __init__(self, input_tuple: tuple | queuehandler.DrawObject):
+    def __init__(self, input_object: queuehandler.DrawObject):
         super().__init__(timeout=None)
-        if type(input_tuple) is stablecog.StableCog:
-            self.input_object = None
-        elif type(input_tuple) == queuehandler.DrawObject:
-            self.input_object: queuehandler.DrawObject = input_tuple
-        else:
-            self.input_object = queuehandler.DrawObject(*input_tuple)
+        self.input_object: queuehandler.DrawObject = input_object
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
@@ -333,8 +328,8 @@ class DrawView(View):
 
 
 class DrawExtendedView(DrawView):
-    def __init__(self, input_tuple: tuple | queuehandler.DrawObject):
-        super().__init__(input_tuple)
+    def __init__(self, input_object: queuehandler.DrawObject):
+        super().__init__(input_object)
 
     # the 🏳️ ends the game and reveals the answer
     @discord.ui.button(
