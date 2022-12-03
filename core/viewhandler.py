@@ -9,7 +9,7 @@ from core import queuehandler
 from core import stablecog
 
 
-#the modal that is used for the 🖋 button
+# the modal that is used for the 🖋 button
 class DrawModal(Modal):
     def __init__(self, input_object: queuehandler.DrawObject, message: discord.Message) -> None:
         super().__init__(title="Change Prompt!")
@@ -42,7 +42,7 @@ class DrawModal(Modal):
             )
         )
 
-        extra_settings_value = f'batch: {self.input_object.batch_count}'
+        extra_settings_value = f'batch: {self.input_object.batch}'
         extra_settings_value += f'\nsteps: {self.input_object.steps}'
         extra_settings_value += f'\nguidance_scale: {self.input_object.guidance_scale}'
 
@@ -129,7 +129,7 @@ class DrawModal(Modal):
                 if 'tiling' in commands:            draw_object.tiling          = command_draw_object.tiling
                 if 'highres_fix' in commands:       draw_object.highres_fix     = command_draw_object.highres_fix
                 if 'clip_skip' in commands:         draw_object.clip_skip       = command_draw_object.clip_skip
-                if 'batch' in commands:             draw_object.batch_count     = command_draw_object.batch_count
+                if 'batch' in commands:             draw_object.batch     = command_draw_object.batch
                 if 'script' in commands:            draw_object.script          = command_draw_object.script
             except:
                 pass
@@ -140,7 +140,7 @@ class DrawModal(Modal):
 
             loop.create_task(stable_cog.dream_object(draw_object))
         except Exception as e:
-            print_exception('re-prompt failed', e, interaction, loop)
+            print_exception(e, interaction, loop)
 
 # create the view to confirm the deletion of an image
 class DeleteModal(Modal):
@@ -171,9 +171,9 @@ class DeleteModal(Modal):
             update_user_delete(interaction.user.id)
 
         except Exception as e:
-            print_exception('delete failed', e, interaction, loop)
+            print_exception(e, interaction, loop)
 
-#creating the view that holds the buttons for /draw output
+# creating the view that holds the buttons for /draw output
 class DrawView(View):
     def __init__(self, input_object: queuehandler.DrawObject):
         super().__init__(timeout=None)
@@ -207,7 +207,7 @@ class DrawView(View):
             loop.create_task(interaction.response.send_modal(DrawModal(input_object, message)))
 
         except Exception as e:
-            print_exception('re-prompt failed', e, interaction, loop)
+            print_exception(e, interaction, loop)
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
@@ -252,7 +252,7 @@ class DrawView(View):
             loop.create_task(stablecog.StableCog(self).dream_object(draw_object))
 
         except Exception as e:
-            print_exception('send to img2img failed', e, interaction, loop)
+            print_exception(e, interaction, loop)
 
 
     # the 🔁 button will take the same parameters for the image, change the seed, and add a task to the queue
@@ -291,10 +291,10 @@ class DrawView(View):
             loop.create_task(stablecog.StableCog(self).dream_object(draw_object))
 
         except Exception as e:
-            print_exception('reroll failed', e, interaction, loop)
+            print_exception(e, interaction, loop)
 
 
-    #the button to delete generated images
+    # the button to delete generated images
     @discord.ui.button(
         custom_id="button_x",
         emoji="❌")
@@ -315,12 +315,12 @@ class DrawView(View):
                 update_user_delete(interaction.user.id)
 
         except Exception as e:
-            print_exception('delete failed', e, interaction, loop)
+            print_exception(e, interaction, loop)
 
     def find_between(self, s: str, first: str, last: str):
         try:
-            start = s.index( first ) + len( first )
-            end = s.index( last, start )
+            start = s.index(first) + len(first)
+            end = s.index(last, start)
             return s[start:end]
         except ValueError:
             return ''
@@ -375,7 +375,7 @@ class DeleteView(View):
                 update_user_delete(interaction.user.id)
 
         except Exception as e:
-            print_exception('delete failed', e, interaction, loop)
+            print_exception(e, interaction, loop)
 
 # shared utility functions
 user_last_delete: dict = {}
@@ -409,9 +409,7 @@ async def get_message(interaction: discord.Interaction):
         message = interaction.message
     return message
 
-def print_exception(message: str, e: Exception, interaction: discord.Interaction, loop: asyncio.AbstractEventLoop):
-    print(f'Exception: {message}')
-    print(f'{e}\n{traceback.print_exc()}')
-    # button.disabled = True
-    # await interaction.response.edit_message(view=self)
-    loop.create_task(interaction.response.send_message(f'{message}\n{e}\n{traceback.print_exc()}', ephemeral=True, delete_after=30))
+def print_exception(e: Exception, interaction: discord.Interaction, loop: asyncio.AbstractEventLoop):
+    content = f'Something went wrong.\n{e}'
+    print(content + f'\n{traceback.print_exc()}')
+    loop.create_task(interaction.response.send_message(content, ephemeral=True, delete_after=30))

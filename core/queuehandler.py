@@ -10,7 +10,7 @@ from core import settings
 #the queue object for txt2image and img2img
 class DrawObject:
     def __init__(self, cog, ctx, prompt, negative_prompt, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_url, copy_command, batch_count, style, facefix, tiling, highres_fix, clip_skip, script,
+                 strength, init_url, copy_command, batch, style, facefix, tiling, highres_fix, clip_skip, script,
                  view = None, payload = None):
         self.cog = cog
         self.ctx: discord.ApplicationContext | discord.Interaction | discord.Message = ctx
@@ -27,7 +27,7 @@ class DrawObject:
         self.strength: float = strength
         self.init_url: str = init_url
         self.copy_command: str = copy_command
-        self.batch_count: int = batch_count
+        self.batch: int = batch
         self.style: str = style
         self.facefix: str = facefix
         self.tiling: bool = tiling
@@ -95,7 +95,7 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
         if queue_object.init_url: dream_compute_cost *= max(0.2, queue_object.strength)
         dream_compute_cost += dream_compute_cost_add
         dream_compute_cost = max(1.0, dream_compute_cost)
-        dream_compute_cost *= float(queue_object.batch_count)
+        dream_compute_cost *= float(queue_object.batch)
 
     elif type(queue_object) is UpscaleObject:
         dream_compute_cost = queue_object.resize
@@ -157,7 +157,7 @@ def get_progress():
         if settings.global_var.api_auth:
             s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
-        # send normal payload to webui
+        # send login payload to webui
         if settings.global_var.gradio_auth:
             login_payload = {
                 'username': settings.global_var.username,

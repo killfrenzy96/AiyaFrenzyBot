@@ -2,7 +2,6 @@ import asyncio
 import discord
 import os
 import sys
-import csv
 import discord
 from core import settings
 from core.logging import get_logger
@@ -21,7 +20,6 @@ self.logger = get_logger(__name__)
 settings.startup_check()
 settings.files_check()
 
-self.load_extension('core.settingscog')
 self.load_extension('core.stablecog')
 self.load_extension('core.upscalecog')
 self.load_extension('core.identifycog')
@@ -44,18 +42,7 @@ async def on_ready():
     #because guilds are only known when on_ready, run files check for guilds
     settings.guilds_check(self)
 
-# @self.event
-# async def on_message(message: discord.Message):
-#     if message.author == self.user:
-#         try:
-#             if message.content.startswith('<@') and '> ``' in message.content:
-#                 await message.add_reaction('❌')
-#                 if '``/dream prompt:' in message.content:
-#                     await message.add_reaction('🔁')
-#         except(Exception,):
-#             pass
-
-#fallback feature to delete generations if aiya has been restarted
+# fallback feature to let reactions still work
 @self.event
 async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
     if ctx.user_id == self.user.id:
@@ -101,25 +88,21 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
         if channel.permissions_for(user).use_application_commands == False:
             return
 
-        # message = await self.get_channel(ctx.channel_id).fetch_message(ctx.message_id)
-
         if message.author.id == self.user.id and user.id != self.user.id:
-            # try:
-                # Check if the message from Shanghai was actually a generation
-                # if message.embeds[0].fields[0].name == 'command':
-                if '``/dream prompt:' in message.content:
-                    def find_between(s, first, last):
-                        try:
-                            start = s.index( first ) + len( first )
-                            end = s.index( last, start )
-                            return s[start:end]
-                        except ValueError:
-                            return ''
+            # check if the message from Shanghai was actually a generation
+            if '``/dream prompt:' in message.content:
+                def find_between(s: str, first: str, last: str):
+                    try:
+                        start = s.index(first) + len(first)
+                        end = s.index(last, start)
+                        return s[start:end]
+                    except ValueError:
+                        return ''
 
-                    command = find_between(message.content, '``/dream ', '``')
+                command = find_between(message.content, '``/dream ', '``')
 
-                    message.author = user
-                    await stable_cog.dream_command(message, command)
+                message.author = user
+                await stable_cog.dream_command(message, command)
 
 @self.event
 async def on_guild_join(guild: discord.Guild):

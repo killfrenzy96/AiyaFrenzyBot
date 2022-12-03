@@ -52,7 +52,6 @@ class Minigame:
         loop = asyncio.get_running_loop()
         self.channel = ctx.channel
 
-        # minigames.append(self)
         loop.create_task(self.next_image_variation(ctx, self.prompt))
 
     async def stop(self):
@@ -60,16 +59,19 @@ class Minigame:
             return
         self.running = False
 
-        # minigames.remove(self)
-
     async def answer(self, ctx: discord.ApplicationContext | discord.Interaction, guess: str):
         loop = asyncio.get_running_loop()
-        user = queuehandler.get_user(ctx)
+        content = None
+        ephemeral = False
 
-        if self.running == False:
-            content = f'<@{user.id}> This game is over. Press 🖋️ or 🖼️ to continue the minigame.'
-            ephemeral = True
-        else:
+        try:
+            user = queuehandler.get_user(ctx)
+
+            if self.running == False:
+                content = f'<@{user.id}> This game is over. Press 🖋️ or 🖼️ to continue the minigame.'
+                ephemeral = True
+                raise Exception()
+
             prompt = self.prompt.lower()
             guess = self.sanatize(guess).lower()
 
@@ -78,17 +80,21 @@ class Minigame:
 
             if prompt in guess or similarity > 0.9:
                 content = f'<@{user.id}> has guessed the answer! The prompt was ``{self.prompt}``.\nIt took ``{self.guess_count}`` guesses and ``{self.image_count}`` images to get this answer.\nPress 🖋️ or 🖼️ to continue the minigame.'
-                ephemeral = False
                 await self.stop()
             elif similarity > 0.8:
                 content = f'<@{user.id}> tried ``{guess}``. This is really close.'
-                ephemeral = False
             elif similarity > 0.65:
                 content = f'<@{user.id}> tried ``{guess}``. This is kind of close.'
-                ephemeral = False
+            elif similarity > 0.4:
+                content = f'<@{user.id}> tried ``{guess}``. Maybe you\'re getting somewhere.'
             else:
                 content = f'<@{user.id}> tried ``{guess}``. This was not the correct answer.'
-                ephemeral = False
+
+        except Exception as e:
+            if content == None:
+                content = f'Something went wrong.\n{e}'
+                print(content + f'\n{traceback.print_exc()}')
+                ephemeral = True
 
         if ephemeral:
             delete_after = 30
@@ -103,17 +109,21 @@ class Minigame:
     async def next_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str = 'unset'):
         loop = asyncio.get_running_loop()
         user = queuehandler.get_user(ctx)
-
+        content = None
+        ephemeral = False
         print(f'Minigame Request -- {user.name}#{user.discriminator} -- {self.guild}')
 
-        dream_cost = 2.0
-        queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
+        try:
+            # calculate total cost of queued items and reject if there is too expensive
+            dream_cost = 2.0
+            queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
+            if dream_cost + queue_cost > settings.read(self.guild)['max_compute']:
+                print(f'Minigame rejected: Too much in queue already')
+                content = f'<@{user.id}> Please wait! You have too much queued up.'
+                ephemeral = True
+                raise Exception()
 
-        if dream_cost + queue_cost > settings.read(self.guild)['max_compute']:
-            print(f'Minigame rejected: Too much in queue already')
-            content = f'<@{user.id}> Please wait! You have too much queued up.'
-            ephemeral = True
-        else:
+            # reset game if it's not running
             if self.running == False:
                 self.running = True
                 self.restarting = True
@@ -126,12 +136,14 @@ class Minigame:
                 else:
                     self.reveal_prompt = True
 
+            # update prompt if there is a new game
             if prompt == 'unset' or not self.prompt:
                 prompt = self.sanatize(prompt)
                 self.prompt = await loop.run_in_executor(None, self.get_random_prompt, self.hard_mode)
             elif prompt:
                 self.prompt = self.sanatize(prompt)
 
+            # start image generation
             content = f'<@{self.host.id}> '
             if self.game_iteration == 0:
                 content += 'Your minigame is starting... '
@@ -140,6 +152,12 @@ class Minigame:
 
             queue_length = await self.get_image_variation(ctx, self.prompt)
             content += f' Queue: ``{queue_length}``'
+
+        except Exception as e:
+            if content == None:
+                content = f'Something went wrong.\n{e}'
+                print(content + f'\n{traceback.print_exc()}')
+                ephemeral = True
 
         if ephemeral:
             delete_after = 30
@@ -171,22 +189,21 @@ class Minigame:
     async def get_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str):
         loop = asyncio.get_running_loop()
 
+        # get data model and token from checkpoint
         model_name: str = self.model_name
         data_model: str = self.data_model
         token: str = ''
         for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
             if display_name == model_name or full_name == model_name:
-                #take selected data_model and get model_name, then update data_model with the full name
                 model_name = display_name
                 data_model = full_name
                 token = settings.global_var.model_tokens[display_name]
 
         if self.images_base64:
             guidance_scale = round(4.0 + random.random() * 8.0, 2)
-            init_url = 'dummy'
+            init_url = 'dummy' # minigame only uses cached images
         else:
-            # start with a nonsense image
-            guidance_scale = 1.0
+            guidance_scale = 1.0 # start with a more random image
             init_url = None
 
         # randomize sampler
@@ -246,7 +263,7 @@ class Minigame:
             strength=round(0.65 + random.random() * 0.35, 2),
             init_url=init_url,
             copy_command=copy_command,
-            batch_count=self.batch,
+            batch=self.batch,
             style=None,
             facefix=False,
             tiling=False,
@@ -278,7 +295,7 @@ class Minigame:
             "seed_resize_from_w": 0,
             "denoising_strength": draw_object.strength,
             "tiling": draw_object.tiling,
-            "n_iter": draw_object.batch_count
+            "n_iter": draw_object.batch
         }
 
         if init_url and self.images_base64:
@@ -351,7 +368,7 @@ class Minigame:
             if settings.global_var.api_auth:
                 s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
-            # send normal payload to webui
+            # send login payload to webui
             if settings.global_var.gradio_auth:
                 login_payload = {
                     'username': settings.global_var.username,
@@ -412,7 +429,7 @@ class Minigame:
                         response_data = response_fragment_data
                     else:
                         response_data['images'].append(response_fragment_data['images'][0])
-                #end of workaround
+                # end of workaround
             else:
                 # do normal batched payload
                 response = s.post(url=url, json=queue_object.payload)
@@ -422,7 +439,7 @@ class Minigame:
 
             self.game_iteration += 1
 
-            #create safe/sanitized filename
+            # create safe/sanitized filename
             keep_chars = (' ', '.', '_')
             file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
@@ -463,14 +480,12 @@ class Minigame:
                     ctx=queue_object.ctx, content=f'<@{user.id}> {queue_object.copy_command}', files=files, view=queue_object.view
                 ))
                 queue_object.view = None
-                self.image_count += queue_object.batch_count
+                self.image_count += queue_object.batch
 
         except Exception as e:
-            print('minigame failed (dream)')
-            embed = discord.Embed(title='minigame failed (dream)', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
-            queuehandler.process_upload(queuehandler.UploadObject(
-                ctx=queue_object.ctx, content=f'<@{user.id}> Minigame Failed', embed=embed
-            ))
+            content = f'Something went wrong.\n{e}'
+            print(content + f'\n{traceback.print_exc()}')
+            queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
 
     # sanatize input strings
     def sanatize(self, input: str):
@@ -478,8 +493,6 @@ class Minigame:
             input = input.replace('``', ' ')
             input = input.replace('\n', ' ')
         return input
-
-# minigames: list[Minigame] = []
 
 class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='Guess the prompt from the picture minigame.'):
     ctx_parse = discord.ApplicationContext
@@ -525,9 +538,6 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
             host = queuehandler.get_user(ctx)
             guild = queuehandler.get_guild(ctx)
 
-            # interaction = await ctx.send_response(content='Please wait. The minigame is starting...')
-            # message = viewhandler.get_message(interaction)
-
             minigame = Minigame(host, guild)
             minigame.prompt = prompt
             minigame.hard_mode = hard_mode
@@ -553,21 +563,7 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
             loop.create_task(minigame.start(ctx))
 
         except Exception as e:
-            viewhandler.print_exception('minigame failed', e, ctx.interaction, loop)
-
-    # This is disabled. It would require extra intents that's not neccessary for the primary function of this bot.
-    # @commands.Cog.listener()
-    # async def on_message(self, message: discord.Message):
-    #     loop = asyncio.get_running_loop()
-    #     if message.author.id == self.bot.user.id:
-    #         return
-
-    #     print('Message content:')
-    #     print(message.content)
-
-    #     for minigame in minigames:
-    #         if message.channel == minigame.channel:
-    #             loop.create_task(minigame.answer(message))
+            viewhandler.print_exception(e, ctx.interaction, loop)
 
 
 class MinigameView(View):
@@ -603,7 +599,7 @@ class MinigameView(View):
             loop.create_task(interaction.response.send_modal(MinigameEditModal(self, self.minigame)))
 
         except Exception as e:
-            viewhandler.print_exception('re-prompt failed', e, interaction, loop)
+            viewhandler.print_exception(e, interaction, loop)
 
     # the 🏳️ ends the game and reveals the answer
     @discord.ui.button(
@@ -633,7 +629,7 @@ class MinigameView(View):
             loop.create_task(self.minigame.give_up(interaction))
 
         except Exception as e:
-            viewhandler.print_exception('send to img2img failed', e, interaction, loop)
+            viewhandler.print_exception(e, interaction, loop)
 
     #the button to delete generated images
     @discord.ui.button(
@@ -656,7 +652,7 @@ class MinigameView(View):
                 viewhandler.update_user_delete(interaction.user.id)
 
         except Exception as e:
-            viewhandler.print_exception('delete failed', e, interaction, loop)
+            viewhandler.print_exception(e, interaction, loop)
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
@@ -688,7 +684,7 @@ class MinigameView(View):
             loop.create_task(self.minigame.next_image_variation(interaction, None))
 
         except Exception as e:
-            viewhandler.print_exception('send to img2img failed', e, interaction, loop)
+            viewhandler.print_exception(e, interaction, loop)
 
     # guess prompt button
     @discord.ui.button(
@@ -710,7 +706,7 @@ class MinigameView(View):
             loop.create_task(interaction.response.send_modal(MinigameAnswerModal(self, self.minigame)))
 
         except Exception as e:
-            viewhandler.print_exception('delete failed', e, interaction, loop)
+            viewhandler.print_exception(e, interaction, loop)
 
 
 class MinigameEditModal(Modal):
@@ -719,15 +715,11 @@ class MinigameEditModal(Modal):
         self.view = view
         self.minigame = minigame
 
+        # only reveal the prompt if it was manually inputted
         if minigame.reveal_prompt:
             prompt = minigame.prompt
         else:
             prompt = ''
-
-        if minigame.hard_mode:
-            hard_mode = 'H'
-        else:
-            hard_mode = 'E'
 
         self.add_item(
             InputText(
@@ -765,7 +757,7 @@ class MinigameEditModal(Modal):
             loop.create_task(self.minigame.next_image_variation(interaction, prompt))
 
         except Exception as e:
-            viewhandler.print_exception('send to img2img failed', e, interaction, loop)
+            viewhandler.print_exception(e, interaction, loop)
 
 
 class MinigameAnswerModal(Modal):
@@ -799,7 +791,7 @@ class MinigameAnswerModal(Modal):
             loop.create_task(self.minigame.answer(interaction, guess))
 
         except Exception as e:
-            viewhandler.print_exception('send to img2img failed', e, interaction, loop)
+            viewhandler.print_exception(e, interaction, loop)
 
 
 def setup(bot: discord.Bot):

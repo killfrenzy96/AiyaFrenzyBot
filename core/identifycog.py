@@ -41,10 +41,12 @@ class IdentifyCog(commands.Cog):
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str] = None,
                             model: Optional[str] = 'combined'):
-        try:
-            loop = asyncio.get_running_loop()
+        loop = asyncio.get_running_loop()
+        content = None
+        ephemeral = False
 
-            #get guild id and user
+        try:
+            # get guild id and user
             guild = queuehandler.get_guild(ctx)
             user = queuehandler.get_user(ctx)
 
@@ -81,63 +83,62 @@ class IdentifyCog(commands.Cog):
                     content = 'URL image not found! Please check the image URL.'
                     ephemeral = True
                     image_validated = False
-            #fail if no image is provided
+
+            # fail if no image is provided
             if image_validated == False:
                 content = 'I need an image to identify!'
                 ephemeral = True
+                raise Exception()
 
-            #set up the queue if an image was found
-            content = None
-            ephemeral = False
+            # log the command
+            copy_command = f'/identify init_url:{init_url} model:{model}'
+            print(copy_command)
 
-            if image_validated:
-                #log the command
-                copy_command = f'/identify init_url:{init_url} model:{model}'
-                print(copy_command)
+            # creates the upscale object out of local variables
+            def get_identify_object():
+                queue_object = queuehandler.IdentifyObject(self, ctx, init_url, model, copy_command, viewhandler.DeleteView(user.id))
 
-                #creates the upscale object out of local variables
-                def get_identify_object():
-                    queue_object = queuehandler.IdentifyObject(self, ctx, init_url, model, copy_command, viewhandler.DeleteView(user.id))
+                # construct a payload
+                payload = {
+                    "image": image,
+                    "model": model
+                }
 
-                    #construct a payload
-                    payload = {
-                        "image": image,
+                if model:
+                    model_payload = {
                         "model": model
                     }
+                    payload.update(model_payload)
 
-                    if model:
-                        model_payload = {
-                            "model": model
-                        }
-                        payload.update(model_payload)
+                queue_object.payload = payload
+                return queue_object
 
-                    queue_object.payload = payload
-                    return queue_object
+            identify_object = get_identify_object()
 
-                identify_object = get_identify_object()
-                dream_cost = queuehandler.get_dream_cost(identify_object)
-                queue_cost = queuehandler.get_user_queue_cost(user.id)
+            # calculate total cost of queued items and reject if there is too expensive
+            dream_cost = queuehandler.get_dream_cost(identify_object)
+            queue_cost = queuehandler.get_user_queue_cost(user.id)
+            if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
+                content = f'<@{user.id}> Please wait! You have too much queued up.'
+                ephemeral = True
+                raise Exception()
 
-                if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
-                    content = f'<@{user.id}> Please wait! You have too much queued up.'
-                    ephemeral = True
-                else:
-                    if guild == 'private':
-                        priority: str = 'lowest'
-                    elif queue_cost == 0.0:
-                        priority: str = 'high'
-                    else:
-                        priority: str = 'medium'
+            if guild == 'private':
+                priority: str = 'lowest'
+            elif queue_cost == 0.0:
+                priority: str = 'high'
+            else:
+                priority: str = 'medium'
 
-                    # queuehandler.GlobalQueue.identify_q.append(identify_object)
-                    queue_length = queuehandler.process_dream(self, identify_object, priority)
-                    # await ctx.send_response(f'<@{user.id}>, I\'m identifying the image!\nQueue: ``{len(queuehandler.union(queuehandler.GlobalQueue.draw_q, queuehandler.GlobalQueue.upscale_q, queuehandler.GlobalQueue.identify_q))}``')
-                    content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
+            # start the interrogation
+            queue_length = queuehandler.process_dream(self, identify_object, priority)
+            content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
+
         except Exception as e:
-            print('identify failed')
-            print(f'{e}\n{traceback.print_exc()}')
-            content = f'identify failed\n{e}\n{traceback.print_exc()}'
-            ephemeral = True
+            if content == None:
+                content = f'Something went wrong.\n{e}'
+                print(content + f'\n{traceback.print_exc()}')
+                ephemeral = True
 
         if content:
             if ephemeral:
@@ -154,7 +155,7 @@ class IdentifyCog(commands.Cog):
         user = queuehandler.get_user(queue_object.ctx)
 
         try:
-            #send normal payload to webui
+            # send login payload to webui
             with requests.Session() as s:
                 if settings.global_var.api_auth:
                     s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
@@ -169,6 +170,7 @@ class IdentifyCog(commands.Cog):
                 #     s.post(settings.global_var.url + '/login')
 
             if queue_object.model == 'combined':
+                # combined model payload - iterate through all models and put them in the prompt
                 payloads: list[dict] = []
                 threads: list[Thread] = []
                 responses: list[requests.Response] = []
@@ -215,14 +217,12 @@ class IdentifyCog(commands.Cog):
                         ))
                         queue_object.view = None
                     except Exception as e:
-                        print('identify failed (thread)')
-                        print(response)
-                        embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
-                        queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
-                        ))
+                        content = f'Something went wrong.\n{e}'
+                        print(content + f'\n{traceback.print_exc()}')
+                        queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
                 Thread(target=post_dream, daemon=True).start()
             else:
+                # regular payload - get identify for the model specified
                 response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
                 queue_object.payload = None
 
@@ -234,20 +234,15 @@ class IdentifyCog(commands.Cog):
                         ))
                         queue_object.view = None
                     except Exception as e:
-                        print('identify failed (thread)')
-                        print(response)
-                        embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
-                        queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
-                        ))
+                        content = f'Something went wrong.\n{e}'
+                        print(content + f'\n{traceback.print_exc()}')
+                        queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
                 Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
-            print('identify failed (main)')
-            embed = discord.Embed(title='identify failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
-            queuehandler.process_upload(queuehandler.UploadObject(
-                ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
-            ))
+            content = f'Something went wrong.\n{e}'
+            print(content + f'\n{traceback.print_exc()}')
+            queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
 
-def setup(bot):
+def setup(bot: discord.Bot):
     bot.add_cog(IdentifyCog(bot))

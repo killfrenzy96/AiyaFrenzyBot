@@ -13,7 +13,7 @@ class TipsView(View):
     @discord.ui.button(
         custom_id="button_tips",
         label="Quick tips")
-    async def button_tips(self, button, interaction):
+    async def button_tips(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
 
         embed_tips = discord.Embed(title="Quick Tips", description="")
@@ -61,7 +61,7 @@ class TipsView(View):
     @discord.ui.button(
         custom_id="button_styles",
         label="Styles list")
-    async def button_style(self, button, interaction):
+    async def button_style(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
 
         style_list = ''
@@ -77,7 +77,7 @@ class TipsView(View):
     @discord.ui.button(
         custom_id="button_model",
         label="Models list")
-    async def button_model(self, button, interaction):
+    async def button_model(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
 
         model_list = ''
@@ -93,7 +93,7 @@ class TipsView(View):
     @discord.ui.button(
         custom_id="button_about",
         label="About me")
-    async def button_about(self, button, interaction):
+    async def button_about(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
 
         url_frenzy = 'https://github.com/killfrenzy96/aiyabot'
@@ -111,7 +111,7 @@ class TipsView(View):
         loop.create_task(interaction.response.edit_message(embed=embed_about))
 
 class TipsCog(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: discord.Bot):
         self.bot = bot
 
     @commands.Cog.listener()
@@ -119,7 +119,7 @@ class TipsCog(commands.Cog):
         self.bot.add_view(TipsView())
 
     @commands.slash_command(name="tips", description="Some quick tips for generating images!")
-    async def tips(self, ctx):
+    async def tips(self, ctx: discord.ApplicationContext):
         loop = asyncio.get_running_loop()
 
         first_embed = discord.Embed(title='Select a button!')
@@ -128,6 +128,6 @@ class TipsCog(commands.Cog):
         loop.create_task(ctx.respond(embed=first_embed, view=TipsView(), ephemeral=True))
 
 
-def setup(bot):
+def setup(bot: discord.Bot):
     bot.add_cog(TipsCog(bot))
 

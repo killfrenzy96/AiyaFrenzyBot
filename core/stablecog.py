@@ -28,16 +28,16 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
     async def on_ready(self):
         self.bot.add_view(viewhandler.DrawExtendedView(None))
 
-    #pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
-    def model_autocomplete(self: discord.AutocompleteContext):
-        return [
-            model for model in settings.global_var.model_names
-        ]
-    #and for styles
-    def style_autocomplete(self: discord.AutocompleteContext):
-        return [
-            style for style in settings.global_var.style_names
-        ]
+    # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
+    # def model_autocomplete(self: discord.AutocompleteContext):
+    #     return [
+    #         model for model in settings.global_var.model_names
+    #     ]
+    # and for styles
+    # def style_autocomplete(self: discord.AutocompleteContext):
+    #     return [
+    #         style for style in settings.global_var.style_names
+    #     ]
 
     # a list of parameters, used to sanatize text
     dream_params = [
@@ -216,13 +216,18 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             highres_fix: Optional[bool] = False,
                             clip_skip: Optional[int] = 0,
                             script: Optional[str] = None):
+        loop = asyncio.get_event_loop()
+        content = None
+        ephemeral = False
+
         try:
-            negative_prompt: str = negative
-            model_name: str = checkpoint
-            count: int = batch
             copy_command: str = None
 
-            loop = asyncio.get_event_loop()
+            # get guild id and user
+            guild = queuehandler.get_guild(ctx)
+            user = queuehandler.get_user(ctx)
+
+            print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
 
             # sanatize input strings
             def sanatize(input: str):
@@ -234,48 +239,40 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 return input
 
             prompt = sanatize(prompt)
-            negative_prompt = sanatize(negative_prompt)
+            negative = sanatize(negative)
             style = sanatize(style)
             init_url = sanatize(init_url)
 
-            #get guild id and user
-            guild = queuehandler.get_guild(ctx)
-            user = queuehandler.get_user(ctx)
-
-            #update defaults with any new defaults from settingscog
-            if not model_name:
-                model_name = settings.read(guild)['data_model']
-            if negative_prompt == 'unset':
-                negative_prompt = settings.read(guild)['negative_prompt']
+            # update defaults with any new defaults from settingscog
+            if not checkpoint:
+                checkpoint = settings.read(guild)['data_model']
+            if negative == 'unset':
+                negative = settings.read(guild)['negative_prompt']
             if steps == -1:
                 steps = settings.read(guild)['default_steps']
-            if count is None:
-                count = settings.read(guild)['default_count']
+            if batch is None:
+                batch = settings.read(guild)['default_count']
             if sampler == 'unset':
                 sampler = settings.read(guild)['sampler']
             if clip_skip == 0:
                 clip_skip = settings.read(guild)['clip_skip']
 
+            # get data model and token from checkpoint
             data_model: str = ''
             token: str = ''
             for (display_name, full_name) in settings.global_var.model_names.items():
-                if display_name == model_name or full_name == model_name:
-                    #take selected data_model and get model_name, then update data_model with the full name
-                    model_name = display_name
+                if display_name == checkpoint or full_name == checkpoint:
+                    checkpoint = display_name
                     data_model = full_name
                     token = settings.global_var.model_tokens[display_name]
 
-            print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
-
             if seed == -1: seed = random.randint(0, 0xFFFFFFFF)
 
-            #formatting aiya initial reply
-            append_options = ''
-
+            # get arguments that can be passed into the draw object
             def get_draw_object_args():
-                return (self, ctx, prompt, negative_prompt, model_name, data_model,
+                return (self, ctx, prompt, negative, checkpoint, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
-                        strength, init_url, copy_command, count, style,
+                        strength, init_url, copy_command, batch, style,
                         facefix, tiling, highres_fix, clip_skip, script)
 
             # get estimate of the compute cost of this dream
@@ -285,11 +282,11 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 dream_cost_draw_object.width = _width
                 dream_cost_draw_object.height = _height
                 dream_cost_draw_object.steps = _steps
-                dream_cost_draw_object.batch_count = _count
+                dream_cost_draw_object.batch = _count
                 return queuehandler.get_dream_cost(dream_cost_draw_object)
             dream_compute_cost = get_dream_cost(width, height, steps, 1)
 
-            #get settings
+            # get settings
             setting_max_compute = settings.read(guild)['max_compute']
             setting_max_compute_batch = settings.read(guild)['max_compute_batch']
             setting_max_steps = settings.read(guild)['max_steps']
@@ -299,6 +296,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             increment_steps = 0
             increment_guidance_scale = 0
             increment_clip_skip = 0
+            append_options = ''
 
             match script:
                 case None:
@@ -307,26 +305,26 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 case 'preset steps':
                     steps = 10
                     increment_steps = 5
-                    count = 9
+                    batch = 9
 
-                    average_step_cost = get_dream_cost(width, height, steps + (increment_steps * count * 0.5), count)
+                    average_step_cost = get_dream_cost(width, height, steps + (increment_steps * batch * 0.5), batch)
                     if average_step_cost > setting_max_compute_batch:
                         increment_steps = 10
-                        count = 5
+                        batch = 5
 
                 case 'preset guidance_scale':
                     guidance_scale = 5.0
                     increment_guidance_scale = 1.0
-                    count = max(10, count)
+                    batch = max(10, batch)
 
-                    if dream_compute_cost * count > setting_max_compute_batch:
-                        count = int(count / 2)
+                    if dream_compute_cost * batch > setting_max_compute_batch:
+                        batch = int(batch / 2)
                         increment_guidance_scale = 2.0
 
                 case 'preset clip_skip':
                     clip_skip = 1
                     increment_clip_skip = 1
-                    count = max(6, min(12, count))
+                    batch = max(6, min(12, batch))
 
                 case other:
                     try:
@@ -339,19 +337,19 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             match script_param:
                                 case 'steps':
                                     increment_steps = int(script_value)
-                                    count = max(5, count)
+                                    batch = max(5, batch)
                                 case 'guidance_scale':
                                     increment_guidance_scale = script_value
                                     if increment_guidance_scale < 1.0:
-                                        count = max(10, count)
+                                        batch = max(10, batch)
                                     else:
-                                        count = max(4, count)
+                                        batch = max(4, batch)
                                 case 'clip_skip':
                                     increment_clip_skip = int(script_value)
-                                    count = max(4, count)
-                                    clip_skip_max = clip_skip + (count * increment_clip_skip)
+                                    batch = max(4, batch)
+                                    clip_skip_max = clip_skip + (batch * increment_clip_skip)
                                     if clip_skip_max > 12:
-                                        count = clip_skip_max - 12
+                                        batch = clip_skip_max - 12
                     except:
                         append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
                         increment_seed = 1
@@ -359,58 +357,34 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         increment_guidance_scale = 0
                         increment_clip_skip = 0
 
-            #lower step value to the highest setting if user goes over max steps
+            # lower step value to the highest setting if user goes over max steps
             if dream_compute_cost > setting_max_compute:
                 steps = min(int(float(steps) * (setting_max_compute / dream_compute_cost)), setting_max_steps)
                 append_options = append_options + '\nDream compute cost is too high! Steps reduced to ``' + str(steps) + '``'
             if steps > setting_max_steps:
                 steps = setting_max_steps
                 append_options = append_options + '\nExceeded maximum of ``' + str(steps) + '`` steps! This is the best I can do...'
-            # if model_name != 'Default':
-            #     append_options = append_options + '\nModel: ``' + str(model_name) + '``'
-            # if negative_prompt != '':
-            #     append_options = append_options + '\nNegative Prompt: ``' + str(negative_prompt) + '``'
-            # if width != 512:
-            #     append_options = append_options + '\nWidth: ``' + str(width) + '``'
-            # if height != 512:
-            #     append_options = append_options + '\nHeight: ``' + str(height) + '``'
-            # if guidance_scale != 7.0:
-            #     append_options = append_options + '\nGuidance Scale: ``' + str(guidance_scale) + '``'
-            # if sampler != 'Euler a':
-            #     append_options = append_options + '\nSampler: ``' + str(sampler) + '``'
-            # if init_image:
-            #     append_options = append_options + '\nStrength: ``' + str(strength) + '``'
-            #     append_options = append_options + '\nURL Init Image: ``' + str(init_image.url) + '``'
-            if count != 1:
+
+            # reduce batch count if batch compute cost is too high
+            if batch != 1:
                 if increment_steps:
-                    dream_compute_batch_cost = get_dream_cost(width, height, steps + (increment_steps * count * 0.5), count)
+                    dream_compute_batch_cost = get_dream_cost(width, height, steps + (increment_steps * batch * 0.5), batch)
                 else:
-                    dream_compute_batch_cost = get_dream_cost(width, height, steps, count)
+                    dream_compute_batch_cost = get_dream_cost(width, height, steps, batch)
                 setting_max_count = settings.read(guild)['max_count']
                 if dream_compute_batch_cost > setting_max_compute_batch:
-                    count = min(int(float(count) * setting_max_compute_batch / dream_compute_batch_cost), setting_max_count)
-                    append_options = append_options + '\nBatch compute cost is too high! Batch count reduced to ``' + str(count) + '``'
-                if count > setting_max_count:
-                    count = setting_max_count
-                    append_options = append_options + '\nExceeded maximum of ``' + str(count) + '`` images! This is the best I can do...'
-            #     append_options = append_options + '\nCount: ``' + str(count) + '``'
-            # if style != 'None':
-            #     append_options = append_options + '\nStyle: ``' + str(style) + '``'
-            # if facefix != 'None':
-            #     append_options = append_options + '\nFace restoration: ``' + str(facefix) + '``'
-            # if tiling:
-            #     append_options = append_options + '\nTiling: ``' + str(tiling) + '``'
-            # if highres_fix:
-            #     append_options = append_options + '\High-res fix: ``' + str(highres_fix) + '``'
-            # if clip_skip != 1:
-            #     append_options = append_options + f'\nCLIP skip: ``{clip_skip}``'
+                    batch = min(int(float(batch) * setting_max_compute_batch / dream_compute_batch_cost), setting_max_count)
+                    append_options = append_options + '\nBatch compute cost is too high! Batch count reduced to ``' + str(batch) + '``'
+                if batch > setting_max_count:
+                    batch = setting_max_count
+                    append_options = append_options + '\nExceeded maximum of ``' + str(batch) + '`` images! This is the best I can do...'
 
-            #log the command
+            # log the command
             copy_command = f'/dream prompt:{prompt}'
-            if negative_prompt != '':
-                copy_command = copy_command + f' negative:{negative_prompt}'
-            if data_model and model_name != 'Default':
-                copy_command = copy_command + f' checkpoint:{model_name}'
+            if negative != '':
+                copy_command = copy_command + f' negative:{negative}'
+            if data_model and checkpoint != 'Default':
+                copy_command = copy_command + f' checkpoint:{checkpoint}'
             copy_command = copy_command + f' width:{width} height:{height} steps:{steps} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
             if init_image or init_url:
                 if init_image:
@@ -427,188 +401,185 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 copy_command = copy_command + f' highres_fix:{highres_fix}'
             if clip_skip != 1:
                 copy_command = copy_command + f' clip_skip:{clip_skip}'
-            if count > 1:
-                copy_command = copy_command + f' batch:{count}'
+            if batch > 1:
+                copy_command = copy_command + f' batch:{batch}'
             if script:
                 copy_command = copy_command + f' script:{script}'
             print(copy_command)
 
-            #setup the queue
-            content = None
-            ephemeral = False
-
-            # calculate total cost of queued items
-            dream_cost = round(get_dream_cost(width, height, steps, count), 2)
+            # calculate total cost of queued items and reject if there is too expensive
+            dream_cost = round(get_dream_cost(width, height, steps, batch), 2)
             queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
-
             print(f'Estimated total compute cost -- Dream: {dream_cost} Queue: {queue_cost} Total: {dream_cost + queue_cost}')
 
             if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
                 print(f'Dream rejected: Too much in queue already')
                 content = f'<@{user.id}> Please wait! You have too much queued up.'
                 ephemeral = True
-                append_options = ''
-            else:
-                # get input image
-                image: str = None
-                image_validated = True
-                if init_url or init_image:
-                    if not init_url and init_image:
-                        init_url = init_image.url
+                raise Exception()
 
-                    if init_url.startswith('https://cdn.discordapp.com/') == False:
-                        print(f'Dream rejected: Image is not from the Discord CDN.')
-                        content = 'Only URL images from the Discord CDN are allowed!'
+            # get input image
+            image: str = None
+            image_validated = True
+            if init_url or init_image:
+                if not init_url and init_image:
+                    init_url = init_image.url
+
+                if init_url.startswith('https://cdn.discordapp.com/') == False:
+                    print(f'Dream rejected: Image is not from the Discord CDN.')
+                    content = 'Only URL images from the Discord CDN are allowed!'
+                    ephemeral = True
+                    image_validated = False
+
+                try:
+                    # reject URL downloads larger than 10MB
+                    url_head = await loop.run_in_executor(None, requests.head, init_url)
+                    url_size = int(url_head.headers.get('content-length', -1))
+                    if url_size > 10 * 1024 * 1024:
+                        print(f'Dream rejected: Image too large.')
+                        content = 'URL image is too large! Please make the download size smaller.'
                         ephemeral = True
                         image_validated = False
-
-                    try:
-                        # reject URL downloads larger than 10MB
-                        url_head = await loop.run_in_executor(None, requests.head, init_url)
-                        url_size = int(url_head.headers.get('content-length', -1))
-                        if url_size > 10 * 1024 * 1024:
-                            print(f'Dream rejected: Image too large.')
-                            content = 'URL image is too large! Please make the download size smaller.'
-                            ephemeral = True
-                            image_validated = False
-                        else:
-                            # download and encode the image
-                            image_data = await loop.run_in_executor(None, requests.get, init_url)
-                            image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')
-                            image_validated = True
-                    except Exception as e:
-                        content = 'URL image not found! Please check the image URL.'
-                        ephemeral = True
-                        image_validated = False
-
-                if image_validated:
-                    #increment number of images generated
-                    settings.increment_stats(count)
-
-                    # create draw object
-                    def get_draw_object():
-                        args = get_draw_object_args()
-                        queue_object = queuehandler.DrawObject(*args)
-                        # queue_object.batch_count = 1
-
-                        #set up tuple of parameters to pass into the Discord view
-                        queue_object.view = viewhandler.DrawView(queue_object)
-
-                        # create persistent session since we'll need to do a few API calls
-                        s = requests.Session()
-                        if settings.global_var.api_auth:
-                            s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
-
-                        # construct a payload
-                        payload_prompt = queue_object.prompt
-                        if token: payload_prompt = f'{token} {payload_prompt}'
-
-                        payload = {
-                            "prompt": payload_prompt,
-                            "negative_prompt": queue_object.negative_prompt,
-                            "steps": queue_object.steps,
-                            "width": queue_object.width,
-                            "height": queue_object.height,
-                            "cfg_scale": queue_object.guidance_scale,
-                            "sampler_index": queue_object.sampler,
-                            "seed": queue_object.seed,
-                            "seed_resize_from_h": 0,
-                            "seed_resize_from_w": 0,
-                            "denoising_strength": None,
-                            "tiling": queue_object.tiling,
-                            "n_iter": 1,
-                            "styles": [
-                                queue_object.style
-                            ]
-                        }
-
-                        # update payload if init_img or init_url is used
-                        if queue_object.init_url:
-                            img_payload = {
-                                "init_images": [image],
-                                "denoising_strength": queue_object.strength
-                            }
-                            payload.update(img_payload)
-
-                        # update payload if high-res fix is used
-                        if queue_object.highres_fix:
-                            highres_payload = {
-                                "enable_hr": queue_object.highres_fix,
-                                "denoising_strength": queue_object.strength
-                            }
-                            payload.update(highres_payload)
-
-                        # add any options that would go into the override_settings
-                        override_settings = {"CLIP_stop_at_last_layers": queue_object.clip_skip}
-                        if queue_object.facefix != 'None':
-                            override_settings["face_restoration_model"] = queue_object.facefix
-                            # face restoration needs this extra parameter
-                            facefix_payload = {
-                                "restore_faces": True,
-                            }
-                            payload.update(facefix_payload)
-
-                        # update payload with override_settings
-                        override_payload = {
-                            "override_settings": override_settings
-                        }
-                        payload.update(override_payload)
-
-                        queue_object.payload = payload
-                        return queue_object
-
-                    if count == 1:
-                        if guild == 'private':
-                            priority: str = 'lowest'
-                        elif queue_cost == 0.0: # if user does not have a dream in process, they get high priority
-                            priority: str = 'high'
-                        elif dream_cost + queue_cost > setting_max_compute: # if user user has a lot in queue, they get low priority
-                            priority: str = 'low'
-                        else:
-                            priority: str = 'medium'
-
-                        queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
                     else:
-                        if guild == 'private':
-                            priority: str = 'lowest'
-                        # batched items go into the low priority queue
-                        else:
-                            priority: str = 'low'
-                        queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
+                        # download and encode the image
+                        image_data = await loop.run_in_executor(None, requests.get, init_url)
+                        image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')
+                        image_validated = True
+                except Exception as e:
+                    content = 'URL image not found! Please check the image URL.'
+                    ephemeral = True
+                    image_validated = False
 
-                        batch_count = 1
-                        while batch_count < count:
-                            batch_count += 1
-                            copy_command = f'#{batch_count}`` ``'
+            if image_validated == False:
+                raise Exception()
 
-                            if increment_seed:
-                                seed += increment_seed
-                                copy_command = copy_command + f'seed:{seed}'
+            # increment number of images generated
+            settings.increment_stats(batch)
 
-                            if increment_steps:
-                                steps += increment_steps
-                                copy_command = copy_command + f'steps:{steps}'
+            # create draw object
+            def get_draw_object():
+                args = get_draw_object_args()
+                queue_object = queuehandler.DrawObject(*args)
 
-                            if increment_guidance_scale:
-                                guidance_scale += increment_guidance_scale
-                                guidance_scale = round(guidance_scale, 4)
-                                copy_command = copy_command + f'guidance_scale:{guidance_scale}'
+                # set up tuple of parameters to pass into the Discord view
+                queue_object.view = viewhandler.DrawView(queue_object)
 
-                            if increment_clip_skip:
-                                clip_skip += increment_clip_skip
-                                copy_command = copy_command + f'clip_skip:{clip_skip}'
+                # create persistent session since we'll need to do a few API calls
+                s = requests.Session()
+                if settings.global_var.api_auth:
+                    s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
-                            queuehandler.process_dream(self, get_draw_object(), priority, False)
+                # construct a payload
+                payload_prompt = queue_object.prompt
+                if token: payload_prompt = f'{token} {payload_prompt}'
 
-                    content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
-                    if count > 1: content = content + f' - Batch: ``{count}``'
-                    content = content + append_options
+                payload = {
+                    "prompt": payload_prompt,
+                    "negative_prompt": queue_object.negative_prompt,
+                    "steps": queue_object.steps,
+                    "width": queue_object.width,
+                    "height": queue_object.height,
+                    "cfg_scale": queue_object.guidance_scale,
+                    "sampler_index": queue_object.sampler,
+                    "seed": queue_object.seed,
+                    "seed_resize_from_h": 0,
+                    "seed_resize_from_w": 0,
+                    "denoising_strength": None,
+                    "tiling": queue_object.tiling,
+                    "n_iter": 1,
+                    "styles": [
+                        queue_object.style
+                    ]
+                }
+
+                # update payload if init_img or init_url is used
+                if queue_object.init_url:
+                    img_payload = {
+                        "init_images": [image],
+                        "denoising_strength": queue_object.strength
+                    }
+                    payload.update(img_payload)
+
+                # update payload if high-res fix is used
+                if queue_object.highres_fix:
+                    highres_payload = {
+                        "enable_hr": queue_object.highres_fix,
+                        "denoising_strength": queue_object.strength
+                    }
+                    payload.update(highres_payload)
+
+                # add any options that would go into the override_settings
+                override_settings = {"CLIP_stop_at_last_layers": queue_object.clip_skip}
+                if queue_object.facefix != 'None':
+                    override_settings["face_restoration_model"] = queue_object.facefix
+                    # face restoration needs this extra parameter
+                    facefix_payload = {
+                        "restore_faces": True,
+                    }
+                    payload.update(facefix_payload)
+
+                # update payload with override_settings
+                override_payload = {
+                    "override_settings": override_settings
+                }
+                payload.update(override_payload)
+
+                queue_object.payload = payload
+                return queue_object
+
+            # start the dream
+            if batch == 1:
+                if guild == 'private':
+                    priority: str = 'lowest'
+                elif queue_cost == 0.0: # if user does not have a dream in process, they get high priority
+                    priority: str = 'high'
+                elif dream_cost + queue_cost > setting_max_compute: # if user user has a lot in queue, they get low priority
+                    priority: str = 'low'
+                else:
+                    priority: str = 'medium'
+
+                queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
+            else:
+                if guild == 'private':
+                    priority: str = 'lowest'
+                # batched items go into the low priority queue
+                else:
+                    priority: str = 'low'
+                queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
+
+                batch_count = 1
+                while batch_count < batch:
+                    batch_count += 1
+                    copy_command = f'#{batch_count}`` ``'
+
+                    if increment_seed:
+                        seed += increment_seed
+                        copy_command = copy_command + f'seed:{seed}'
+
+                    if increment_steps:
+                        steps += increment_steps
+                        copy_command = copy_command + f'steps:{steps}'
+
+                    if increment_guidance_scale:
+                        guidance_scale += increment_guidance_scale
+                        guidance_scale = round(guidance_scale, 4)
+                        copy_command = copy_command + f'guidance_scale:{guidance_scale}'
+
+                    if increment_clip_skip:
+                        clip_skip += increment_clip_skip
+                        copy_command = copy_command + f'clip_skip:{clip_skip}'
+
+                    queuehandler.process_dream(self, get_draw_object(), priority, False)
+
+            content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
+            if batch > 1: content = content + f' - Batch: ``{batch}``'
+            content = content + append_options
 
         except Exception as e:
-            print('dream failed')
-            print(f'{e}\n{traceback.print_exc()}')
-            content = f'dream failed\n{e}\n{traceback.print_exc()}'
-            ephemeral = True
+            if content == None:
+                content = f'Something went wrong.\n{e}'
+                print(content + f'\n{traceback.print_exc()}')
+                ephemeral = True
 
         if content:
             if ephemeral:
@@ -625,7 +596,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             else:
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
-    #generate the image
+    # generate the image
     def dream(self, queue_object: queuehandler.DrawObject):
         user = queuehandler.get_user(queue_object.ctx)
 
@@ -637,7 +608,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             if settings.global_var.api_auth:
                 s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
-            # send normal payload to webui
+            # send login payload to webui
             if settings.global_var.gradio_auth:
                 login_payload = {
                     'username': settings.global_var.username,
@@ -666,7 +637,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     response_data = response.json()
                     end_time = time.time()
 
-                    #create safe/sanitized filename
+                    # create safe/sanitized filename
                     keep_chars = (' ', '.', '_')
                     file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
@@ -704,20 +675,16 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         ))
                         queue_object.view = None
                 except Exception as e:
-                    print('txt2img failed (thread)')
-                    print(response)
-                    embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
-                    queuehandler.process_upload(queuehandler.UploadObject(
-                        ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
-                    ))
+                    content = f'Something went wrong.\n{e}'
+                    print(content + f'\n{traceback.print_exc()}')
+                    queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+
             Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
-            print('txt2img failed (main)')
-            embed = discord.Embed(title='txt2img failed', description=f'{e}\n{traceback.print_exc()}', color=settings.global_var.embed_color)
-            queuehandler.process_upload(queuehandler.UploadObject(
-                ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', embed=embed
-            ))
+            content = f'Something went wrong.\n{e}'
+            print(content + f'\n{traceback.print_exc()}')
+            queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
 
     async def dream_object(self, draw_object: queuehandler.DrawObject):
         loop = asyncio.get_running_loop()
@@ -734,7 +701,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             init_image=None,
             init_url=draw_object.init_url,
             strength=draw_object.strength,
-            batch=draw_object.batch_count,
+            batch=draw_object.batch,
             style=draw_object.style,
             facefix=draw_object.facefix,
             tiling=draw_object.tiling,
@@ -743,6 +710,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             script=draw_object.script
         ))
 
+    # process dream from a command string
     async def dream_command(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, command: str, randomize_seed = True):
         queue_object = self.get_draw_object_from_command(command)
 
@@ -753,6 +721,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         loop = asyncio.get_event_loop()
         loop.create_task(self.dream_object(queue_object))
 
+    # get draw object from a command string
     def get_draw_object_from_command(self, command: str):
         def find_between(s: str, first: str, last: str):
             try:
@@ -762,8 +731,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             except ValueError:
                 return ''
 
+        # format command for easier processing
         command = '\n\n ' + command + '\n\n'
-
         for param in self.dream_params:
             command = command.replace(f' {param}:', f'\n\n{param}\n')
         command = command.replace('``', '\n\n')
@@ -772,6 +741,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             result = find_between(command, f'\n{param}\n', '\n\n')
             return result.strip()
 
+        # get all parameters and validate inputs
         prompt = get_param('prompt')
 
         negative = get_param('negative')
@@ -886,7 +856,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             strength=strength,
             init_url=init_url,
             copy_command=None,
-            batch_count=batch,
+            batch=batch,
             style=style,
             facefix=facefix,
             tiling=tiling,
