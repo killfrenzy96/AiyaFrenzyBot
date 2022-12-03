@@ -3,6 +3,7 @@ import discord
 import os
 import sys
 from core import settings
+from core import consoleinput
 from core.logging import get_logger
 from dotenv import load_dotenv
 
@@ -111,7 +112,11 @@ async def on_guild_join(guild: discord.Guild):
 async def shutdown(bot: discord.Bot):
     await bot.close()
 
+print('Starting Bot...')
+console_input = consoleinput.ConsoleInput(self)
+
 try:
+    console_input.run()
     self.run(os.getenv('TOKEN'))
 except KeyboardInterrupt:
     self.logger.info('Keyboard interrupt received. Exiting.')

@@ -126,6 +126,7 @@ def files_check():
     replace_model_file = False
 
     # if models.csv exists and has data
+    print('Loading checkpoint models...')
     if os.path.isfile('resources/models.csv'):
         with open('resources/models.csv', encoding='utf-8') as f:
             reader = csv.reader(f, delimiter="|")
@@ -163,11 +164,16 @@ def files_check():
             global_var.model_names[row[0]] = row[1]
             global_var.model_tokens[row[0]] = row[2]
 
+    print(f'- Checkpoint models count: {len(global_var.model_names)}')
+
     # get random messages list
+    print('Loading messages...')
     with open('resources/messages.csv') as csv_file:
         message_data = list(csv.reader(csv_file, delimiter='|'))
         for row in message_data:
             global_var.messages.append(row[0])
+
+    print(f'- Messages count: {len(global_var.messages)}')
 
     # if directory in DIR doesn't exist, create it
     dir_exists = os.path.exists(global_var.dir)
@@ -181,20 +187,27 @@ def files_check():
         s.auth = (global_var.api_user, global_var.api_pass)
 
     # do a check to see if --gradio-auth is set
-    response_data = s.get(global_var.url + '/sdapi/v1/cmd-flags').json()
-    if response_data['gradio_auth']:
-        global_var.gradio_auth = True
+    print('Connecting to WebUI...')
+    try:
+        response_data = s.get(global_var.url + '/sdapi/v1/cmd-flags').json()
+        if response_data['gradio_auth']:
+            global_var.gradio_auth = True
 
-    if global_var.gradio_auth:
-        login_payload = {
-            'username': global_var.username,
-            'password': global_var.password
-        }
-        s.post(global_var.url + '/login', data=login_payload)
-    else:
-        s.post(global_var.url + '/login')
+        if global_var.gradio_auth:
+            login_payload = {
+                'username': global_var.username,
+                'password': global_var.password
+            }
+            s.post(global_var.url + '/login', data=login_payload)
+        else:
+            s.post(global_var.url + '/login')
+    except Exception as e:
+        print("Can't connect to API for some reason!"
+                "Please check your .env URL or credentials.")
+        os.system("pause")
 
     # get samplers
+    print('Retrieving samplers...')
     response_data = s.get(global_var.url + "/sdapi/v1/samplers").json()
     for sampler in response_data:
         try:
@@ -209,17 +222,26 @@ def files_check():
     if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
     if 'PLMS' in global_var.sampler_names: global_var.sampler_names.remove('PLMS')
 
+    print(f'- Samplers count: {len(global_var.sampler_names)}')
+
     # get styles
+    print('Retrieving styles...')
     response_data = s.get(global_var.url + "/sdapi/v1/prompt-styles").json()
     for style in response_data:
         global_var.style_names[style['name']] = style['prompt']
 
+    print(f'- Styles count: {len(global_var.model_names)}')
+
     # get face fix models
+    print('Retrieving face fix models...')
     response_data = s.get(global_var.url + "/sdapi/v1/face-restorers").json()
     for facefix_model in response_data:
         global_var.facefix_models.append(facefix_model['name'])
 
+    print(f'- Face fix models count: {len(global_var.facefix_models)}')
+
     # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
+    print('Loading upscaler models...')
     config = s.get(global_var.url + "/config/").json()
     try:
         for item in config['components']:
@@ -231,6 +253,8 @@ def files_check():
                 pass
     except:
         print('Warning: Could not read config. Upscalers will be missing.')
+
+    print(f'- Upscalers count: {len(global_var.upscaler_names)}')
 
     # get interrogate models - no API endpoint for this, so it's hard coded
     global_var.identify_models = ['clip', 'deepdanbooru']
