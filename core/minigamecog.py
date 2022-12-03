@@ -433,7 +433,7 @@ class Minigame:
                 image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
                 pil_images.append(image)
 
-                image_base64 = 'data:image/png;base64,' + image
+                image_base64 = 'data:image/png;base64,' + image_base64
                 self.images_base64.append(image_base64)
 
                 # grab png info
