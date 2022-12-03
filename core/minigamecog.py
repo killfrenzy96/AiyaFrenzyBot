@@ -496,7 +496,7 @@ class Minigame:
 
 class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='Guess the prompt from the picture minigame.'):
     ctx_parse = discord.ApplicationContext
-    def __init__(self, bot):
+    def __init__(self, bot: discord.Bot):
         self.bot: discord.Bot = bot
 
     @commands.slash_command(name = 'minigame', description = 'Starts a minigame where you guess the prompt from a picture.')

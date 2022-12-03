@@ -20,7 +20,7 @@ from core import settings
 
 
 class UpscaleCog(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: discord.Bot):
         self.wait_message = []
         self.bot = bot
         self.file_name = ''

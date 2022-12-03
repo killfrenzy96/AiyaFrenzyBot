@@ -14,7 +14,7 @@ from core import settings
 
 
 class IdentifyCog(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot: discord.Bot):
         self.bot = bot
 
     @commands.slash_command(name = 'identify', description = 'Describe an image')

@@ -6,7 +6,7 @@ from discord.ext import commands
 from core import queuehandler
 
 class CancelCog(commands.Cog, name='Cancel Cog', description='Cancels all images in queue.'):
-    def __init__(self, bot):
+    def __init__(self, bot: discord.Bot):
         self.bot = bot
 
     @commands.slash_command(name = "cancel", description = "Cancels all images in queue.")

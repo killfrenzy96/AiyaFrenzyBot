@@ -2,7 +2,6 @@ import asyncio
 import discord
 import os
 import sys
-import discord
 from core import settings
 from core.logging import get_logger
 from dotenv import load_dotenv
