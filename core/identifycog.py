@@ -75,7 +75,7 @@ class IdentifyCog(commands.Cog):
                     else:
                         # download and encode the image
                         image_data = await loop.run_in_executor(None, requests.get, init_url)
-                        image = base64.b64encode(image_data.content).decode('utf-8')
+                        image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')
                         image_validated = True
                 except:
                     content = 'URL image not found! Please check the image URL.'
@@ -101,7 +101,7 @@ class IdentifyCog(commands.Cog):
 
                     #construct a payload
                     payload = {
-                        "image": 'data:image/png;base64,' + image,
+                        "image": image,
                         "model": model
                     }
 

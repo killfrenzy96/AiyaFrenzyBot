@@ -474,7 +474,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         else:
                             # download and encode the image
                             image_data = await loop.run_in_executor(None, requests.get, init_url)
-                            image = base64.b64encode(image_data.content).decode('utf-8')
+                            image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')
                             image_validated = True
                     except Exception as e:
                         content = 'URL image not found! Please check the image URL.'
@@ -525,9 +525,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                         # update payload if init_img or init_url is used
                         if queue_object.init_url:
                             img_payload = {
-                                "init_images": [
-                                    'data:image/png;base64,' + image
-                                ],
+                                "init_images": [image],
                                 "denoising_strength": queue_object.strength
                             }
                             payload.update(img_payload)

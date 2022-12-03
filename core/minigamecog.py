@@ -37,7 +37,7 @@ class Minigame:
         self.hard_mode: bool = False
         self.game_iteration: int = 0
         self.batch: int = 1
-        self.image_base64: list[str] = []
+        self.images_base64: list[str] = []
         self.channel: discord.TextChannel = None
 
         self.restarting = False
@@ -181,7 +181,7 @@ class Minigame:
                 data_model = full_name
                 token = settings.global_var.model_tokens[display_name]
 
-        if self.image_base64:
+        if self.images_base64:
             guidance_scale = round(4.0 + random.random() * 8.0, 2)
             init_url = 'dummy'
         else:
@@ -281,13 +281,10 @@ class Minigame:
             "n_iter": draw_object.batch_count
         }
 
-        if init_url and self.image_base64:
+        if init_url and self.images_base64:
             # update payload if image_base64 is available
-            images: list[str] = []
-            for image in self.image_base64:
-                images.append('data:image/png;base64,' + image)
             img_payload = {
-                "init_images": images,
+                "init_images": self.images_base64,
                 "denoising_strength": draw_object.strength
             }
             payload.update(img_payload)
@@ -431,13 +428,17 @@ class Minigame:
 
             # save local copy of image and prepare PIL images
             pil_images: list[Image.Image] = []
+            self.images_base64 = []
             for i, image_base64 in enumerate(response_data['images']):
                 image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
                 pil_images.append(image)
 
+                image_base64 = 'data:image/png;base64,' + image
+                self.images_base64.append(image_base64)
+
                 # grab png info
                 png_payload = {
-                    "image": "data:image/png;base64," + image_base64
+                    "image": image_base64
                 }
                 png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
 
@@ -463,8 +464,6 @@ class Minigame:
                 ))
                 queue_object.view = None
                 self.image_count += queue_object.batch_count
-
-            self.image_base64 = response_data['images']
 
         except Exception as e:
             print('minigame failed (dream)')
