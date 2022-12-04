@@ -34,7 +34,6 @@ class Minigame:
         self.prompt: str = None
         self.model_name: str = None
         self.data_model: str = None
-        self.hard_mode: bool = False
         self.game_iteration: int = 0
         self.batch: int = 1
         self.images_base64: list[str] = []
@@ -139,7 +138,7 @@ class Minigame:
             # update prompt if there is a new game
             if prompt == 'unset' or not self.prompt:
                 prompt = self.sanatize(prompt)
-                self.prompt = await loop.run_in_executor(None, self.get_random_prompt, self.hard_mode)
+                self.prompt = await loop.run_in_executor(None, self.get_random_prompt)
             elif prompt:
                 self.prompt = self.sanatize(prompt)
 
@@ -220,9 +219,6 @@ class Minigame:
 
         if model_name != 'Default':
             copy_command += f' checkpoint:{model_name}'
-
-        if self.hard_mode == True:
-            copy_command += f' hard_mode:{self.hard_mode}'
 
         copy_command += f' batch:{self.batch}``\n'
 
@@ -320,29 +316,8 @@ class Minigame:
         # while game_iteration == self.game_iteration:
         #     await asyncio.sleep(0.1)
 
-    def get_random_prompt(self, hard_mode: bool):
-        nouns_path = 'resources/minigame-nouns.csv'
-
-        if hard_mode:
-            # hard mode includes an adjective and a noun
-            adjectives_path = 'resources/minigame-adjectives.csv'
-
-            # random chance of having 2 nouns
-            if random.randrange(1, 2) == 1:
-                random_adjective = self.get_random_word(adjectives_path)
-            else:
-                random_adjective = self.get_random_word(nouns_path)
-
-            random_noun = self.get_random_word(nouns_path)
-
-            # take care of rare edge case
-            while random_noun == random_adjective:
-                random_noun = self.get_random_word(nouns_path)
-
-            return f'{random_adjective} {random_noun}'
-        else:
-            # easy mode only includes a noun
-            return self.get_random_word(nouns_path)
+    def get_random_prompt(self):
+        return self.get_random_word('resources/minigame-words.csv')
 
     def get_random_word(self, filepath: str):
         file_stats = os.stat(filepath)
@@ -529,12 +504,6 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
         choices=settings.global_var.model_names,
     )
     @option(
-        'hard_mode',
-        str,
-        description='Hard mode will generate two words per prompt instead of one.',
-        required=False,
-    )
-    @option(
         'batch',
         int,
         description='The number of images to generate. This is "Batch count", not "Batch size".',
@@ -543,7 +512,6 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
     async def draw_handler(self, ctx: discord.ApplicationContext, *,
                            prompt: Optional[str] = None,
                            checkpoint: Optional[str] = None,
-                           hard_mode: Optional[bool] = False,
                            batch: Optional[int] = 2):
         try:
             model_name: str = checkpoint
@@ -554,7 +522,6 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
 
             minigame = Minigame(host, guild)
             minigame.prompt = prompt
-            minigame.hard_mode = hard_mode
             minigame.batch = max(1, min(3, batch))
 
             if not model_name:
