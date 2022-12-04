@@ -9,6 +9,7 @@ import time
 import traceback
 import asyncio
 import threading
+from urllib.parse import quote
 from difflib import SequenceMatcher
 from PIL import Image, PngImagePlugin
 from discord import option
@@ -32,8 +33,10 @@ class Minigame:
         self.minigame_id: int = None
         self.reveal_prompt: bool = False
         self.prompt: str = None
+        self.prompt_adventure: str = None
         self.model_name: str = None
         self.data_model: str = None
+        self.adventure: bool = False
         self.game_iteration: int = 0
         self.batch: int = 1
         self.images_base64: list[str] = []
@@ -67,7 +70,9 @@ class Minigame:
             user = queuehandler.get_user(ctx)
 
             if self.running == False:
-                content = f'<@{user.id}> This game is over. Press 🖋️ or 🖼️ to continue the minigame.'
+                content = f'<@{user.id}> This game is over. The answer was ``{self.prompt}``.\n'
+                if self.adventure and self.prompt != self.prompt_adventure: content += f'The full prompt was ``{self.prompt_adventure}``.\n'
+                content += f'There were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
                 ephemeral = True
                 raise Exception()
 
@@ -78,7 +83,9 @@ class Minigame:
             similarity = SequenceMatcher(None, prompt, guess).ratio()
 
             if prompt in guess or similarity > 0.9:
-                content = f'<@{user.id}> has guessed the answer! The prompt was ``{self.prompt}``.\nIt took ``{self.guess_count}`` guesses and ``{self.image_count}`` images to get this answer.\nPress 🖋️ or 🖼️ to continue the minigame.'
+                content = f'<@{user.id}> has guessed the answer! The answer was ``{self.prompt}``.\n'
+                if self.adventure and self.prompt != self.prompt_adventure: content += f'The full prompt was ``{self.prompt_adventure}``.\n'
+                content += f'It took ``{self.guess_count}`` guesses and ``{self.image_count}`` images to get this answer.\nPress 🖋️ or 🖼️ to continue the minigame.'
                 await self.stop()
             elif similarity > 0.8:
                 content = f'<@{user.id}> tried ``{guess}``. This is really close.'
@@ -130,6 +137,7 @@ class Minigame:
                 self.guess_count = 0
                 self.image_count = 0
                 self.host = user
+                self.prompt_adventure = None
                 if prompt == None:
                     generate_random_prompt = True # user did not input prompt, generate random prompt
 
@@ -146,6 +154,38 @@ class Minigame:
                 self.prompt = self.sanatize(prompt)
                 self.reveal_prompt = True
 
+            # try to make prompt more interesting
+            if self.adventure and self.prompt_adventure == None:
+                self.prompt_adventure = self.prompt
+                try:
+                    query = quote(self.prompt.strip())
+                    response = await loop.run_in_executor(None, requests.get, f'https://lexica.art/api/v1/search?q={query}')
+                    images = response.json()['images']
+
+                    # use random result
+                    result_found = False
+                    searches: int = 5
+                    while searches > 0:
+                        image = images[random.randrange(0, len(images))]
+                        if self.prompt in image['prompt']:
+                            self.prompt_adventure = f'({self.prompt}), ' + self.sanatize(image['prompt'])
+                            result_found = True
+                            break
+                        searches -= 1
+
+                    # find any result if random search fails
+                    if result_found == False:
+                        for image in images:
+                            if self.prompt in image['prompt']:
+                                self.prompt_adventure = f'({self.prompt}), ' + self.sanatize(image['prompt'])
+                                result_found = True
+                                break
+                except:
+                    print(f'Dream rejected: Random prompt query failed.\n{e}\n{traceback.print_exc()}')
+                    content = f'<@{user.id}> Random prompt query failed.'
+                    ephemeral = True
+                    raise Exception()
+
             # start image generation
             content = f'<@{self.host.id}> '
             if self.game_iteration == 0:
@@ -153,7 +193,12 @@ class Minigame:
             content += settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]
             ephemeral = False
 
-            queue_length = await self.get_image_variation(ctx, self.prompt)
+            if self.adventure:
+                prompt = self.prompt_adventure
+            else:
+                prompt = self.prompt
+
+            queue_length = await self.get_image_variation(ctx, prompt)
             content += f' Queue: ``{queue_length}``'
 
         except Exception as e:
@@ -174,12 +219,17 @@ class Minigame:
 
     async def give_up(self, ctx: discord.ApplicationContext | discord.Interaction):
         loop = asyncio.get_running_loop()
+        user = queuehandler.get_user(ctx)
 
         if self.running == False:
-            content = f'The game is over. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
+            content = f'<@{user.id}> This game is over. The answer was ``{self.prompt}``.\n'
+            if self.adventure and self.prompt != self.prompt_adventure: content += f'The full prompt was ``{self.prompt_adventure}``.\n'
+            content += f'There were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
             ephemeral = True
         else:
-            content = f'<@{self.host.id}> has given up. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
+            content = f'<@{user.id}> has given up. The answer was ``{self.prompt}``.\n'
+            if self.adventure and self.prompt != self.prompt_adventure: content += f'The full prompt was ``{self.prompt_adventure}``.\n'
+            content += f'There were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
             ephemeral = False
 
         if type(ctx) is discord.ApplicationContext:
@@ -218,11 +268,14 @@ class Minigame:
         negative = '[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]'
 
         # generate text output
-        words = prompt.split(' ')
+        words = self.prompt.split(' ')
         message = f'``/minigame'
 
         if model_name != 'Default':
             message += f' checkpoint:{model_name}'
+
+        if self.adventure:
+            message += f' adventure:{self.adventure}'
 
         message += f' batch:{self.batch}``\n'
 
@@ -484,6 +537,7 @@ class Minigame:
         if input:
             input = input.replace('`', ' ')
             input = input.replace('\n', ' ')
+            input = input.strip()
         return input
 
 class MinigameCog(commands.Cog, description='Guess the prompt from the picture minigame.'):
@@ -507,6 +561,12 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
         choices=settings.global_var.model_names,
     )
     @option(
+        'adventure',
+        bool,
+        description='Try to make the prompt look more interesting.',
+        required=False,
+    )
+    @option(
         'batch',
         int,
         description='The number of images to generate. This is \'Batch count\', not \'Batch size\'.',
@@ -515,6 +575,7 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
     async def draw_handler(self, ctx: discord.ApplicationContext, *,
                            prompt: Optional[str] = None,
                            checkpoint: Optional[str] = None,
+                           adventure: Optional[bool] = False,
                            batch: Optional[int] = 2):
         try:
             model_name: str = checkpoint
@@ -525,6 +586,7 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
 
             minigame = Minigame(host, guild)
             minigame.prompt = prompt
+            minigame.adventure = adventure
             minigame.batch = max(1, min(3, batch))
 
             if not model_name:

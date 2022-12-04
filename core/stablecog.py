@@ -245,20 +245,20 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             style = sanatize(style)
             init_url = sanatize(init_url)
 
-            # query random result from lexica
+            # try to make prompt more interesting
             if prompt.startswith('?'):
                 try:
-                    prompt = prompt.removeprefix('?')
-                    if prompt == '':
-                        prompt = random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+                    query = prompt.removeprefix('?')
+                    if query == '':
+                        query = random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
                     else:
-                        prompt = quote(prompt.strip())
-                    response = await loop.run_in_executor(None, requests.get, f'https://lexica.art/api/v1/search?q={prompt}')
+                        query = quote(query.strip())
+                    response = await loop.run_in_executor(None, requests.get, f'https://lexica.art/api/v1/search?q={query}')
                     images = response.json()['images']
                     random_image = images[random.randrange(0, len(images))]
                     prompt = sanatize(random_image['prompt'])
                 except:
-                    print(f'Dream rejected: Random prompt query failed.')
+                    print(f'Dream rejected: Random prompt query failed.\n{e}\n{traceback.print_exc()}')
                     content = f'<@{user.id}> Random prompt query failed.'
                     ephemeral = True
                     raise Exception()
