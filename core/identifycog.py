@@ -132,7 +132,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                 priority: str = 'medium'
 
             # start the interrogation
-            queue_length = queuehandler.process_dream(self, identify_object, priority)
+            queue_length = queuehandler.process_dream(identify_object, priority)
             content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
 
         except Exception as e:

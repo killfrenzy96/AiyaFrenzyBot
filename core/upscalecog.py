@@ -214,7 +214,7 @@ class UpscaleCog(commands.Cog):
                 priority: str = 'medium'
 
             # start the upscaling
-            queue_length = queuehandler.process_dream(self, upscale_object, priority)
+            queue_length = queuehandler.process_dream(upscale_object, priority)
             content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
 
         except Exception as e:

@@ -524,7 +524,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 else:
                     priority: str = 'medium'
 
-                queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
+                queue_length = queuehandler.process_dream(get_draw_object(), priority)
             else:
                 if guild == 'private':
                     priority: str = 'lowest'
@@ -532,7 +532,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 else:
                     priority: str = 'low'
 
-                queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
+                queue_length = queuehandler.process_dream(get_draw_object(), priority)
 
                 batch_count = 1
                 while batch_count < batch:
@@ -556,7 +556,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         clip_skip += increment_clip_skip
                         message += f'clip_skip:{clip_skip}'
 
-                    queuehandler.process_dream(self, get_draw_object(message), priority, False)
+                    queuehandler.process_dream(get_draw_object(message), priority, False)
 
             content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
             if batch > 1: content = content + f' - Batch: ``{batch}``'

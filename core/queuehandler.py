@@ -141,7 +141,7 @@ def get_user_queue_cost(user_id: int):
             queue_cost += get_dream_cost(queue_object)
     return queue_cost
 
-def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObject, priority: str | int = 1, print_info = True):
+def process_dream(queue_object: DrawObject | UpscaleObject | IdentifyObject, priority: str | int = 1, print_info = True):
     if type(priority) is str:
         match priority:
             case 'high': priority = 0
@@ -282,7 +282,16 @@ def process_upload_queue():
 
             except Exception as e:
                 print(f'Upload failure:\n{upload_object}\n{e}\n{traceback.print_exc()}')
-    GlobalUploadQueue.event_loop.create_task(run())
+
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(run())
+    except:
+        try:
+            asyncio.run_coroutine_threadsafe(run(), GlobalUploadQueue.event_loop)
+        except Exception as e:
+            print(f'Warning: Run event loop failed. Falling back to create_task.\n{e}')
+            GlobalUploadQueue.event_loop.create_task(run())
 
 def get_guild(ctx: discord.ApplicationContext | discord.Interaction | discord.Message):
     try:
