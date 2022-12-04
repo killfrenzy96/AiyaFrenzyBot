@@ -36,9 +36,9 @@ class Minigame:
         self.prompt_adventure: str = None
         self.model_name: str = None
         self.data_model: str = None
-        self.adventure: bool = False
+        self.adventure: bool = True
         self.game_iteration: int = 0
-        self.batch: int = 1
+        self.batch: int = 2
         self.images_base64: list[str] = []
         self.channel: discord.TextChannel = None
 
@@ -274,10 +274,7 @@ class Minigame:
         if model_name != 'Default':
             message += f' checkpoint:{model_name}'
 
-        if self.adventure:
-            message += f' adventure:{self.adventure}'
-
-        message += f' batch:{self.batch}``\n'
+        message += f' adventure:{self.adventure} batch:{self.batch}``\n'
 
         if len(words) > 1:
             message += f'``({len(words)} words'
@@ -575,8 +572,8 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
     async def draw_handler(self, ctx: discord.ApplicationContext, *,
                            prompt: Optional[str] = None,
                            checkpoint: Optional[str] = None,
-                           adventure: Optional[bool] = False,
-                           batch: Optional[int] = 2):
+                           adventure: Optional[bool] = None,
+                           batch: Optional[int] = None):
         try:
             model_name: str = checkpoint
 
@@ -586,11 +583,10 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
 
             minigame = Minigame(host, guild)
             minigame.prompt = prompt
-            minigame.adventure = adventure
-            minigame.batch = max(1, min(3, batch))
 
-            if not model_name:
-                model_name = settings.read(guild)['data_model']
+            if adventure != None: minigame.adventure = adventure
+            if batch != None: minigame.batch = max(1, min(3, batch))
+            if not model_name: model_name = settings.read(guild)['data_model']
 
             data_model: str = ''
             for (display_name, full_name) in settings.global_var.model_names.items():
