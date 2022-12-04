@@ -18,7 +18,7 @@ from core import viewhandler
 from core import settings
 
 
-class StableCog(commands.Cog, name='Stable Diffusion', description='Create images from natural language.'):
+class StableCog(commands.Cog, description='Create images from natural language.'):
     ctx_parse = discord.ApplicationContext
     def __init__(self, bot):
         self.wait_message: list[str] = []
@@ -26,7 +26,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.bot.add_view(viewhandler.DrawExtendedView(None))
+        self.bot.add_view(viewhandler.DrawExtendedView(self, None))
 
     # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
     # def model_autocomplete(self: discord.AutocompleteContext):
@@ -434,7 +434,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 queue_object = queuehandler.DrawObject(*args)
 
                 # create view to handle buttons
-                queue_object.view = viewhandler.DrawView(queue_object)
+                queue_object.view = viewhandler.DrawView(self, queue_object)
 
                 # send message with queue object
                 if message == None:

@@ -70,7 +70,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
             await message.delete()
 
     if ctx.emoji.name == '🔁':
-        stable_cog = self.get_cog('Stable Diffusion')
+        stable_cog = self.get_cog('StableCog')
         if stable_cog == None:
             print('Error: StableCog not found.')
             return

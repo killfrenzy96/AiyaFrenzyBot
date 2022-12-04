@@ -14,7 +14,7 @@ from core import viewhandler
 from core import settings
 
 
-class IdentifyCog(commands.Cog):
+class IdentifyCog(commands.Cog, description = 'Describe an image'):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
 

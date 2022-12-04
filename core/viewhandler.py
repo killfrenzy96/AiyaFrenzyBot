@@ -12,8 +12,9 @@ from core import stablecog
 
 # the modal that is used for the 🖋 button
 class DrawModal(Modal):
-    def __init__(self, input_object: queuehandler.DrawObject, message: discord.Message) -> None:
+    def __init__(self, stable_cog, input_object: queuehandler.DrawObject, message: discord.Message) -> None:
         super().__init__(title='Change Prompt!')
+        self.stable_cog = stable_cog
         self.input_object = input_object
         self.message = message
 
@@ -86,7 +87,6 @@ class DrawModal(Modal):
         try:
             if check_interaction_permission(interaction, loop) == False: return
 
-            stable_cog = stablecog.StableCog(self)
             draw_object = copy.copy(self.input_object)
 
             draw_object.prompt = self.children[0].value
@@ -118,6 +118,7 @@ class DrawModal(Modal):
                 for index, text in enumerate(commands):
                     if text: commands[index] = text.split(':')[0]
 
+                stable_cog: stablecog.StableCog = self.stable_cog
                 command_draw_object = stable_cog.get_draw_object_from_command(command.replace('\n', ' '))
                 if 'checkpoint' in commands:        draw_object.model_name      = command_draw_object.model_name
                 if 'width' in commands:             draw_object.width           = command_draw_object.width
@@ -176,8 +177,9 @@ class DeleteModal(Modal):
 
 # creating the view that holds the buttons for /draw output
 class DrawView(View):
-    def __init__(self, input_object: queuehandler.DrawObject):
+    def __init__(self, stable_cog, input_object: queuehandler.DrawObject):
         super().__init__(timeout=None)
+        self.stable_cog = stable_cog
         self.input_object: queuehandler.DrawObject = input_object
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
@@ -189,6 +191,7 @@ class DrawView(View):
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)
+            stable_cog: stablecog.StableCog = self.stable_cog
 
             # get input object
             if self.input_object:
@@ -197,7 +200,7 @@ class DrawView(View):
                 # create input object from message command
                 if '``/dream ' in message.content:
                     command = self.find_between(message.content, '``/dream ', '``')
-                    input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    input_object = stable_cog.get_draw_object_from_command(command)
                 elif '``/minigame ' in message.content:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                     return
@@ -205,12 +208,12 @@ class DrawView(View):
                     # retrieve command from cache
                     command = settings.get_dream_command(message.id)
                     if command:
-                        input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                        input_object = stable_cog.get_draw_object_from_command(command)
                     else:
                         loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                         return
 
-            loop.create_task(interaction.response.send_modal(DrawModal(input_object, message)))
+            loop.create_task(interaction.response.send_modal(DrawModal(stable_cog, input_object, message)))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -224,6 +227,7 @@ class DrawView(View):
         try:
             if check_interaction_permission(interaction, loop) == False: return
             message = await get_message(interaction)
+            stable_cog: stablecog.StableCog = self.stable_cog
 
             # obtain URL for the original image
             init_url = message.attachments[0].url
@@ -239,7 +243,7 @@ class DrawView(View):
                 if '``/dream ' in message.content:
                     # retrieve command from message
                     command = self.find_between(message.content, '``/dream ', '``')
-                    input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    input_object = stable_cog.get_draw_object_from_command(command)
                 elif '``/minigame ' in message.content:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                     return
@@ -247,7 +251,7 @@ class DrawView(View):
                     # retrieve command from cache
                     command = settings.get_dream_command(message.id)
                     if command:
-                        input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                        input_object = stable_cog.get_draw_object_from_command(command)
                     else:
                         loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                         return
@@ -261,7 +265,7 @@ class DrawView(View):
             draw_object.init_url = init_url
 
             # run stablecog dream using draw object
-            loop.create_task(stablecog.StableCog(self).dream_object(draw_object))
+            loop.create_task(stable_cog.dream_object(draw_object))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -275,6 +279,7 @@ class DrawView(View):
         loop = asyncio.get_running_loop()
         try:
             if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
 
             # get input object
             if self.input_object:
@@ -285,7 +290,7 @@ class DrawView(View):
                 if '``/dream ' in message.content:
                     # retrieve command from message
                     command = self.find_between(message.content, '``/dream ', '``')
-                    input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    input_object = stable_cog.get_draw_object_from_command(command)
                 elif '``/minigame ' in message.content:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                     return
@@ -293,7 +298,7 @@ class DrawView(View):
                     # retrieve command from cache
                     command = settings.get_dream_command(message.id)
                     if command:
-                        input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                        input_object = stable_cog.get_draw_object_from_command(command)
                     else:
                         loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
                         return
@@ -306,7 +311,7 @@ class DrawView(View):
             draw_object.payload = None
 
             # run stablecog dream using draw object
-            loop.create_task(stablecog.StableCog(self).dream_object(draw_object))
+            loop.create_task(stable_cog.dream_object(draw_object))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -345,8 +350,8 @@ class DrawView(View):
 
 
 class DrawExtendedView(DrawView):
-    def __init__(self, input_object: queuehandler.DrawObject):
-        super().__init__(input_object)
+    def __init__(self, stable_cog, input_object: queuehandler.DrawObject):
+        super().__init__(stable_cog, input_object)
 
     # the 🏳️ ends the game and reveals the answer
     @discord.ui.button(

@@ -486,7 +486,7 @@ class Minigame:
             input = input.replace('\n', ' ')
         return input
 
-class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='Guess the prompt from the picture minigame.'):
+class MinigameCog(commands.Cog, description='Guess the prompt from the picture minigame.'):
     ctx_parse = discord.ApplicationContext
     def __init__(self, bot: discord.Bot):
         self.bot: discord.Bot = bot
