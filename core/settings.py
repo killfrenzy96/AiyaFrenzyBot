@@ -4,8 +4,8 @@ import json
 import os
 import requests
 import time
+import threading
 from typing import Optional
-from threading import Thread
 
 self = discord.Bot()
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -52,9 +52,11 @@ class GlobalVar:
 global_var = GlobalVar()
 
 def build(guild_id: str):
-    settings = json.dumps(template)
-    with open(path + guild_id + '.json', 'w') as configfile:
-        configfile.write(settings)
+    def run():
+        settings = json.dumps(template)
+        with open(path + guild_id + '.json', 'w') as configfile:
+            configfile.write(settings)
+    threading.Thread(target=run).start()
 
 def read(guild_id: str):
     try:
@@ -67,10 +69,12 @@ def read(guild_id: str):
     return settings
 
 def update(guild_id: str, sett: str, value):
-    settings = read(guild_id)
-    settings[sett] = value
-    with open(path + guild_id + '.json', 'w') as configfile:
-        json.dump(settings, configfile)
+    def run():
+        settings = read(guild_id)
+        settings[sett] = value
+        with open(path + guild_id + '.json', 'w') as configfile:
+            json.dump(settings, configfile)
+    threading.Thread(target=run).start()
 
 def get_env_var_with_default(var: str, default: str) -> str:
     ret = os.getenv(var)
@@ -287,4 +291,4 @@ def increment_stats(count: int = 1):
         data[0] = data[0] + count
         with open('resources/stats.txt', 'w') as f:
             f.write('\n'.join(str(x) for x in data))
-    Thread(target=run, daemon=True).start()
+    threading.Thread(target=run).start()

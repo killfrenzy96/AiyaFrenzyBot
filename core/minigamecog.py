@@ -8,8 +8,8 @@ import requests
 import time
 import traceback
 import asyncio
+import threading
 from difflib import SequenceMatcher
-from threading import Thread
 from PIL import Image, PngImagePlugin
 from discord import option
 from discord.ui import InputText, Modal, View
@@ -173,7 +173,7 @@ class Minigame:
         loop = asyncio.get_running_loop()
 
         if self.running == False:
-            content = f'You have already given up. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
+            content = f'The game is over. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
             ephemeral = True
         else:
             content = f'<@{self.host.id}> has given up. The answer was ``{self.prompt}``.\nThere were ``{self.guess_count}`` guesses and ``{self.image_count}`` images generated.\nPress 🖋️ or 🖼️ to continue the minigame.'
@@ -360,7 +360,7 @@ class Minigame:
         random_line.replace('\n', '')
         return random_line.strip()
 
-    def dream(self, queue_object: queuehandler.DrawObject):
+    def dream(self, queue_object: queuehandler.DrawObject, queue_continue: threading.Event):
         user = queuehandler.get_user(queue_object.ctx)
 
         try:
@@ -390,11 +390,17 @@ class Minigame:
             else:
                 url = f'{settings.global_var.url}/sdapi/v1/txt2img'
 
+            # safe for global queue to continue
+            def continue_queue():
+                time.sleep(0.1)
+                queue_continue.set()
+            threading.Thread(target=continue_queue, daemon=True).start()
+
             if queue_object.init_url:
                 # workaround for batched init_images payload not working correctly on AUTOMATIC1111
                 images: list[str] = queue_object.payload['init_images']
                 payloads: list[dict] = []
-                threads: list[Thread] = []
+                threads: list[threading.Thread] = []
                 responses: list[requests.Response] = []
 
                 queue_object.payload['init_images'] = []
@@ -412,7 +418,7 @@ class Minigame:
                     responses[thread_index] = s.post(url=url, json=thread_payload)
 
                 for index, payload in enumerate(payloads):
-                    thread = Thread(target=img2img, args=[index, payload], daemon=True)
+                    thread = threading.Thread(target=img2img, args=[index, payload], daemon=True)
                     threads.append(thread)
 
                 for thread in threads:
@@ -436,51 +442,59 @@ class Minigame:
                 response_data = response.json()
 
             queue_object.payload = None
-
             self.game_iteration += 1
 
-            # create safe/sanitized filename
-            keep_chars = (' ', '.', '_')
-            file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
+            def post_dream():
+                try:
+                    # create safe/sanitized filename
+                    keep_chars = (' ', '.', '_')
+                    file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
-            # save local copy of image and prepare PIL images
-            pil_images: list[Image.Image] = []
-            self.images_base64 = []
-            for i, image_base64 in enumerate(response_data['images']):
-                image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
-                pil_images.append(image)
+                    # save local copy of image and prepare PIL images
+                    pil_images: list[Image.Image] = []
+                    self.images_base64 = []
+                    for i, image_base64 in enumerate(response_data['images']):
+                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
+                        pil_images.append(image)
 
-                image_base64 = 'data:image/png;base64,' + image_base64
-                self.images_base64.append(image_base64)
+                        image_base64 = 'data:image/png;base64,' + image_base64
+                        self.images_base64.append(image_base64)
 
-                # grab png info
-                png_payload = {
-                    "image": image_base64
-                }
-                png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
+                        # grab png info
+                        png_payload = {
+                            "image": image_base64
+                        }
+                        png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
 
-                metadata = PngImagePlugin.PngInfo()
-                epoch_time = int(time.time())
-                metadata.add_text("parameters", png_response.json().get("info"))
-                file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
-                image.save(file_path, pnginfo=metadata)
-                print(f'Saved image: {file_path}')
+                        metadata = PngImagePlugin.PngInfo()
+                        epoch_time = int(time.time())
+                        metadata.add_text("parameters", png_response.json().get("info"))
+                        file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
+                        image.save(file_path, pnginfo=metadata)
+                        print(f'Saved image: {file_path}')
 
-            # post to discord
-            with contextlib.ExitStack() as stack:
-                buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
+                    # post to discord
+                    with contextlib.ExitStack() as stack:
+                        buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
 
-                for (pil_image, buffer) in zip(pil_images, buffer_handles):
-                    pil_image.save(buffer, 'PNG')
-                    buffer.seek(0)
+                        for (pil_image, buffer) in zip(pil_images, buffer_handles):
+                            pil_image.save(buffer, 'PNG')
+                            buffer.seek(0)
 
-                files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{user.id}>', embed=embed, files=files))
-                queuehandler.process_upload(queuehandler.UploadObject(
-                    ctx=queue_object.ctx, content=f'<@{user.id}> {queue_object.copy_command}', files=files, view=queue_object.view
-                ))
-                queue_object.view = None
-                self.image_count += queue_object.batch
+                        files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
+                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{user.id}>', embed=embed, files=files))
+                        queuehandler.process_upload(queuehandler.UploadObject(
+                            ctx=queue_object.ctx, content=f'<@{user.id}> {queue_object.copy_command}', files=files, view=queue_object.view
+                        ))
+                        queue_object.view = None
+                        self.image_count += queue_object.batch
+
+                except Exception as e:
+                    content = f'Something went wrong.\n{e}'
+                    print(content + f'\n{traceback.print_exc()}')
+                    queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+
+            threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'

@@ -3,7 +3,7 @@ import discord
 import traceback
 import time
 import requests
-from threading import Thread
+import threading
 
 from core import settings
 
@@ -70,7 +70,7 @@ class IdentifyObject:
 
 #any command that needs to wait on processing should use the dream thread
 class GlobalQueue:
-    dream_thread = Thread()
+    dream_thread = threading.Thread()
     queue_high: list[DrawObject | UpscaleObject | IdentifyObject] = []
     queue_medium: list[DrawObject | UpscaleObject | IdentifyObject] = []
     queue_low: list[DrawObject | UpscaleObject | IdentifyObject] = []
@@ -145,7 +145,7 @@ def process_dream(self, queue_object: DrawObject | UpscaleObject | IdentifyObjec
 
     # start dream queue thread
     if GlobalQueue.dream_thread.is_alive() == False:
-        GlobalQueue.dream_thread = Thread(target=process_queue)
+        GlobalQueue.dream_thread = threading.Thread(target=process_queue, daemon=True)
         GlobalQueue.dream_thread.start()
 
     if print_info:
@@ -175,8 +175,8 @@ def get_progress():
 
 def process_queue():
     queue_index = 0
-    active_thread = Thread()
-    buffer_thread = Thread()
+    active_thread = threading.Thread()
+    buffer_thread = threading.Thread()
 
     while queue_index < len(GlobalQueue.queues):
         queue = GlobalQueue.queues[queue_index]
@@ -190,42 +190,22 @@ def process_queue():
                 if active_thread.is_alive() and buffer_thread.is_alive():
                     active_thread.join()
                     active_thread = buffer_thread
-                    buffer_thread = Thread()
+                    buffer_thread = threading.Thread()
                 if active_thread.is_alive():
                     buffer_thread = active_thread
 
-                active_thread = Thread(target=queue_object.cog.dream, args=[queue_object])
+                active_thread_event = threading.Event()
+                active_thread = threading.Thread(target=queue_object.cog.dream, args=[queue_object, active_thread_event], daemon=True)
                 active_thread.start()
 
-                if type(queue_object) != DrawObject:
+                # wait for thread to complete, or event (indicating it is safe to continue)
+                def wait_for_join():
                     active_thread.join()
-                else:
-                    wait = True
-                    while wait:
-                        time.sleep(0.5)
-                        progress = get_progress()
-                        if progress:
-                            job_count = int(progress['state']['job_count'])
-                            eta = float(progress['eta_relative'])
-                            try:
-                                completed = float(progress['state']['sampling_step']) / float(progress['state']['sampling_steps'])
-                            except:
-                                completed = 0.0
+                    active_thread_event.set()
+                wait_thread_join = threading.Thread(target=wait_for_join, daemon=True)
+                wait_thread_join.start()
+                active_thread_event.wait()
 
-                            # print(f'Progress job_count={job_count} eta={eta} completed={completed} active_thread={active_thread.is_alive()} buffer_thread={buffer_thread.is_alive()}')
-                            if active_thread.is_alive() == False or (
-                                job_count != -1 and job_count <= 1 and
-                                ((eta != 0.0 and eta < 3.0) or (eta == 0.0 and completed != 0.0 and completed > 0.5))
-                            ):
-                                # queue up next dream
-                                wait = False
-                                continue
-                            else:
-                                # wait before queueing again
-                                pass
-                        else:
-                            print('Warning: WebUI offline. Waiting for WebUI...')
-                            time.sleep(19.0)
             except Exception as e:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
             queue_index = 0
@@ -242,7 +222,7 @@ class UploadObject:
         self.delete_after: float = delete_after
 
 class GlobalUploadQueue:
-    upload_thread = Thread()
+    upload_thread = threading.Thread()
     event_loop = asyncio.get_event_loop()
     queue: list[UploadObject] = []
 
@@ -253,7 +233,7 @@ def process_upload(queue_object: UploadObject):
 
     # start upload queue thread
     if GlobalUploadQueue.upload_thread.is_alive() == False:
-        GlobalUploadQueue.upload_thread = Thread(target=process_upload_queue)
+        GlobalUploadQueue.upload_thread = threading.Thread(target=process_upload_queue, daemon=True)
         GlobalUploadQueue.upload_thread.start()
 
 def process_upload_queue():

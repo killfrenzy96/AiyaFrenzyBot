@@ -1,13 +1,13 @@
 import asyncio
 import discord
 import traceback
+import threading
 from core import settings
-from threading import Thread
 
 class ConsoleInput:
     def __init__(self, bot: discord.Bot):
         self.bot = bot
-        self.input_thread: Thread = None
+        self.input_thread: threading.Thread = None
         self.running = False
         self.help_output = ('Valid commands:\n'
                            '  reload - reloads all settings.\n'
@@ -18,7 +18,7 @@ class ConsoleInput:
     def run(self):
         if self.input_thread == None:
             self.running = True
-            self.input_thread = Thread(target=self.get_input, daemon=True)
+            self.input_thread = threading.Thread(target=self.get_input, daemon=True)
             self.input_thread.start()
 
     def shutdown(self):

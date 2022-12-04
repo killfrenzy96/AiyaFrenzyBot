@@ -6,7 +6,7 @@ import requests
 import time
 import traceback
 import asyncio
-from threading import Thread
+import threading
 from discord import option
 from discord.ext import commands
 from os.path import splitext, basename
@@ -235,7 +235,7 @@ class UpscaleCog(commands.Cog):
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     # generate the image
-    def dream(self, queue_object: queuehandler.UpscaleObject):
+    def dream(self, queue_object: queuehandler.UpscaleObject, queue_continue: threading.Event):
         user = queuehandler.get_user(queue_object.ctx)
 
         try:
@@ -252,6 +252,12 @@ class UpscaleCog(commands.Cog):
                     s.post(settings.global_var.url + '/login', data=login_payload)
                 # else:
                 #     s.post(settings.global_var.url + '/login')
+
+            # safe for global queue to continue
+            def continue_queue():
+                time.sleep(0.1)
+                queue_continue.set()
+            threading.Thread(target=continue_queue, daemon=True).start()
 
             response = s.post(url=f'{settings.global_var.url}/sdapi/v1/extra-single-image', json=queue_object.payload)
             queue_object.payload = None
@@ -307,7 +313,7 @@ class UpscaleCog(commands.Cog):
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
 
-            Thread(target=post_dream, daemon=True).start()
+            threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'

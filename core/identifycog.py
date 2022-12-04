@@ -3,7 +3,8 @@ import discord
 import traceback
 import requests
 import asyncio
-from threading import Thread
+import time
+import threading
 from discord import option
 from discord.ext import commands
 from typing import Optional
@@ -151,7 +152,7 @@ class IdentifyCog(commands.Cog):
             else:
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
-    def dream(self, queue_object: queuehandler.IdentifyObject):
+    def dream(self, queue_object: queuehandler.IdentifyObject, queue_continue: threading.Event):
         user = queuehandler.get_user(queue_object.ctx)
 
         try:
@@ -169,10 +170,16 @@ class IdentifyCog(commands.Cog):
                 # else:
                 #     s.post(settings.global_var.url + '/login')
 
+            # safe for global queue to continue
+            def continue_queue():
+                time.sleep(0.1)
+                queue_continue.set()
+            threading.Thread(target=continue_queue, daemon=True).start()
+
             if queue_object.model == 'combined':
                 # combined model payload - iterate through all models and put them in the prompt
                 payloads: list[dict] = []
-                threads: list[Thread] = []
+                threads: list[threading.Thread] = []
                 responses: list[requests.Response] = []
                 for model in settings.global_var.identify_models:
                     new_payload = {}
@@ -188,7 +195,7 @@ class IdentifyCog(commands.Cog):
                     responses[thread_index] = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=thread_payload)
 
                 for index, payload in enumerate(payloads):
-                    thread = Thread(target=interrogate, args=[index, payload], daemon=True)
+                    thread = threading.Thread(target=interrogate, args=[index, payload], daemon=True)
                     threads.append(thread)
 
                 for thread in threads:
@@ -220,7 +227,7 @@ class IdentifyCog(commands.Cog):
                         content = f'Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
                         queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
-                Thread(target=post_dream, daemon=True).start()
+                threading.Thread(target=post_dream, daemon=True).start()
             else:
                 # regular payload - get identify for the model specified
                 response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
@@ -237,7 +244,7 @@ class IdentifyCog(commands.Cog):
                         content = f'Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
                         queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
-                Thread(target=post_dream, daemon=True).start()
+                threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'

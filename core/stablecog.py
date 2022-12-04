@@ -7,7 +7,7 @@ import requests
 import time
 import traceback
 import asyncio
-from threading import Thread
+import threading
 from PIL import Image, PngImagePlugin
 from discord import option
 from discord.ext import commands
@@ -597,12 +597,10 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     # generate the image
-    def dream(self, queue_object: queuehandler.DrawObject):
+    def dream(self, queue_object: queuehandler.DrawObject, queue_continue: threading.Event):
         user = queuehandler.get_user(queue_object.ctx)
 
         try:
-            start_time = time.time()
-
             # create persistent session since we'll need to do a few API calls
             s = requests.Session()
             if settings.global_var.api_auth:
@@ -617,6 +615,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 s.post(settings.global_var.url + '/login', data=login_payload)
             # else:
             #     s.post(settings.global_var.url + '/login')
+
+            # safe for global queue to continue
+            def continue_queue():
+                time.sleep(0.1)
+                queue_continue.set()
+            threading.Thread(target=continue_queue, daemon=True).start()
 
             # only send model payload if one is defined
             if queue_object.data_model:
@@ -635,8 +639,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             def post_dream():
                 try:
                     response_data = response.json()
-                    end_time = time.time()
-
                     # create safe/sanitized filename
                     keep_chars = (' ', '.', '_')
                     file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
@@ -674,12 +676,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', files=files, view=queue_object.view
                         ))
                         queue_object.view = None
+
                 except Exception as e:
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
 
-            Thread(target=post_dream, daemon=True).start()
+            threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
