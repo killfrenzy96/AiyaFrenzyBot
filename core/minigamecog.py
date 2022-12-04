@@ -211,43 +211,43 @@ class Minigame:
         if sampler in queuehandler.GlobalQueue.slow_samplers: steps = int(steps / 2)
 
         # insertert negative prompt to reduce chance of AI from getting stuck drawing text
-        negative_prompt = '[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]'
+        negative = '[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]'
 
         # generate text output
         words = prompt.split(' ')
-        copy_command = f'``/minigame'
+        message = f'``/minigame'
 
         if model_name != 'Default':
-            copy_command += f' checkpoint:{model_name}'
+            message += f' checkpoint:{model_name}'
 
-        copy_command += f' batch:{self.batch}``\n'
+        message += f' batch:{self.batch}``\n'
 
         if len(words) > 1:
-            copy_command += f'``({len(words)} words'
+            message += f'``({len(words)} words'
         else:
-            copy_command += '``(1 word'
+            message += '``(1 word'
 
         for index, word in enumerate(words):
             if index == 0:
-                copy_command += f', {len(word)} letters'
+                message += f', {len(word)} letters'
             else:
-                copy_command += f' + {len(word)} letters'
+                message += f' + {len(word)} letters'
 
-        copy_command += ')``'
+        message += ')``'
 
         random_message = await loop.run_in_executor(None, self.get_random_word, 'resources/minigame-messages.csv')
         if self.restarting:
-            copy_command += f' This is a new prompt. {random_message}'
+            message += f' This is a new prompt. {random_message}'
             self.restarting = False
         else:
-            copy_command += f' Guess the prompt. {random_message}'
+            message += f' Guess the prompt. {random_message}'
 
         # create draw object
         draw_object = queuehandler.DrawObject(
             cog=self,
             ctx=ctx,
             prompt=prompt,
-            negative_prompt=negative_prompt,
+            negative=negative,
             model_name=model_name,
             data_model=data_model,
             steps=steps,
@@ -258,7 +258,6 @@ class Minigame:
             seed=random.randint(0, 0xFFFFFFFF),
             strength=round(0.65 + random.random() * 0.35, 2),
             init_url=init_url,
-            copy_command=copy_command,
             batch=self.batch,
             style=None,
             facefix=False,
@@ -266,10 +265,11 @@ class Minigame:
             highres_fix=False,
             clip_skip=1,
             script=None,
-            view=None
+            message=message,
+            cache=False
         )
 
-        print(f'prompt: {prompt} negative_prompt:{negative_prompt} checkpoint:{model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
+        print(f'prompt: {prompt} negative:{negative} checkpoint:{model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
 
         draw_object.view = MinigameView(self, draw_object)
         self.last_view = draw_object.view
@@ -280,7 +280,7 @@ class Minigame:
 
         payload = {
             "prompt": payload_prompt,
-            "negative_prompt": draw_object.negative_prompt,
+            "negative_prompt": draw_object.negative,
             "steps": draw_object.steps,
             "width": draw_object.width,
             "height": draw_object.height,
@@ -457,9 +457,8 @@ class Minigame:
                             buffer.seek(0)
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{user.id}>', embed=embed, files=files))
-                        queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{user.id}> {queue_object.copy_command}', files=files, view=queue_object.view
+                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                            content=f'<@{user.id}> {queue_object.message}', files=files, view=queue_object.view
                         ))
                         queue_object.view = None
                         self.image_count += queue_object.batch
@@ -467,19 +466,19 @@ class Minigame:
                 except Exception as e:
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
-                    queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+                    queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
             threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
     # sanatize input strings
     def sanatize(self, input: str):
         if input:
-            input = input.replace('``', ' ')
+            input = input.replace('`', ' ')
             input = input.replace('\n', ' ')
         return input
 

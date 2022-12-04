@@ -32,10 +32,12 @@ class ConsoleInput:
                 match input_parts[0]:
                     case 'reload':
                         print(f'Reloading settings...')
+                        print(f'> Clearing guilds cache')
+                        settings.global_var.guilds_cache = None
+                        print(f'> Clearing dream cache')
+                        settings.global_var.dream_cache = None
                         print(f'> Reloading files')
                         settings.files_check()
-                        print(f'> Clearing guilds cache')
-                        settings.global_var.guilds_cache = {}
                         print(f'> Reloading guilds')
                         settings.guilds_check(self.bot)
                         print(f'Reload complete.')

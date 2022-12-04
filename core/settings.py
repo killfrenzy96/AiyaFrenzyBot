@@ -4,6 +4,7 @@ import json
 import os
 import requests
 import time
+import traceback
 import threading
 from typing import Optional
 
@@ -47,7 +48,10 @@ class GlobalVar:
     identify_models: list[str] = []
     messages: list[str] = []
 
-    guilds_cache = {}
+    dream_cache: dict = None
+    dream_cache_thread = threading.Thread()
+    guilds_cache: dict = None
+    guilds_cache_thread = threading.Thread()
 
 global_var = GlobalVar()
 
@@ -56,16 +60,22 @@ def build(guild_id: str):
         settings = json.dumps(template)
         with open(path + guild_id + '.json', 'w') as configfile:
             configfile.write(settings)
-    threading.Thread(target=run).start()
+    if global_var.guilds_cache_thread.is_alive(): global_var.guilds_cache_thread.join()
+    global_var.guilds_cache_thread = threading.Thread(target=run)
+    global_var.guilds_cache_thread.start()
 
 def read(guild_id: str):
-    try:
-        return global_var.guilds_cache[guild_id]
-    except:
-        with open(path + guild_id + '.json', 'r') as configfile:
-            settings = dict(template)
-            settings.update(json.load(configfile))
-        global_var.guilds_cache.update({guild_id: settings})
+    if global_var.guilds_cache:
+        try:
+            return global_var.guilds_cache[guild_id]
+        except:
+            pass
+
+    global_var.guilds_cache = {}
+    with open(path + guild_id + '.json', 'r') as configfile:
+        settings = dict(template)
+        settings.update(json.load(configfile))
+    global_var.guilds_cache.update({guild_id: settings})
     return settings
 
 def update(guild_id: str, sett: str, value):
@@ -74,7 +84,9 @@ def update(guild_id: str, sett: str, value):
         settings[sett] = value
         with open(path + guild_id + '.json', 'w') as configfile:
             json.dump(settings, configfile)
-    threading.Thread(target=run).start()
+    if global_var.guilds_cache_thread.is_alive(): global_var.guilds_cache_thread.join()
+    global_var.guilds_cache_thread = threading.Thread(target=run)
+    global_var.guilds_cache_thread.start()
 
 def get_env_var_with_default(var: str, default: str) -> str:
     ret = os.getenv(var)
@@ -146,6 +158,7 @@ def files_check():
                                 header = next(reader)
                                 writer.writerows(reader)
                                 replace_model_file = True
+                        break # no need to run this multiple times
                 # if first row has data, do nothing
                 if i == 1:
                     make_model_file = False
@@ -260,6 +273,9 @@ def files_check():
 
     print(f'- Upscalers count: {len(global_var.upscaler_names)}')
 
+    # get dream cache
+    get_dream_command(-1)
+
     # get interrogate models - no API endpoint for this, so it's hard coded
     global_var.identify_models = ['clip', 'deepdanbooru']
 
@@ -282,6 +298,77 @@ def guilds_check(self: discord.Bot):
         except FileNotFoundError:
             build(str(guild.id))
             print(f'Creating new settings file for {guild.id} a.k.a {guild}.')
+
+
+# get dream command from cache
+def get_dream_command(message_id: int):
+    if global_var.dream_cache:
+        try:
+            return global_var.dream_cache[message_id]
+        except:
+            return None
+
+    # retrieve cache from file
+    print('Retrieving dream message cache...')
+    global_var.dream_cache = {}
+
+    def read_cache(file_path: str):
+        try:
+            with open(file_path, 'r') as f:
+                reader = csv.reader(f, delimiter='`')
+                for row in reader:
+                    if len(row) == 2:
+                        global_var.dream_cache.update({int(row[0]): row[1]})
+            print(f'- Loaded dream cache: {file_path}')
+        except FileNotFoundError:
+            pass
+
+    read_cache('resources/dream-cache.txt')
+    read_cache('resources/dream-cache-old.txt')
+    print(f'- Dream message cache entries: {len(global_var.dream_cache)}')
+
+    try:
+        return global_var.dream_cache[message_id]
+    except Exception as e:
+        return None
+
+
+# append command to dream command cache
+dream_cache_write_thread = threading.Thread()
+def append_dream_command(message_id: int, command: str):
+    def run():
+        if get_dream_command(message_id) == None:
+            dream_cache_line = str(message_id) + '`' + command + '\n'
+
+            # archive file if it's too big (over 1MB)
+            try:
+                file_stats = os.stat('resources/dream-cache.txt')
+                if file_stats.st_size > 1024 * 1024:
+                    # remove old archived file
+                    try:
+                        os.remove('resources/dream-cache-old.txt')
+                    except:
+                        pass
+
+                    # archive current file
+                    try:
+                        os.rename('resources/dream-cache.txt', 'resources/dream-cache-old.txt')
+                    except:
+                        pass
+            except:
+                pass
+
+            try:
+                with open('resources/dream-cache.txt', 'a') as f:
+                    f.write(dream_cache_line)
+            except FileNotFoundError:
+                with open('resources/dream-cache.txt', 'w') as f:
+                    f.write(dream_cache_line)
+
+    if global_var.dream_cache_thread.is_alive(): global_var.dream_cache_thread.join()
+    global_var.dream_cache_thread = threading.Thread(target=run)
+    global_var.dream_cache_thread.start()
+
 
 # increment number of images generated
 def increment_stats(count: int = 1):

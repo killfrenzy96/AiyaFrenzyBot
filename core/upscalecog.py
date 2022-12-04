@@ -168,14 +168,14 @@ class UpscaleCog(commands.Cog):
                 append_options = append_options + ' - Strength: ``' + str(upscaler_2_strength) + '``'
 
             #log the command
-            copy_command = f'/upscale init_url:{init_url} resize:{resize} upscaler_1:{upscaler_1}'
+            command = f'/upscale init_url:{init_url} resize:{resize} upscaler_1:{upscaler_1}'
             if upscaler_2 != 'None':
-                copy_command = copy_command + f' upscaler_2:{upscaler_2} upscaler_2_strength:{upscaler_2_strength}'
-            print(copy_command)
+                command = command + f' upscaler_2:{upscaler_2} upscaler_2_strength:{upscaler_2_strength}'
+            print(command)
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, copy_command, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
+                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, command, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
 
                 #construct a payload
                 payload = {
@@ -291,34 +291,22 @@ class UpscaleCog(commands.Cog):
                             file_path += '.jpeg'
                             print(f'New image size: {buffer.getbuffer().nbytes} bytes - Quality: {quality}')
                         buffer.seek(0)
-                        # embed = discord.Embed()
 
-                        # embed.colour = settings.global_var.embed_color
-                        # embed.add_field(name=f'My upscale of', value=f'``{queue_object.resize}``x', inline=False)
-                        # embed.add_field(name='took me', value='``{0:.3f}`` seconds'.format(end_time-start_time), inline=False)
-
-                        # footer_args = dict(text=f'{user.name}#{user.discriminator}')
-                        # if user.avatar is not None:
-                        #     footer_args['icon_url'] = user.avatar.url
-                        # embed.set_footer(**footer_args)
-
-                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{user.id}>', embed=embed,
-                        #                                 file=discord.File(fp=buffer, filename=file_path)))
-                        queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', files=[discord.File(fp=buffer, filename=file_path)], view=queue_object.view
+                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                            content=f'<@{user.id}> ``{queue_object.command}``', files=[discord.File(fp=buffer, filename=file_path)], view=queue_object.view
                         ))
                         queue_object.view = None
                 except Exception as e:
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
-                    queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+                    queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
             threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
 def setup(bot: discord.Bot):
     bot.add_cog(UpscaleCog(bot))

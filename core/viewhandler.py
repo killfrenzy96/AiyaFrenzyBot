@@ -5,6 +5,7 @@ import time
 import asyncio
 from discord.ui import InputText, Modal, View
 
+from core import settings
 from core import queuehandler
 from core import stablecog
 
@@ -28,7 +29,7 @@ class DrawModal(Modal):
             InputText(
                 label='Negative prompt (optional)',
                 style=discord.InputTextStyle.long,
-                value=self.input_object.negative_prompt,
+                value=self.input_object.negative,
                 required=False
             )
         )
@@ -90,7 +91,7 @@ class DrawModal(Modal):
 
             draw_object.prompt = self.children[0].value
 
-            draw_object.negative_prompt = self.children[1].value
+            draw_object.negative = self.children[1].value
 
             try:
                 draw_object.seed = int(self.children[2].value)
@@ -197,12 +198,17 @@ class DrawView(View):
                 if '``/dream ' in message.content:
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
-                elif '> Minigame ID ``' in message.content:
+                elif '``/minigame ' in message.content:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                     return
                 else:
-                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
-                    return
+                    # retrieve command from cache
+                    command = settings.get_dream_command(message.id)
+                    if command:
+                        input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    else:
+                        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                        return
 
             loop.create_task(interaction.response.send_modal(DrawModal(input_object, message)))
 
@@ -231,14 +237,20 @@ class DrawView(View):
             else:
                 # create input object from message command
                 if '``/dream ' in message.content:
+                    # retrieve command from message
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
-                elif '> Minigame ID ``' in message.content:
+                elif '``/minigame ' in message.content:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                     return
                 else:
-                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
-                    return
+                    # retrieve command from cache
+                    command = settings.get_dream_command(message.id)
+                    if command:
+                        input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    else:
+                        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                        return
 
             # setup draw object to send to the stablecog
             draw_object = copy.copy(input_object)
@@ -271,14 +283,20 @@ class DrawView(View):
                 # create input object from message command
                 message = await get_message(interaction)
                 if '``/dream ' in message.content:
+                    # retrieve command from message
                     command = self.find_between(message.content, '``/dream ', '``')
                     input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
                 elif '``/minigame ' in message.content:
                     loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                     return
                 else:
-                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
-                    return
+                    # retrieve command from cache
+                    command = settings.get_dream_command(message.id)
+                    if command:
+                        input_object = stablecog.StableCog(self).get_draw_object_from_command(command)
+                    else:
+                        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                        return
 
             # setup draw object to send to the stablecog
             draw_object = copy.copy(input_object)

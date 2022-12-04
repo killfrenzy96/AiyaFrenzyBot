@@ -92,12 +92,12 @@ class IdentifyCog(commands.Cog):
                 raise Exception()
 
             # log the command
-            copy_command = f'/identify init_url:{init_url} model:{model}'
-            print(copy_command)
+            command = f'/identify init_url:{init_url} model:{model}'
+            print(command)
 
             # creates the upscale object out of local variables
             def get_identify_object():
-                queue_object = queuehandler.IdentifyObject(self, ctx, init_url, model, copy_command, viewhandler.DeleteView(user.id))
+                queue_object = queuehandler.IdentifyObject(self, ctx, init_url, model, command, viewhandler.DeleteView(user.id))
 
                 # construct a payload
                 payload = {
@@ -217,16 +217,16 @@ class IdentifyCog(commands.Cog):
                         content = content.replace('\\)', '')
                         content = content.replace('_', ' ')
 
-                        content = f'<@{user.id}> ``{queue_object.copy_command}``\nI think this is ``{content}``'
+                        content = f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{content}``'
 
-                        queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=content, view=queue_object.view
+                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                            content=content, view=queue_object.view
                         ))
                         queue_object.view = None
                     except Exception as e:
                         content = f'Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
-                        queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
                 threading.Thread(target=post_dream, daemon=True).start()
             else:
                 # regular payload - get identify for the model specified
@@ -236,20 +236,20 @@ class IdentifyCog(commands.Cog):
                 def post_dream():
                     try:
                         response_data = response.json()
-                        queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``\nI think this is ``{response_data.get("caption")}``', view=queue_object.view
+                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                            content=f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{response_data.get("caption")}``', view=queue_object.view
                         ))
                         queue_object.view = None
                     except Exception as e:
                         content = f'Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
-                        queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
                 threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
 def setup(bot: discord.Bot):
     bot.add_cog(IdentifyCog(bot))

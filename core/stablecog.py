@@ -210,8 +210,8 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str] = None,
                             batch: Optional[int] = None,
-                            style: Optional[str] = 'None',
-                            facefix: Optional[str] = 'None',
+                            style: Optional[str] = None,
+                            facefix: Optional[str] = None,
                             tiling: Optional[bool] = False,
                             highres_fix: Optional[bool] = False,
                             clip_skip: Optional[int] = 0,
@@ -221,7 +221,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         ephemeral = False
 
         try:
-            copy_command: str = None
+            command: str = None
 
             # get guild id and user
             guild = queuehandler.get_guild(ctx)
@@ -232,7 +232,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             # sanatize input strings
             def sanatize(input: str):
                 if input:
-                    input = input.replace('``', ' ')
+                    input = input.replace('`', ' ')
                     input = input.replace('\n', ' ')
                     for param in self.dream_params:
                         input = input.replace(f' {param}:', f' {param} ')
@@ -272,7 +272,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             def get_draw_object_args():
                 return (self, ctx, prompt, negative, checkpoint, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
-                        strength, init_url, copy_command, batch, style,
+                        strength, init_url, batch, style,
                         facefix, tiling, highres_fix, clip_skip, script)
 
             # get estimate of the compute cost of this dream
@@ -379,34 +379,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     batch = setting_max_count
                     append_options = append_options + '\nExceeded maximum of ``' + str(batch) + '`` images! This is the best I can do...'
 
-            # log the command
-            copy_command = f'/dream prompt:{prompt}'
-            if negative != '':
-                copy_command = copy_command + f' negative:{negative}'
-            if data_model and checkpoint != 'Default':
-                copy_command = copy_command + f' checkpoint:{checkpoint}'
-            copy_command = copy_command + f' width:{width} height:{height} steps:{steps} guidance_scale:{guidance_scale} sampler:{sampler} seed:{seed}'
-            if init_image or init_url:
-                if init_image:
-                    copy_command = copy_command + f' strength:{strength} init_url:{init_image.url}'
-                else:
-                    copy_command = copy_command + f' strength:{strength} init_url:{init_url}'
-            if style != 'None':
-                copy_command = copy_command + f' style:{style}'
-            if facefix != 'None':
-                copy_command = copy_command + f' facefix:{facefix}'
-            if tiling:
-                copy_command = copy_command + f' tiling:{tiling}'
-            if highres_fix:
-                copy_command = copy_command + f' highres_fix:{highres_fix}'
-            if clip_skip != 1:
-                copy_command = copy_command + f' clip_skip:{clip_skip}'
-            if batch > 1:
-                copy_command = copy_command + f' batch:{batch}'
-            if script:
-                copy_command = copy_command + f' script:{script}'
-            print(copy_command)
-
             # calculate total cost of queued items and reject if there is too expensive
             dream_cost = round(get_dream_cost(width, height, steps, batch), 2)
             queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
@@ -457,12 +429,19 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             settings.increment_stats(batch)
 
             # create draw object
-            def get_draw_object():
+            def get_draw_object(message: str = None):
                 args = get_draw_object_args()
                 queue_object = queuehandler.DrawObject(*args)
 
-                # set up tuple of parameters to pass into the Discord view
+                # create view to handle buttons
                 queue_object.view = viewhandler.DrawView(queue_object)
+
+                # send message with queue object
+                if message == None:
+                    queue_object.message = queue_object.get_command()
+                    print(queue_object.message) # log the command
+                else:
+                    queue_object.message = message
 
                 # create persistent session since we'll need to do a few API calls
                 s = requests.Session()
@@ -475,7 +454,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                 payload = {
                     "prompt": payload_prompt,
-                    "negative_prompt": queue_object.negative_prompt,
+                    "negative_prompt": queue_object.negative,
                     "steps": queue_object.steps,
                     "width": queue_object.width,
                     "height": queue_object.height,
@@ -486,44 +465,51 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     "seed_resize_from_w": 0,
                     "denoising_strength": None,
                     "tiling": queue_object.tiling,
-                    "n_iter": 1,
-                    "styles": [
-                        queue_object.style
-                    ]
+                    "n_iter": 1
                 }
 
                 # update payload if init_img or init_url is used
                 if queue_object.init_url:
-                    img_payload = {
+                    payload.update({
                         "init_images": [image],
                         "denoising_strength": queue_object.strength
-                    }
-                    payload.update(img_payload)
+                    })
 
                 # update payload if high-res fix is used
                 if queue_object.highres_fix:
-                    highres_payload = {
+                    payload.update({
                         "enable_hr": queue_object.highres_fix,
                         "denoising_strength": queue_object.strength
-                    }
-                    payload.update(highres_payload)
+                    })
+
+                # update payload if style is used
+                if queue_object.highres_fix:
+                    payload.update({
+                        "styles": [queue_object.style]
+                    })
 
                 # add any options that would go into the override_settings
-                override_settings = {"CLIP_stop_at_last_layers": queue_object.clip_skip}
-                if queue_object.facefix != 'None':
-                    override_settings["face_restoration_model"] = queue_object.facefix
-                    # face restoration needs this extra parameter
-                    facefix_payload = {
+                override_settings = {}
+
+                # update payload if clip skip is used
+                if queue_object.clip_skip != 1:
+                    override_settings["CLIP_stop_at_last_layers"] = queue_object.clip_skip
+
+                # update payload if facefix is used
+                if queue_object.facefix != None:
+                    payload.update({
                         "restore_faces": True,
-                    }
-                    payload.update(facefix_payload)
+                    })
+                    override_settings["face_restoration_model"] = queue_object.facefix
 
                 # update payload with override_settings
-                override_payload = {
-                    "override_settings": override_settings
-                }
-                payload.update(override_payload)
+                if len(override_settings) > 1:
+                    override_payload = {
+                        "override_settings": override_settings
+                    }
+                    payload.update(override_payload)
 
+                # attach payload to queue object
                 queue_object.payload = payload
                 return queue_object
 
@@ -545,31 +531,32 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 # batched items go into the low priority queue
                 else:
                     priority: str = 'low'
+
                 queue_length = queuehandler.process_dream(self, get_draw_object(), priority)
 
                 batch_count = 1
                 while batch_count < batch:
                     batch_count += 1
-                    copy_command = f'#{batch_count}`` ``'
+                    message = f'#{batch_count}`` ``'
 
                     if increment_seed:
                         seed += increment_seed
-                        copy_command = copy_command + f'seed:{seed}'
+                        message += f'seed:{seed}'
 
                     if increment_steps:
                         steps += increment_steps
-                        copy_command = copy_command + f'steps:{steps}'
+                        message += f'steps:{steps}'
 
                     if increment_guidance_scale:
                         guidance_scale += increment_guidance_scale
                         guidance_scale = round(guidance_scale, 4)
-                        copy_command = copy_command + f'guidance_scale:{guidance_scale}'
+                        message += f'guidance_scale:{guidance_scale}'
 
                     if increment_clip_skip:
                         clip_skip += increment_clip_skip
-                        copy_command = copy_command + f'clip_skip:{clip_skip}'
+                        message += f'clip_skip:{clip_skip}'
 
-                    queuehandler.process_dream(self, get_draw_object(), priority, False)
+                    queuehandler.process_dream(self, get_draw_object(message), priority, False)
 
             content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
             if batch > 1: content = content + f' - Batch: ``{batch}``'
@@ -671,29 +658,28 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                             buffer.seek(0)
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                        # event_loop.create_task(queue_object.ctx.channel.send(content=f'<@{user.id}>', embed=embed, files=files))
-                        queuehandler.process_upload(queuehandler.UploadObject(
-                            ctx=queue_object.ctx, content=f'<@{user.id}> ``{queue_object.copy_command}``', files=files, view=queue_object.view
+                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                           content=f'<@{user.id}> ``{queue_object.message}``', files=files, view=queue_object.view
                         ))
                         queue_object.view = None
 
                 except Exception as e:
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
-                    queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+                    queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
             threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(ctx=queue_object.ctx, content=content, delete_after=30))
+            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
     async def dream_object(self, draw_object: queuehandler.DrawObject):
         loop = asyncio.get_running_loop()
         loop.create_task(self.dream_handler(ctx=draw_object.ctx,
             prompt=draw_object.prompt,
-            negative=draw_object.negative_prompt,
+            negative=draw_object.negative,
             checkpoint=draw_object.model_name,
             width=draw_object.width,
             height=draw_object.height,
@@ -808,7 +794,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             init_url = None
 
         style = get_param('style')
-        if style not in settings.global_var.style_names: style = 'None'
+        if style not in settings.global_var.style_names: style = None
 
         try:
             tiling = get_param('tiling')
@@ -847,7 +833,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             cog=None,
             ctx=None,
             prompt=prompt,
-            negative_prompt=negative,
+            negative=negative,
             model_name=checkpoint,
             data_model=checkpoint,
             steps=steps,
@@ -858,7 +844,6 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             seed=seed,
             strength=strength,
             init_url=init_url,
-            copy_command=None,
             batch=batch,
             style=style,
             facefix=facefix,
