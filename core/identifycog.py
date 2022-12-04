@@ -101,13 +101,13 @@ class IdentifyCog(commands.Cog):
 
                 # construct a payload
                 payload = {
-                    "image": image,
-                    "model": model
+                    'image': image,
+                    'model': model
                 }
 
                 if model:
                     model_payload = {
-                        "model": model
+                        'model': model
                     }
                     payload.update(model_payload)
 
@@ -236,8 +236,9 @@ class IdentifyCog(commands.Cog):
                 def post_dream():
                     try:
                         response_data = response.json()
+                        content = response_data.get('caption')
                         queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
-                            content=f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{response_data.get("caption")}``', view=queue_object.view
+                            content=f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{content}``', view=queue_object.view
                         ))
                         queue_object.view = None
                     except Exception as e:

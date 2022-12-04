@@ -179,17 +179,17 @@ class UpscaleCog(commands.Cog):
 
                 #construct a payload
                 payload = {
-                    "upscaling_resize": queue_object.resize,
-                    "upscaler_1": queue_object.upscaler_1,
-                    "image": image,
-                    "gfpgan_visibility": queue_object.gfpgan,
-                    "codeformer_visibility": queue_object.codeformer,
-                    "upscale_first": queue_object.upscale_first
+                    'upscaling_resize': queue_object.resize,
+                    'upscaler_1': queue_object.upscaler_1,
+                    'image': image,
+                    'gfpgan_visibility': queue_object.gfpgan,
+                    'codeformer_visibility': queue_object.codeformer,
+                    'upscale_first': queue_object.upscale_first
                 }
                 if queue_object.upscaler_2 is not None:
                     up2_payload = {
-                        "upscaler_2": queue_object.upscaler_2,
-                        "extras_upscaler_2_visibility": queue_object.upscaler_2_strength
+                        'upscaler_2': queue_object.upscaler_2,
+                        'extras_upscaler_2_visibility': queue_object.upscaler_2_strength
                     }
                     payload.update(up2_payload)
 
@@ -272,7 +272,7 @@ class UpscaleCog(commands.Cog):
 
                     # save local copy of image
                     image_data = response_data['image']
-                    with open(file_path, "wb") as fh:
+                    with open(file_path, 'wb') as fh:
                         fh.write(base64.b64decode(image_data))
                     print(f'Saved image: {file_path}')
 

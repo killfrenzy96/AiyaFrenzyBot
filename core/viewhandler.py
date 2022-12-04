@@ -13,7 +13,7 @@ from core import stablecog
 # the modal that is used for the 🖋 button
 class DrawModal(Modal):
     def __init__(self, input_object: queuehandler.DrawObject, message: discord.Message) -> None:
-        super().__init__(title="Change Prompt!")
+        super().__init__(title='Change Prompt!')
         self.input_object = input_object
         self.message = message
 
@@ -146,7 +146,7 @@ class DrawModal(Modal):
 # create the view to confirm the deletion of an image
 class DeleteModal(Modal):
     def __init__(self, message: discord.Message) -> None:
-        super().__init__(title="Confirm Delete")
+        super().__init__(title='Confirm Delete')
         self.message = message
 
         self.add_item(
@@ -164,7 +164,7 @@ class DeleteModal(Modal):
             if check_interaction_permission(interaction, loop) == False: return
 
             if not self.message.content.startswith(f'<@{interaction.user.id}>'):
-                loop.create_task(interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
                 return
 
             loop.create_task(interaction.response.defer())
@@ -182,8 +182,8 @@ class DrawView(View):
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
-        custom_id="button_re-prompt",
-        emoji="🖋")
+        custom_id='button_re-prompt',
+        emoji='🖋')
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -217,8 +217,8 @@ class DrawView(View):
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
-        custom_id="button_image-variation",
-        emoji="🖼️")
+        custom_id='button_image-variation',
+        emoji='🖼️')
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -269,8 +269,8 @@ class DrawView(View):
 
     # the 🔁 button will take the same parameters for the image, change the seed, and add a task to the queue
     @discord.ui.button(
-        custom_id="button_re-roll",
-        emoji="🔁")
+        custom_id='button_re-roll',
+        emoji='🔁')
     async def button_reroll(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -314,8 +314,8 @@ class DrawView(View):
 
     # the button to delete generated images
     @discord.ui.button(
-        custom_id="button_x",
-        emoji="❌")
+        custom_id='button_x',
+        emoji='❌')
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -323,7 +323,7 @@ class DrawView(View):
             message = await get_message(interaction)
 
             if not message.content.startswith(f'<@{interaction.user.id}>'):
-                loop.create_task(interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
                 return
 
             if confirm_user_delete(interaction.user.id):
@@ -350,8 +350,8 @@ class DrawExtendedView(DrawView):
 
     # the 🏳️ ends the game and reveals the answer
     @discord.ui.button(
-        custom_id="button_giveup",
-        emoji="🏳️")
+        custom_id='button_giveup',
+        emoji='🏳️')
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
@@ -359,8 +359,8 @@ class DrawExtendedView(DrawView):
 
     # guess prompt button
     @discord.ui.button(
-        custom_id="button_guess-prompt",
-        emoji="⌨️",
+        custom_id='button_guess-prompt',
+        emoji='⌨️',
         row=2)
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -374,8 +374,8 @@ class DeleteView(View):
         self.user = user
 
     @discord.ui.button(
-        custom_id="button_x",
-        emoji="❌")
+        custom_id='button_x',
+        emoji='❌')
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -383,7 +383,7 @@ class DeleteView(View):
             message = await get_message(interaction)
 
             if not message.content.startswith(f'<@{interaction.user.id}>'):
-                loop.create_task(interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
                 return
 
             if confirm_user_delete(interaction.user.id):

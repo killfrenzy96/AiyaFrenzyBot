@@ -154,7 +154,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
     @option(
         'batch',
         int,
-        description='The number of images to generate. This is "Batch count", not "Batch size".',
+        description='The number of images to generate. This is \'Batch count\', not \'Batch size\'.',
         required=False,
     )
     @option(
@@ -199,12 +199,12 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
         choices=scripts
     )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, *,
-                            prompt: str, negative: str = 'unset',
+                            prompt: str, negative: str = None,
                             checkpoint: Optional[str] = None,
                             steps: Optional[int] = -1,
                             width: Optional[int] = 512, height: Optional[int] = 512,
                             guidance_scale: Optional[float] = 7.0,
-                            sampler: Optional[str] = 'unset',
+                            sampler: Optional[str] = None,
                             seed: Optional[int] = -1,
                             strength: Optional[float] = 0.75,
                             init_image: Optional[discord.Attachment] = None,
@@ -246,13 +246,13 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             # update defaults with any new defaults from settingscog
             if not checkpoint:
                 checkpoint = settings.read(guild)['data_model']
-            if negative == 'unset':
+            if negative == None:
                 negative = settings.read(guild)['negative_prompt']
             if steps == -1:
                 steps = settings.read(guild)['default_steps']
             if batch is None:
                 batch = settings.read(guild)['default_count']
-            if sampler == 'unset':
+            if sampler == None:
                 sampler = settings.read(guild)['sampler']
             if clip_skip == 0:
                 clip_skip = settings.read(guild)['clip_skip']
@@ -453,39 +453,39 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                 if token: payload_prompt = f'{token} {payload_prompt}'
 
                 payload = {
-                    "prompt": payload_prompt,
-                    "negative_prompt": queue_object.negative,
-                    "steps": queue_object.steps,
-                    "width": queue_object.width,
-                    "height": queue_object.height,
-                    "cfg_scale": queue_object.guidance_scale,
-                    "sampler_index": queue_object.sampler,
-                    "seed": queue_object.seed,
-                    "seed_resize_from_h": 0,
-                    "seed_resize_from_w": 0,
-                    "denoising_strength": None,
-                    "tiling": queue_object.tiling,
-                    "n_iter": 1
+                    'prompt': payload_prompt,
+                    'negative_prompt': queue_object.negative,
+                    'steps': queue_object.steps,
+                    'width': queue_object.width,
+                    'height': queue_object.height,
+                    'cfg_scale': queue_object.guidance_scale,
+                    'sampler_index': queue_object.sampler,
+                    'seed': queue_object.seed,
+                    'seed_resize_from_h': 0,
+                    'seed_resize_from_w': 0,
+                    'denoising_strength': None,
+                    'tiling': queue_object.tiling,
+                    'n_iter': 1
                 }
 
                 # update payload if init_img or init_url is used
                 if queue_object.init_url:
                     payload.update({
-                        "init_images": [image],
-                        "denoising_strength": queue_object.strength
+                        'init_images': [image],
+                        'denoising_strength': queue_object.strength
                     })
 
                 # update payload if high-res fix is used
                 if queue_object.highres_fix:
                     payload.update({
-                        "enable_hr": queue_object.highres_fix,
-                        "denoising_strength": queue_object.strength
+                        'enable_hr': queue_object.highres_fix,
+                        'denoising_strength': queue_object.strength
                     })
 
                 # update payload if style is used
                 if queue_object.highres_fix:
                     payload.update({
-                        "styles": [queue_object.style]
+                        'styles': [queue_object.style]
                     })
 
                 # add any options that would go into the override_settings
@@ -493,19 +493,19 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
                 # update payload if clip skip is used
                 if queue_object.clip_skip != 1:
-                    override_settings["CLIP_stop_at_last_layers"] = queue_object.clip_skip
+                    override_settings['CLIP_stop_at_last_layers'] = queue_object.clip_skip
 
                 # update payload if facefix is used
                 if queue_object.facefix != None:
                     payload.update({
-                        "restore_faces": True,
+                        'restore_faces': True,
                     })
-                    override_settings["face_restoration_model"] = queue_object.facefix
+                    override_settings['face_restoration_model'] = queue_object.facefix
 
                 # update payload with override_settings
                 if len(override_settings) > 1:
                     override_payload = {
-                        "override_settings": override_settings
+                        'override_settings': override_settings
                     }
                     payload.update(override_payload)
 
@@ -612,7 +612,7 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
             # only send model payload if one is defined
             if queue_object.data_model:
                 model_payload = {
-                    "sd_model_checkpoint": queue_object.data_model
+                    'sd_model_checkpoint': queue_object.data_model
                 }
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
 
@@ -628,23 +628,23 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
                     response_data = response.json()
                     # create safe/sanitized filename
                     keep_chars = (' ', '.', '_')
-                    file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
+                    file_name = ''.join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
                     # save local copy of image and prepare PIL images
                     pil_images = []
                     for i, image_base64 in enumerate(response_data['images']):
-                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
+                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(',',1)[0])))
                         pil_images.append(image)
 
                         # grab png info
                         png_payload = {
-                            "image": "data:image/png;base64," + image_base64
+                            'image': 'data:image/png;base64,' + image_base64
                         }
                         png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
 
                         metadata = PngImagePlugin.PngInfo()
                         epoch_time = int(time.time())
-                        metadata.add_text("parameters", png_response.json().get("info"))
+                        metadata.add_text('parameters', png_response.json().get('info'))
                         file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
                         image.save(file_path, pnginfo=metadata)
                         print(f'Saved image: {file_path}')
@@ -768,9 +768,9 @@ class StableCog(commands.Cog, name='Stable Diffusion', description='Create image
 
         try:
             sampler = get_param('sampler')
-            if sampler not in settings.global_var.sampler_names: sampler = 'unset'
+            if sampler not in settings.global_var.sampler_names: sampler = None
         except:
-            sampler = 'unset'
+            sampler = None
 
         try:
             seed = int(get_param('seed'))

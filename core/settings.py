@@ -14,23 +14,23 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 path = 'resources/'.format(dir_path)
 
 template = {
-            "default_steps": 20,
-            "sampler": "DPM++ 2M Karras",
-            "negative_prompt": "",
-            "max_steps": 100,
-            "default_count": 1,
-            "max_count": 16,
-            "clip_skip": 1,
-            "data_model": "Default",
-            "max_compute": 6.0,
-            "max_compute_batch": 16.0,
-            "max_compute_queue": 16.0
-        }
+    'default_steps': 20,
+    'sampler': 'DPM++ 2M Karras',
+    'negative_prompt': '',
+    'max_steps': 100,
+    'default_count': 1,
+    'max_count': 16,
+    'clip_skip': 1,
+    'data_model': 'Default',
+    'max_compute': 6.0,
+    'max_compute_batch': 16.0,
+    'max_compute_queue': 16.0
+}
 
 # initialize global variables here
 class GlobalVar:
-    url = ""
-    dir = ""
+    url = ''
+    dir = ''
     embed_color = discord.Colour.from_rgb(222, 89, 28)
     username: Optional[str] = None
     password: Optional[str] = None
@@ -94,16 +94,16 @@ def get_env_var_with_default(var: str, default: str) -> str:
 
 def startup_check():
     # check .env for parameters. if they don't exist, ignore it and go with defaults.
-    global_var.url = get_env_var_with_default('URL', 'http://127.0.0.1:7860').rstrip("/")
+    global_var.url = get_env_var_with_default('URL', 'http://127.0.0.1:7860').rstrip('/')
     print(f'Using URL: {global_var.url}')
 
     global_var.dir = get_env_var_with_default('DIR', 'outputs')
     print(f'Using outputs directory: {global_var.dir}')
 
-    global_var.username = os.getenv("USER")
-    global_var.password = os.getenv("PASS")
-    global_var.api_user = os.getenv("APIUSER")
-    global_var.api_pass = os.getenv("APIPASS")
+    global_var.username = os.getenv('USER')
+    global_var.password = os.getenv('PASS')
+    global_var.api_user = os.getenv('APIUSER')
+    global_var.api_pass = os.getenv('APIPASS')
 
     # check if Web UI is running
     connected = False
@@ -117,11 +117,11 @@ def startup_check():
                 if (not global_var.api_pass) or (not global_var.api_user):
                     print('API rejected me! If using --api-auth, '
                           'please check your .env file for APIUSER and APIPASS values.')
-                    os.system("pause")
+                    os.system('pause')
             # lazy method to see if --api commandline argument is not set
             if response.status_code == 404:
                 print('API is unreachable! Please check Web UI COMMANDLINE_ARGS for --api.')
-                os.system("pause")
+                os.system('pause')
             return requests.head(global_var.url)
         except(Exception,):
             print(f'Waiting for Web UI at {global_var.url}...')
@@ -145,15 +145,15 @@ def files_check():
     print('Loading checkpoint models...')
     if os.path.isfile('resources/models.csv'):
         with open('resources/models.csv', encoding='utf-8') as f:
-            reader = csv.reader(f, delimiter="|")
+            reader = csv.reader(f, delimiter='|')
             for i, row in enumerate(reader):
                 # if header is missing columns, reformat the file
                 if i == 0:
                     if len(row)<3:
                         with open('resources/models.csv', 'r') as fp:
-                            reader = csv.DictReader(fp, fieldnames=header, delimiter = "|")
+                            reader = csv.DictReader(fp, fieldnames=header, delimiter = '|')
                             with open('resources/models2.csv', 'w', newline='') as fh:
-                                writer = csv.DictWriter(fh, fieldnames=reader.fieldnames, delimiter = "|")
+                                writer = csv.DictWriter(fh, fieldnames=reader.fieldnames, delimiter = '|')
                                 writer.writeheader()
                                 header = next(reader)
                                 writer.writerows(reader)
@@ -170,7 +170,7 @@ def files_check():
     if make_model_file:
         print(f'Uh oh, missing models.csv data. Creating a new one.')
         with open('resources/models.csv', 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f, delimiter = "|")
+            writer = csv.writer(f, delimiter = '|')
             writer.writerow(header)
             writer.writerow(unset_model)
 
@@ -219,21 +219,21 @@ def files_check():
         else:
             s.post(global_var.url + '/login')
     except Exception as e:
-        print("Can't connect to API for some reason!"
-                "Please check your .env URL or credentials.")
-        os.system("pause")
+        print('Can\'t connect to API for some reason!'
+                'Please check your .env URL or credentials.')
+        os.system('pause')
 
     # get samplers
     print('Retrieving samplers...')
-    response_data = s.get(global_var.url + "/sdapi/v1/samplers").json()
+    response_data = s.get(global_var.url + '/sdapi/v1/samplers').json()
     for sampler in response_data:
         try:
             global_var.sampler_names.append(sampler['name'])
         except(Exception,):
             # throw in last exception error for anything that wasn't caught earlier
-            print("Can't connect to API for some reason!"
-                  "Please check your .env URL or credentials.")
-            os.system("pause")
+            print('Can\'t connect to API for some reason!'
+                  'Please check your .env URL or credentials.')
+            os.system('pause')
 
     # remove samplers that seem to have some issues under certain cases
     if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
@@ -243,7 +243,7 @@ def files_check():
 
     # get styles
     print('Retrieving styles...')
-    response_data = s.get(global_var.url + "/sdapi/v1/prompt-styles").json()
+    response_data = s.get(global_var.url + '/sdapi/v1/prompt-styles').json()
     for style in response_data:
         global_var.style_names[style['name']] = style['prompt']
 
@@ -251,7 +251,7 @@ def files_check():
 
     # get face fix models
     print('Retrieving face fix models...')
-    response_data = s.get(global_var.url + "/sdapi/v1/face-restorers").json()
+    response_data = s.get(global_var.url + '/sdapi/v1/face-restorers').json()
     for facefix_model in response_data:
         global_var.facefix_models.append(facefix_model['name'])
 
@@ -259,7 +259,7 @@ def files_check():
 
     # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
     print('Loading upscaler models...')
-    config = s.get(global_var.url + "/config/").json()
+    config = s.get(global_var.url + '/config/').json()
     try:
         for item in config['components']:
             try:

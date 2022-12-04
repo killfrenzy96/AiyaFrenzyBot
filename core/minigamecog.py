@@ -105,7 +105,7 @@ class Minigame:
         elif type(ctx) is discord.Interaction:
             loop.create_task(ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after))
 
-    async def next_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str = 'unset'):
+    async def next_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str = None):
         loop = asyncio.get_running_loop()
         user = queuehandler.get_user(ctx)
         content = None
@@ -123,6 +123,7 @@ class Minigame:
                 raise Exception()
 
             # reset game if it's not running
+            generate_random_prompt = False
             if self.running == False:
                 self.running = True
                 self.restarting = True
@@ -130,17 +131,20 @@ class Minigame:
                 self.image_count = 0
                 self.host = user
                 if prompt == None:
-                    prompt = 'unset'
-                    self.reveal_prompt = False
-                else:
-                    self.reveal_prompt = True
+                    generate_random_prompt = True # user did not input prompt, generate random prompt
 
-            # update prompt if there is a new game
-            if prompt == 'unset' or not self.prompt:
+            # generate random prompt if one isn't set
+            if not self.prompt:
+                generate_random_prompt = True
+
+            # update prompt
+            if generate_random_prompt:
                 prompt = self.sanatize(prompt)
                 self.prompt = await loop.run_in_executor(None, self.get_random_prompt)
+                self.reveal_prompt = False
             elif prompt:
                 self.prompt = self.sanatize(prompt)
+                self.reveal_prompt = True
 
             # start image generation
             content = f'<@{self.host.id}> '
@@ -279,26 +283,26 @@ class Minigame:
         if token: payload_prompt = f'[[[{token}]]] ((({payload_prompt})))'
 
         payload = {
-            "prompt": payload_prompt,
-            "negative_prompt": draw_object.negative,
-            "steps": draw_object.steps,
-            "width": draw_object.width,
-            "height": draw_object.height,
-            "cfg_scale": draw_object.guidance_scale,
-            "sampler_index": draw_object.sampler,
-            "seed": draw_object.seed,
-            "seed_resize_from_h": 0,
-            "seed_resize_from_w": 0,
-            "denoising_strength": draw_object.strength,
-            "tiling": draw_object.tiling,
-            "n_iter": draw_object.batch
+            'prompt': payload_prompt,
+            'negative_prompt': draw_object.negative,
+            'steps': draw_object.steps,
+            'width': draw_object.width,
+            'height': draw_object.height,
+            'cfg_scale': draw_object.guidance_scale,
+            'sampler_index': draw_object.sampler,
+            'seed': draw_object.seed,
+            'seed_resize_from_h': 0,
+            'seed_resize_from_w': 0,
+            'denoising_strength': draw_object.strength,
+            'tiling': draw_object.tiling,
+            'n_iter': draw_object.batch
         }
 
         if init_url and self.images_base64:
             # update payload if image_base64 is available
             img_payload = {
-                "init_images": self.images_base64,
-                "denoising_strength": draw_object.strength
+                'init_images': self.images_base64,
+                'denoising_strength': draw_object.strength
             }
             payload.update(img_payload)
 
@@ -356,7 +360,7 @@ class Minigame:
             # construct a payload for data model
             if queue_object.data_model:
                 model_payload = {
-                    "sd_model_checkpoint": queue_object.data_model
+                    'sd_model_checkpoint': queue_object.data_model
                 }
                 s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
 
@@ -423,13 +427,13 @@ class Minigame:
                 try:
                     # create safe/sanitized filename
                     keep_chars = (' ', '.', '_')
-                    file_name = "".join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
+                    file_name = ''.join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
                     # save local copy of image and prepare PIL images
                     pil_images: list[Image.Image] = []
                     self.images_base64 = []
                     for i, image_base64 in enumerate(response_data['images']):
-                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(",",1)[0])))
+                        image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(',',1)[0])))
                         pil_images.append(image)
 
                         image_base64 = 'data:image/png;base64,' + image_base64
@@ -437,13 +441,13 @@ class Minigame:
 
                         # grab png info
                         png_payload = {
-                            "image": image_base64
+                            'image': image_base64
                         }
                         png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
 
                         metadata = PngImagePlugin.PngInfo()
                         epoch_time = int(time.time())
-                        metadata.add_text("parameters", png_response.json().get("info"))
+                        metadata.add_text('parameters', png_response.json().get('info'))
                         file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
                         image.save(file_path, pnginfo=metadata)
                         print(f'Saved image: {file_path}')
@@ -505,7 +509,7 @@ class MinigameCog(commands.Cog, name='Stable Diffusion Minigame', description='G
     @option(
         'batch',
         int,
-        description='The number of images to generate. This is "Batch count", not "Batch size".',
+        description='The number of images to generate. This is \'Batch count\', not \'Batch size\'.',
         required=False,
     )
     async def draw_handler(self, ctx: discord.ApplicationContext, *,
@@ -554,8 +558,8 @@ class MinigameView(View):
 
     # the 🖋️ button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
-        custom_id="button_re-prompt",
-        emoji="🖋️")
+        custom_id='button_re-prompt',
+        emoji='🖋️')
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -583,8 +587,8 @@ class MinigameView(View):
 
     # the 🏳️ ends the game and reveals the answer
     @discord.ui.button(
-        custom_id="button_giveup",
-        emoji="🏳️")
+        custom_id='button_giveup',
+        emoji='🏳️')
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -613,8 +617,8 @@ class MinigameView(View):
 
     #the button to delete generated images
     @discord.ui.button(
-        custom_id="button_x",
-        emoji="❌")
+        custom_id='button_x',
+        emoji='❌')
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
@@ -622,7 +626,7 @@ class MinigameView(View):
             message = await viewhandler.get_message(interaction)
 
             if not message.content.startswith(f'<@{interaction.user.id}>'):
-                loop.create_task(interaction.response.send_message("You can't delete other people's images!", ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
                 return
 
             if viewhandler.confirm_user_delete(interaction.user.id):
@@ -636,9 +640,9 @@ class MinigameView(View):
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
-        label="More Images",
-        custom_id="button_image-variation",
-        emoji="🖼️",
+        label='More Images',
+        custom_id='button_image-variation',
+        emoji='🖼️',
         row=2)
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -668,9 +672,9 @@ class MinigameView(View):
 
     # guess prompt button
     @discord.ui.button(
-        label="Guess Prompt",
-        custom_id="button_guess-prompt",
-        emoji="⌨️",
+        label='Guess Prompt',
+        custom_id='button_guess-prompt',
+        emoji='⌨️',
         row=2)
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -691,7 +695,7 @@ class MinigameView(View):
 
 class MinigameEditModal(Modal):
     def __init__(self, view: MinigameView, minigame: Minigame) -> None:
-        super().__init__(title="Change Prompt!")
+        super().__init__(title='Change Prompt!')
         self.view = view
         self.minigame = minigame
 
@@ -742,7 +746,7 @@ class MinigameEditModal(Modal):
 
 class MinigameAnswerModal(Modal):
     def __init__(self, view: MinigameView, minigame: Minigame) -> None:
-        super().__init__(title="Guess Prompt")
+        super().__init__(title='Guess Prompt')
         self.view = view
         self.minigame = minigame
 

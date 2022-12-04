@@ -9,7 +9,7 @@ class CancelCog(commands.Cog, name='Cancel Cog', description='Cancels all images
     def __init__(self, bot: discord.Bot):
         self.bot = bot
 
-    @commands.slash_command(name = "cancel", description = "Cancels all images in queue.")
+    @commands.slash_command(name = 'cancel', description = 'Cancels all images in queue.')
     async def cancel(self, ctx: discord.ApplicationContext):
         loop = asyncio.get_running_loop()
 
@@ -26,7 +26,7 @@ class CancelCog(commands.Cog, name='Cancel Cog', description='Cancels all images
                         total_cleared += 1
 
             embed=discord.Embed()
-            embed.add_field(name="Items Cleared", value=f'``{total_cleared}`` dreams cleared from queue', inline=False)
+            embed.add_field(name='Items Cleared', value=f'``{total_cleared}`` dreams cleared from queue', inline=False)
             loop.create_task(ctx.respond(embed=embed, ephemeral=True))
 
         except Exception as e:
