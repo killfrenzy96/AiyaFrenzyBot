@@ -8,6 +8,7 @@ import time
 import traceback
 import asyncio
 import threading
+from urllib.parse import quote
 from PIL import Image, PngImagePlugin
 from discord import option
 from discord.ext import commands
@@ -236,12 +237,31 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     input = input.replace('\n', ' ')
                     for param in self.dream_params:
                         input = input.replace(f' {param}:', f' {param} ')
+                    input = input.strip()
                 return input
 
             prompt = sanatize(prompt)
             negative = sanatize(negative)
             style = sanatize(style)
             init_url = sanatize(init_url)
+
+            # query random result from lexica
+            if prompt.startswith('?'):
+                try:
+                    prompt = prompt.removeprefix('?')
+                    if prompt == '':
+                        prompt = random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
+                    else:
+                        prompt = quote(prompt.strip())
+                    response = await loop.run_in_executor(None, requests.get, f'https://lexica.art/api/v1/search?q={prompt}')
+                    images = response.json()['images']
+                    random_image = images[random.randrange(0, len(images))]
+                    prompt = sanatize(random_image['prompt'])
+                except:
+                    print(f'Dream rejected: Random prompt query failed.')
+                    content = f'<@{user.id}> Random prompt query failed.'
+                    ephemeral = True
+                    raise Exception()
 
             # update defaults with any new defaults from settingscog
             if not checkpoint:

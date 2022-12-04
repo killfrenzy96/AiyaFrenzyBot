@@ -33,7 +33,7 @@ class TipsView(View):
         embed_tips.add_field(name='Prompting',
                              value='Word order influences the image. Putting `cat, dog` will lean more towards cat.\nKeep '
                                    'in mind when doing very long prompts, the AI will be more likely to ignore words near '
-                                   'the end of the prompt.',
+                                   'the end of the prompt. Can\'t think of a prompt? Try putting ? as the prompt.',
                              inline=False)
         embed_tips.add_field(name='Emphasizing',
                              value='`(word)`-each `()` increases attention to `word` by 1.1x\n`[word]`-each `[]` decreases '
