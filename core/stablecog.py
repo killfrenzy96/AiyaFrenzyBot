@@ -836,9 +836,9 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
         try:
             facefix = get_param('facefix')
-            if facefix not in settings.global_var.facefix_models: facefix = 'None'
+            if facefix not in settings.global_var.facefix_models: facefix = None
         except:
-            facefix = 'None'
+            facefix = None
 
         try:
             clip_skip = int(get_param('clip_skip'))
