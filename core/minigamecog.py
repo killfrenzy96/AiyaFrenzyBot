@@ -65,12 +65,11 @@ class Minigame:
 
     async def answer(self, ctx: discord.ApplicationContext | discord.Interaction, guess: str):
         loop = asyncio.get_running_loop()
+        user = utility.get_user(ctx)
         content = None
         ephemeral = False
 
         try:
-            user = utility.get_user(ctx)
-
             if self.running == False:
                 content = f'<@{user.id}> This game is over. The answer was ``{self.prompt}``.\n'
                 if self.adventure and self.prompt != self.prompt_adventure: content += f'The full prompt was ``{self.prompt_adventure}``.\n'
@@ -100,7 +99,7 @@ class Minigame:
 
         except Exception as e:
             if content == None:
-                content = f'Something went wrong.\n{e}'
+                content = f'<@{user.id}> Something went wrong.\n{e}'
                 print(content + f'\n{traceback.print_exc()}')
                 ephemeral = True
 
@@ -203,11 +202,15 @@ class Minigame:
                 prompt = self.prompt
 
             queue_length = await self.get_image_variation(ctx, prompt)
-            content += f' Queue: ``{queue_length}``'
+            if queue_length == None:
+                content = f'<@{user.id}> Sorry, I am currently offline.'
+                ephemeral = True
+            else:
+                content += f' Queue: ``{queue_length}``'
 
         except Exception as e:
             if content == None:
-                content = f'Something went wrong.\n{e}'
+                content = f'<@{user.id}> Something went wrong.\n{e}'
                 print(content + f'\n{traceback.print_exc()}')
                 ephemeral = True
 
@@ -540,7 +543,7 @@ class Minigame:
 
                 except Exception as e:
                     self.view = self.view_last # allow user to use previous view
-                    content = f'Something went wrong.\n{e}'
+                    content = f'<@{user.id}> Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -555,7 +558,7 @@ class Minigame:
 
         except Exception as e:
             self.view = self.view_last # allow user to use previous view
-            content = f'Something went wrong.\n{e}'
+            content = f'<@{user.id}> Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 

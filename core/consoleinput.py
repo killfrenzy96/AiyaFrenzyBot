@@ -2,7 +2,6 @@ import asyncio
 import discord
 import traceback
 import threading
-
 from core import settings
 from core import queuehandler
 
@@ -33,6 +32,12 @@ class ConsoleInput:
                 match input_parts[0]:
                     case 'reload':
                         print(f'Reloading settings...')
+                        print(f'> Reconnect to WebUI')
+                        for index, web_ui in enumerate(settings.global_var.web_ui):
+                            if index == 0:
+                                web_ui.connect_blocking()
+                            else:
+                                web_ui.connect()
                         print(f'> Clearing guilds cache')
                         settings.global_var.guilds_cache = None
                         print(f'> Clearing dream cache')

@@ -134,11 +134,15 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
             # start the interrogation
             queue_length = queuehandler.dream_queue.process_dream(identify_object, priority)
-            content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
+            if queue_length == None:
+                content = f'<@{user.id}> Sorry, I am currently offline.'
+                ephemeral = True
+            else:
+                content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
 
         except Exception as e:
             if content == None:
-                content = f'Something went wrong.\n{e}'
+                content = f'<@{user.id}> Something went wrong.\n{e}'
                 print(content + f'\n{traceback.print_exc()}')
                 ephemeral = True
 
@@ -226,7 +230,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                         queue_object.view = None
 
                     except Exception as e:
-                        content = f'Something went wrong.\n{e}'
+                        content = f'<@{user.id}> Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -245,7 +249,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                         ))
                         queue_object.view = None
                     except Exception as e:
-                        content = f'Something went wrong.\n{e}'
+                        content = f'<@{user.id}> Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
                 threading.Thread(target=post_dream, daemon=True).start()
@@ -258,7 +262,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
             return
 
         except Exception as e:
-            content = f'Something went wrong.\n{e}'
+            content = f'<@{user.id}> Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 

@@ -433,6 +433,7 @@ async def get_message(interaction: discord.Interaction):
     return message
 
 def print_exception(e: Exception, interaction: discord.Interaction, loop: asyncio.AbstractEventLoop):
-    content = f'Something went wrong.\n{e}'
+    user = interaction.user
+    content = f'<@{user.id}> Something went wrong.\n{e}'
     print(content + f'\n{traceback.print_exc()}')
     loop.create_task(interaction.response.send_message(content, ephemeral=True, delete_after=30))

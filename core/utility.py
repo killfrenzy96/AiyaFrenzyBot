@@ -19,6 +19,15 @@ class WebUI:
 
         self.reconnect_thread: threading.Thread = threading.Thread()
 
+        self.data_models: list[str] = []
+        self.sampler_names: list[str] = []
+        self.model_tokens = {}
+        self.style_names = {}
+        self.facefix_models: list[str] = []
+        self.upscaler_names: list[str] = []
+        self.identify_models: list[str] = []
+        self.messages: list[str] = []
+
     # check connection to WebUI and authentication
     def check_status(self):
         try:
@@ -42,6 +51,7 @@ class WebUI:
             self.online = False
             return False
 
+        # check gradio authentication
         try:
             s = requests.Session()
             if self.api_auth:
@@ -59,10 +69,67 @@ class WebUI:
                     'password': self.password
                 }
                 s.post(self.url + '/login', data=login_payload, timeout=60)
-            # else:
-            #     s.post(self.url + '/login', timeout=60)
+            else:
+                s.post(self.url + '/login', timeout=60)
         except Exception as e:
-            print(f'> Connection failed to Web UI at {self.url}')
+            print(f'> Gradio Authentication failed for Web UI at {self.url}')
+            self.online = False
+            return False
+
+        # retrieve instance configuration
+        try:
+            # get stable diffusion models
+            # print('Retrieving stable diffusion models...')
+            response_data = s.get(self.url + '/sdapi/v1/sd-models').json()
+            self.data_models = []
+            for sd_model in response_data:
+                self.data_models.append(sd_model['title'])
+            # print(f'- Stable diffusion models: {len(self.data_models)}')
+
+            # get samplers
+            # print('Retrieving samplers...')
+            response_data = s.get(self.url + '/sdapi/v1/samplers', timeout=60).json()
+            for sampler in response_data:
+                self.sampler_names.append(sampler['name'])
+
+            # remove samplers that seem to have some issues under certain cases
+            if 'DPM adaptive' in self.sampler_names: self.sampler_names.remove('DPM adaptive')
+            if 'PLMS' in self.sampler_names: self.sampler_names.remove('PLMS')
+            # print(f'- Samplers count: {len(self.sampler_names)}')
+
+            # get styles
+            # print('Retrieving styles...')
+            response_data = s.get(self.url + '/sdapi/v1/prompt-styles', timeout=60).json()
+            for style in response_data:
+                self.style_names[style['name']] = style['prompt']
+            # print(f'- Styles count: {len(self.style_names)}')
+
+            # get face fix models
+            # print('Retrieving face fix models...')
+            response_data = s.get(self.url + '/sdapi/v1/face-restorers', timeout=60).json()
+            for facefix_model in response_data:
+                self.facefix_models.append(facefix_model['name'])
+            # print(f'- Face fix models count: {len(self.facefix_models)}')
+
+            # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
+            # print('Retrieving upscaler models...')
+            config = s.get(self.url + '/config/', timeout=60).json()
+            try:
+                for item in config['components']:
+                    try:
+                        if item['props']:
+                            if item['props']['label'] == 'Upscaler':
+                                self.upscaler_names = item['props']['choices']
+                    except:
+                        pass
+            except:
+                print('Warning: Could not read config. Upscalers will be missing.')
+
+            print(f'> Loaded data for Web UI at {self.url}')
+            print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)}')
+
+        except Exception as e:
+            print(f'> Retrieve data failed for Web UI at {self.url}')
             self.online = False
             return False
 

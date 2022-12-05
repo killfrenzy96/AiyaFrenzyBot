@@ -193,54 +193,14 @@ def files_check():
         print(f'The folder for DIR doesn\'t exist! Creating folder at {global_var.dir}.')
         os.mkdir(global_var.dir)
 
-    # create persistent session since we'll need to do a few API calls
+    # use main webui instance data for global config
     web_ui = global_var.web_ui[0]
-    s = web_ui.get_session()
+    global_var.sampler_names = web_ui.sampler_names
+    global_var.style_names = web_ui.style_names
+    global_var.facefix_models = web_ui.facefix_models
+    global_var.upscaler_names = web_ui.upscaler_names
 
-    # get samplers
-    print('Retrieving samplers...')
-    response_data = s.get(web_ui.url + '/sdapi/v1/samplers', timeout=60).json()
-    for sampler in response_data:
-        global_var.sampler_names.append(sampler['name'])
-
-    # remove samplers that seem to have some issues under certain cases
-    if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
-    if 'PLMS' in global_var.sampler_names: global_var.sampler_names.remove('PLMS')
-    print(f'- Samplers count: {len(global_var.sampler_names)}')
-
-    # get styles
-    print('Retrieving styles...')
-    response_data = s.get(web_ui.url + '/sdapi/v1/prompt-styles', timeout=60).json()
-    for style in response_data:
-        global_var.style_names[style['name']] = style['prompt']
-
-    print(f'- Styles count: {len(global_var.model_names)}')
-
-    # get face fix models
-    print('Retrieving face fix models...')
-    response_data = s.get(web_ui.url + '/sdapi/v1/face-restorers', timeout=60).json()
-    for facefix_model in response_data:
-        global_var.facefix_models.append(facefix_model['name'])
-
-    print(f'- Face fix models count: {len(global_var.facefix_models)}')
-
-    # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
-    print('Loading upscaler models...')
-    config = s.get(web_ui.url + '/config/', timeout=60).json()
-    try:
-        for item in config['components']:
-            try:
-                if item['props']:
-                    if item['props']['label'] == 'Upscaler':
-                        global_var.upscaler_names = item['props']['choices']
-            except:
-                pass
-    except:
-        print('Warning: Could not read config. Upscalers will be missing.')
-
-    print(f'- Upscalers count: {len(global_var.upscaler_names)}')
-
-    # get dream cache
+    # load dream cache
     get_dream_command(-1)
 
     # get interrogate models - no API endpoint for this, so it's hard coded

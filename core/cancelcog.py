@@ -13,9 +13,9 @@ class CancelCog(commands.Cog, description='Cancels all images in queue.'):
     @commands.slash_command(name = 'cancel', description = 'Cancels all images in queue.')
     async def cancel(self, ctx: discord.ApplicationContext):
         loop = asyncio.get_running_loop()
+        user = utility.get_user(ctx)
 
         try:
-            user = utility.get_user(ctx)
             total_cleared: int = queuehandler.dream_queue.clear_user_queue(user.id)
 
             embed=discord.Embed()
@@ -23,7 +23,7 @@ class CancelCog(commands.Cog, description='Cancels all images in queue.'):
             loop.create_task(ctx.respond(embed=embed, ephemeral=True))
 
         except Exception as e:
-            content = f'Something went wrong.\n{e}'
+            content = f'<@{user.id}> Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             loop.create_task(ctx.respond(content=content, ephemeral=True, delete_after=30))
 

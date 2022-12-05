@@ -93,15 +93,34 @@ class DreamQueueInstance:
     def get_queue_length(self):
         return len(self.queue_inprogress) + len(self.queue)
 
-    def is_ready(self, buffer_limit: int = 2, data_model: str = None):
-        if not self.web_ui.online:
+    def is_valid(self, queue_object: utility.DreamObject):
+        # check if webui is online
+        if self.web_ui.online == False:
             return False
 
-        if data_model and data_model != self.last_data_model:
-            return False
+        # check if models exist in this Web UI instance
+        if type(queue_object) is utility.DrawObject:
+            if queue_object.data_model not in self.web_ui.data_models:
+                return False
+            if queue_object.style != None and queue_object.style != 'None' and queue_object.style not in self.web_ui.style_names:
+                return False
 
+        if type(queue_object) is utility.UpscaleObject:
+            if queue_object.upscaler_1 and queue_object.upscaler_1 not in self.web_ui.upscaler_names:
+                return False
+            if queue_object.upscaler_2 and queue_object.upscaler_2 not in self.web_ui.upscaler_names:
+                return False
+
+        return True
+
+    def is_ready(self, buffer_limit: int = 2):
+        # check if too many items are queued up
         if self.get_queue_length() >= buffer_limit:
             return False
+
+        # check if webui is online
+        # if not self.is_valid(queue_object):
+        #     return False
 
         return True
 
@@ -123,7 +142,7 @@ class DreamQueue:
         for web_ui in settings.global_var.web_ui:
             self.dream_instances.append(DreamQueueInstance(web_ui))
 
-    def process_dream(self, queue_object: utility.DreamObject, priority: str | int = 1, print_info = True):
+    def process_dream(self, queue_object: utility.DreamObject, priority: str | int = 1, extended = True):
         if type(priority) is str:
             match priority:
                 case 'high': priority = 0
@@ -131,7 +150,12 @@ class DreamQueue:
                 case 'low': priority = 2
                 case 'lowest': priority = 3
 
-        if print_info:
+        if extended:
+            valid_instances = self.get_valid_instances(queue_object)
+            if len(valid_instances) == 0:
+                print(f'Dream Rejected: No valid instances.')
+                return None
+
             # get queue length
             queue_length = self.get_queue_length(priority)
 
@@ -151,7 +175,7 @@ class DreamQueue:
             self.dream_thread = threading.Thread(target=self.process_queue, daemon=True)
             self.dream_thread.start()
 
-        if print_info:
+        if extended:
             return queue_length
 
     def process_queue(self):
@@ -169,36 +193,31 @@ class DreamQueue:
                     # Pick appropiate dream instance
                     target_dream_instance: DreamQueueInstance = None
 
-                    # TODO: separate webui instance for stable diffusion 2.0
-                    # find any available webui instance already running the requested checkpoint
-                    if type(queue_object) is utility.DrawObject:
-                        for dream_instance in self.dream_instances:
-                            if dream_instance.is_ready(2, queue_object.data_model):
-                                target_dream_instance = dream_instance
-                                break
-
-                    # find any completely free webui instance
-                    if target_dream_instance == None:
-                        for dream_instance in self.dream_instances:
-                            if dream_instance.is_ready(1):
-                                target_dream_instance = dream_instance
-                                break
-
-                    # find any available webui instance
-                    if target_dream_instance == None:
-                        for dream_instance in self.dream_instances:
-                            if dream_instance.is_ready(2):
-                                target_dream_instance = dream_instance
-                                break
-
-                    if target_dream_instance == None:
-                        # no instance is suitable, try next item in line
-                        queue_index += 1
-                    else:
-                        # start the dream in the instance
+                    # check if any instance is valid for queue
+                    valid_instances: list[DreamQueueInstance] = self.get_valid_instances(queue_object)
+                    if len(valid_instances) == 0:
+                        # no available instance - remove the object from queue
                         queue.pop(queue_index)
                         queue_index = 0
-                        target_dream_instance.process_dream(queue_object)
+                        user = utility.get_user(queue_object.ctx)
+                        content = f'<@{user.id}> Sorry, I am currently offline.'
+                        upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, ephemeral=True, delete_after=30))
+
+                    else:
+                        # start dream on any available webui instance
+                        for dream_instance in valid_instances:
+                            if dream_instance.is_ready():
+                                target_dream_instance = dream_instance
+                                break
+
+                        if target_dream_instance == None:
+                            # no instance is suitable, try next item in line
+                            queue_index += 1
+                        else:
+                            # start the dream in the instance
+                            queue.pop(queue_index)
+                            queue_index = 0
+                            target_dream_instance.process_dream(queue_object)
 
                 except Exception as e:
                     print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
@@ -225,6 +244,13 @@ class DreamQueue:
             total_cleared += dream_instance.clear_user_queue(user_id)
 
         return total_cleared
+
+    def get_valid_instances(self, queue_object: utility.DreamObject):
+        valid_instances: list[DreamQueueInstance] = []
+        for dream_instance in self.dream_instances:
+            if dream_instance.is_valid(queue_object):
+                valid_instances.append(dream_instance)
+        return valid_instances
 
     def get_queue_length(self, priority: int):
         queue_index = 0

@@ -216,11 +216,15 @@ class UpscaleCog(commands.Cog):
 
             # start the upscaling
             queue_length = queuehandler.dream_queue.process_dream(upscale_object, priority)
-            content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
+            if queue_length == None:
+                content = f'<@{user.id}> Sorry, I am currently offline.'
+                ephemeral = True
+            else:
+                content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
 
         except Exception as e:
             if content == None:
-                content = f'Something went wrong.\n{e}'
+                content = f'<@{user.id}> Something went wrong.\n{e}'
                 print(content + f'\n{traceback.print_exc()}')
                 ephemeral = True
 
@@ -292,7 +296,7 @@ class UpscaleCog(commands.Cog):
                         queue_object.view = None
 
                 except Exception as e:
-                    content = f'Something went wrong.\n{e}'
+                    content = f'<@{user.id}> Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -306,7 +310,7 @@ class UpscaleCog(commands.Cog):
             return
 
         except Exception as e:
-            content = f'Something went wrong.\n{e}'
+            content = f'<@{user.id}> Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 

@@ -219,16 +219,12 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             clip_skip: Optional[int] = 0,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
+        guild = utility.get_guild(ctx)
+        user = utility.get_user(ctx)
         content = None
         ephemeral = False
 
         try:
-            command: str = None
-
-            # get guild id and user
-            guild = utility.get_guild(ctx)
-            user = utility.get_user(ctx)
-
             print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
 
             # sanatize input strings
@@ -551,40 +547,45 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 last_draw_object = get_draw_object()
                 queue_length = queuehandler.dream_queue.process_dream(last_draw_object, priority)
 
-                batch_count = 1
-                while batch_count < batch:
-                    batch_count += 1
-                    message = f'#{batch_count}`` ``'
+                if queue_length != None:
+                    batch_count = 1
+                    while batch_count < batch:
+                        batch_count += 1
+                        message = f'#{batch_count}`` ``'
 
-                    if increment_seed:
-                        seed += increment_seed
-                        message += f'seed:{seed}'
+                        if increment_seed:
+                            seed += increment_seed
+                            message += f'seed:{seed}'
 
-                    if increment_steps:
-                        steps += increment_steps
-                        message += f'steps:{steps}'
+                        if increment_steps:
+                            steps += increment_steps
+                            message += f'steps:{steps}'
 
-                    if increment_guidance_scale:
-                        guidance_scale += increment_guidance_scale
-                        guidance_scale = round(guidance_scale, 4)
-                        message += f'guidance_scale:{guidance_scale}'
+                        if increment_guidance_scale:
+                            guidance_scale += increment_guidance_scale
+                            guidance_scale = round(guidance_scale, 4)
+                            message += f'guidance_scale:{guidance_scale}'
 
-                    if increment_clip_skip:
-                        clip_skip += increment_clip_skip
-                        message += f'clip_skip:{clip_skip}'
+                        if increment_clip_skip:
+                            clip_skip += increment_clip_skip
+                            message += f'clip_skip:{clip_skip}'
 
-                    draw_object = get_draw_object(message)
-                    draw_object.wait_for_dream = last_draw_object
-                    last_draw_object = draw_object
-                    queuehandler.dream_queue.process_dream(draw_object, priority, False)
+                        draw_object = get_draw_object(message)
+                        draw_object.wait_for_dream = last_draw_object
+                        last_draw_object = draw_object
+                        queuehandler.dream_queue.process_dream(draw_object, priority, False)
 
-            content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
-            if batch > 1: content = content + f' - Batch: ``{batch}``'
-            content = content + append_options
+            if queue_length == None:
+                content = f'<@{user.id}> Sorry, I am currently offline.'
+                ephemeral = True
+            else:
+                content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
+                if batch > 1: content = content + f' - Batch: ``{batch}``'
+                content = content + append_options
 
         except Exception as e:
             if content == None:
-                content = f'Something went wrong.\n{e}'
+                content = f'<@{user.id}> Something went wrong.\n{e}'
                 print(content + f'\n{traceback.print_exc()}')
                 ephemeral = True
 
@@ -676,7 +677,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         queue_object.view = None
 
                 except Exception as e:
-                    content = f'Something went wrong.\n{e}'
+                    content = f'<@{user.id}> Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -690,7 +691,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             return
 
         except Exception as e:
-            content = f'Something went wrong.\n{e}'
+            content = f'<@{user.id}> Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
