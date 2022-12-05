@@ -3,6 +3,7 @@ import asyncio
 import discord
 import traceback
 import threading
+import requests
 
 from core import utility
 from core import settings
@@ -60,7 +61,10 @@ class DreamQueueInstance:
                 def wait_for_join():
                     active_thread.join()
                     active_thread_event.set()
-                    if self.queue_inprogress: self.queue_inprogress.pop(0) # remove in progress object after completion
+                    try:
+                        self.queue_inprogress.pop(0) # remove in progress object after completion
+                    except:
+                        pass
                 wait_thread_join = threading.Thread(target=wait_for_join, daemon=True)
                 wait_thread_join.start()
                 active_thread_event.wait()
@@ -379,10 +383,20 @@ class UploadQueue:
                 if type(upload_object.queue_object) is utility.DrawObject and upload_object.queue_object.write_to_cache:
                     settings.append_dream_command(message.id, upload_object.queue_object.get_command())
 
-            except Exception as e:
-                print(f'Upload failure:\n{upload_object}\n{e}\n{traceback.print_exc()}')
+                self.queue.remove(upload_object)
 
-            self.queue.pop(index)
+            except (requests.exceptions.RequestException, asyncio.exceptions.TimeoutError) as e:
+                # connection error, return items to queue
+                print(f'Upload connection error, retrying:\n{e}\n{traceback.print_exc()}')
+                await asyncio.sleep(5.0)
+
+            except Exception as e:
+                print(f'Upload failure:\n{e}\n{traceback.print_exc()}')
+                upload_object.queue_object.uploaded = True
+                try:
+                    self.queue.remove(upload_object)
+                except:
+                    pass
 
         self.is_uploading = False
 
