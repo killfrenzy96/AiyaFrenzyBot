@@ -169,7 +169,7 @@ class WebUI:
             print(f'> Checking connection to WebUI at {self.url}')
             while self.check_status() == False:
                 print(f'> - Retrying in 30 seconds...')
-                time.sleep(15)
+                time.sleep(30)
             print(f'> Connected to {self.url}')
 
         if self.reconnect_thread.is_alive() == False:
