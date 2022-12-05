@@ -6,13 +6,13 @@ import asyncio
 from discord.ui import InputText, Modal, View
 
 from core import settings
-from core import queuehandler
+from core import utility
 from core import stablecog
 
 
 # the modal that is used for the 🖋 button
 class DrawModal(Modal):
-    def __init__(self, stable_cog, input_object: queuehandler.DrawObject, message: discord.Message) -> None:
+    def __init__(self, stable_cog, input_object: utility.DrawObject, message: discord.Message) -> None:
         super().__init__(title='Change Prompt!')
         self.stable_cog = stable_cog
         self.input_object = input_object
@@ -177,10 +177,10 @@ class DeleteModal(Modal):
 
 # creating the view that holds the buttons for /draw output
 class DrawView(View):
-    def __init__(self, stable_cog, input_object: queuehandler.DrawObject):
+    def __init__(self, stable_cog, input_object: utility.DrawObject):
         super().__init__(timeout=None)
         self.stable_cog = stable_cog
-        self.input_object: queuehandler.DrawObject = input_object
+        self.input_object: utility.DrawObject = input_object
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
@@ -350,7 +350,7 @@ class DrawView(View):
 
 
 class DrawExtendedView(DrawView):
-    def __init__(self, stable_cog, input_object: queuehandler.DrawObject):
+    def __init__(self, stable_cog, input_object: utility.DrawObject):
         super().__init__(stable_cog, input_object)
 
     # the 🏳️ ends the game and reveals the answer

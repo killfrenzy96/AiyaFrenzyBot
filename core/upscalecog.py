@@ -14,6 +14,7 @@ from PIL import Image
 from typing import Optional
 from urllib.parse import urlparse
 
+from core import utility
 from core import queuehandler
 from core import viewhandler
 from core import settings
@@ -88,8 +89,8 @@ class UpscaleCog(commands.Cog):
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
                             resize: float = 4.0,
-                            upscaler_1: str = 'None',
-                            upscaler_2: Optional[str] = 'None',
+                            upscaler_1: str = None,
+                            upscaler_2: Optional[str] = None,
                             upscaler_2_strength: Optional[float] = 0.5,
                             gfpgan: Optional[float] = 0.0,
                             codeformer: Optional[float] = 0.0,
@@ -100,12 +101,12 @@ class UpscaleCog(commands.Cog):
 
         try:
             # get guild id and user
-            guild = queuehandler.get_guild(ctx)
-            user = queuehandler.get_user(ctx)
+            guild = utility.get_guild(ctx)
+            user = utility.get_user(ctx)
 
             print(f'Upscale Request -- {user.name}#{user.discriminator} -- {guild}')
 
-            if upscaler_1 == 'None' and upscaler_2 == 'None':
+            if upscaler_1 == None and upscaler_2 == None:
                 if 'R-ESRGAN 4x+' in settings.global_var.upscaler_names:
                     upscaler_1 = 'R-ESRGAN 4x+'
                 elif 'SwinIR_4x' in settings.global_var.upscaler_names:
@@ -169,13 +170,13 @@ class UpscaleCog(commands.Cog):
 
             #log the command
             command = f'/upscale init_url:{init_url} resize:{resize} upscaler_1:{upscaler_1}'
-            if upscaler_2 != 'None':
+            if upscaler_2 != None:
                 command = command + f' upscaler_2:{upscaler_2} upscaler_2_strength:{upscaler_2_strength}'
             print(command)
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                queue_object = queuehandler.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, command, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
+                queue_object = utility.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, command, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
 
                 #construct a payload
                 payload = {
@@ -197,8 +198,8 @@ class UpscaleCog(commands.Cog):
                 return queue_object
 
             upscale_object = get_upscale_object()
-            dream_cost = queuehandler.get_dream_cost(upscale_object)
-            queue_cost = queuehandler.get_user_queue_cost(user.id)
+            dream_cost = queuehandler.dream_queue.get_dream_cost(upscale_object)
+            queue_cost = queuehandler.dream_queue.get_user_queue_cost(user.id)
 
             # check if the user has too much things in queue
             if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
@@ -214,7 +215,7 @@ class UpscaleCog(commands.Cog):
                 priority: str = 'medium'
 
             # start the upscaling
-            queue_length = queuehandler.process_dream(upscale_object, priority)
+            queue_length = queuehandler.dream_queue.process_dream(upscale_object, priority)
             content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
 
         except Exception as e:
@@ -235,23 +236,16 @@ class UpscaleCog(commands.Cog):
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     # generate the image
-    def dream(self, queue_object: queuehandler.UpscaleObject, queue_continue: threading.Event):
-        user = queuehandler.get_user(queue_object.ctx)
+    def dream(self, queue_object: utility.UpscaleObject, web_ui: utility.WebUI, queue_continue: threading.Event):
+        user = utility.get_user(queue_object.ctx)
 
         try:
-            # send normal payload to webui
-            with requests.Session() as s:
-                if settings.global_var.api_auth:
-                    s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
-
-                if settings.global_var.gradio_auth:
-                    login_payload = {
-                        'username': settings.global_var.username,
-                        'password': settings.global_var.password
-                    }
-                    s.post(settings.global_var.url + '/login', data=login_payload)
-                # else:
-                #     s.post(settings.global_var.url + '/login')
+            # get webui session
+            s = web_ui.get_session()
+            if s == None:
+                # no session, return the object to the queue handler to try again
+                queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+                return
 
             # safe for global queue to continue
             def continue_queue():
@@ -259,7 +253,7 @@ class UpscaleCog(commands.Cog):
                 queue_continue.set()
             threading.Thread(target=continue_queue, daemon=True).start()
 
-            response = s.post(url=f'{settings.global_var.url}/sdapi/v1/extra-single-image', json=queue_object.payload)
+            response = s.post(url=f'{web_ui.url}/sdapi/v1/extra-single-image', json=queue_object.payload, timeout=60)
             queue_object.payload = None
 
             def post_dream():
@@ -292,21 +286,29 @@ class UpscaleCog(commands.Cog):
                             print(f'New image size: {buffer.getbuffer().nbytes} bytes - Quality: {quality}')
                         buffer.seek(0)
 
-                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                        queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                             content=f'<@{user.id}> ``{queue_object.command}``', files=[discord.File(fp=buffer, filename=file_path)], view=queue_object.view
                         ))
                         queue_object.view = None
+
                 except Exception as e:
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
-                    queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+                    queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
             threading.Thread(target=post_dream, daemon=True).start()
+
+        except requests.exceptions.RequestException as e:
+            # connection error, return items to queue
+            time.sleep(5.0)
+            web_ui.reconnect()
+            queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+            return
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+            queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
 def setup(bot: discord.Bot):
     bot.add_cog(UpscaleCog(bot))

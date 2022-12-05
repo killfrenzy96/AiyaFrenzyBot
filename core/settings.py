@@ -2,11 +2,10 @@ import csv
 import discord
 import json
 import os
-import requests
 import time
-import traceback
 import threading
-from typing import Optional
+
+from core import utility
 
 self = discord.Bot()
 dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -29,15 +28,9 @@ template = {
 
 # initialize global variables here
 class GlobalVar:
-    url = ''
+    web_ui: list[utility.WebUI] = []
     dir = ''
     embed_color = discord.Colour.from_rgb(222, 89, 28)
-    username: Optional[str] = None
-    password: Optional[str] = None
-    api_auth = False
-    gradio_auth = False
-    api_user: Optional[str] = None
-    api_pass: Optional[str] = None
 
     sampler_names: list[str] = []
     model_names = {}
@@ -52,6 +45,11 @@ class GlobalVar:
     dream_cache_thread = threading.Thread()
     guilds_cache: dict = None
     guilds_cache_thread = threading.Thread()
+
+    slow_samplers = [
+        'Heun', 'DPM2', 'DPM2 a', 'DPM++ 2S a',
+        'DPM2 Karras', 'DPM2 a Karras', 'DPM++ 2S a Karras',
+        'DPM++ SDE', 'DPM++ SDE Karras']
 
 global_var = GlobalVar()
 
@@ -93,39 +91,36 @@ def get_env_var_with_default(var: str, default: str) -> str:
     return ret if ret is not None else default
 
 def startup_check():
-    # check .env for parameters. if they don't exist, ignore it and go with defaults.
-    global_var.url = get_env_var_with_default('URL', 'http://127.0.0.1:7860').rstrip('/')
-    print(f'Using URL: {global_var.url}')
+    # connect to WebUI URL access points
+    global_var.web_ui = []
+    index = 0
+    while True:
+        if index == 0:
+            url = get_env_var_with_default('URL', 'http://127.0.0.1:7860').rstrip('/')
+            suffix = ''
+        else:
+            url = os.getenv(f'URL{index}')
+            if not url: break
+            suffix = str(index)
+
+        username = os.getenv(f'USER{suffix}')
+        password = os.getenv(f'PASS{suffix}')
+        api_user = os.getenv(f'APIUSER{suffix}')
+        api_pass = os.getenv(f'APIPASS{suffix}')
+
+        web_ui = utility.WebUI(url, username, password, api_user, api_pass)
+
+        # check if Web UI is running
+        if index == 0:
+            web_ui.connect_blocking()
+        else:
+            web_ui.connect()
+
+        global_var.web_ui.append(web_ui)
+        index += 1
 
     global_var.dir = get_env_var_with_default('DIR', 'outputs')
     print(f'Using outputs directory: {global_var.dir}')
-
-    global_var.username = os.getenv('USER')
-    global_var.password = os.getenv('PASS')
-    global_var.api_user = os.getenv('APIUSER')
-    global_var.api_pass = os.getenv('APIPASS')
-
-    # check if Web UI is running
-    connected = False
-    while not connected:
-        try:
-            response = requests.get(global_var.url + '/sdapi/v1/cmd-flags')
-            # lazy method to see if --api-auth commandline argument is set
-            if response.status_code == 401:
-                global_var.api_auth = True
-                # lazy method to see if --api-auth credentials are set
-                if (not global_var.api_pass) or (not global_var.api_user):
-                    print('API rejected me! If using --api-auth, '
-                          'please check your .env file for APIUSER and APIPASS values.')
-                    os.system('pause')
-            # lazy method to see if --api commandline argument is not set
-            if response.status_code == 404:
-                print('API is unreachable! Please check Web UI COMMANDLINE_ARGS for --api.')
-                os.system('pause')
-            return requests.head(global_var.url)
-        except(Exception,):
-            print(f'Waiting for Web UI at {global_var.url}...')
-            time.sleep(20)
 
 def files_check():
     # create stats file if it doesn't exist
@@ -199,51 +194,23 @@ def files_check():
         os.mkdir(global_var.dir)
 
     # create persistent session since we'll need to do a few API calls
-    s = requests.Session()
-    if global_var.api_auth:
-        s.auth = (global_var.api_user, global_var.api_pass)
-
-    # do a check to see if --gradio-auth is set
-    print('Connecting to WebUI...')
-    try:
-        response_data = s.get(global_var.url + '/sdapi/v1/cmd-flags').json()
-        if response_data['gradio_auth']:
-            global_var.gradio_auth = True
-
-        if global_var.gradio_auth:
-            login_payload = {
-                'username': global_var.username,
-                'password': global_var.password
-            }
-            s.post(global_var.url + '/login', data=login_payload)
-        else:
-            s.post(global_var.url + '/login')
-    except Exception as e:
-        print('Can\'t connect to API for some reason!'
-                'Please check your .env URL or credentials.')
-        os.system('pause')
+    web_ui = global_var.web_ui[0]
+    s = web_ui.get_session()
 
     # get samplers
     print('Retrieving samplers...')
-    response_data = s.get(global_var.url + '/sdapi/v1/samplers').json()
+    response_data = s.get(web_ui.url + '/sdapi/v1/samplers', timeout=60).json()
     for sampler in response_data:
-        try:
-            global_var.sampler_names.append(sampler['name'])
-        except(Exception,):
-            # throw in last exception error for anything that wasn't caught earlier
-            print('Can\'t connect to API for some reason!'
-                  'Please check your .env URL or credentials.')
-            os.system('pause')
+        global_var.sampler_names.append(sampler['name'])
 
     # remove samplers that seem to have some issues under certain cases
     if 'DPM adaptive' in global_var.sampler_names: global_var.sampler_names.remove('DPM adaptive')
     if 'PLMS' in global_var.sampler_names: global_var.sampler_names.remove('PLMS')
-
     print(f'- Samplers count: {len(global_var.sampler_names)}')
 
     # get styles
     print('Retrieving styles...')
-    response_data = s.get(global_var.url + '/sdapi/v1/prompt-styles').json()
+    response_data = s.get(web_ui.url + '/sdapi/v1/prompt-styles', timeout=60).json()
     for style in response_data:
         global_var.style_names[style['name']] = style['prompt']
 
@@ -251,7 +218,7 @@ def files_check():
 
     # get face fix models
     print('Retrieving face fix models...')
-    response_data = s.get(global_var.url + '/sdapi/v1/face-restorers').json()
+    response_data = s.get(web_ui.url + '/sdapi/v1/face-restorers', timeout=60).json()
     for facefix_model in response_data:
         global_var.facefix_models.append(facefix_model['name'])
 
@@ -259,7 +226,7 @@ def files_check():
 
     # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
     print('Loading upscaler models...')
-    config = s.get(global_var.url + '/config/').json()
+    config = s.get(web_ui.url + '/config/', timeout=60).json()
     try:
         for item in config['components']:
             try:

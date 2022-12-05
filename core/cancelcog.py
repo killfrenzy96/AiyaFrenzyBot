@@ -3,6 +3,7 @@ import asyncio
 import traceback
 from discord.ext import commands
 
+from core import utility
 from core import queuehandler
 
 class CancelCog(commands.Cog, description='Cancels all images in queue.'):
@@ -14,16 +15,8 @@ class CancelCog(commands.Cog, description='Cancels all images in queue.'):
         loop = asyncio.get_running_loop()
 
         try:
-            user = queuehandler.get_user(ctx)
-            total_cleared: int = 0
-            for queue in queuehandler.GlobalQueue.queues:
-                index = len(queue)
-                while index > 0:
-                    index -= 1
-                    user_compare = queuehandler.get_user(queue[index].ctx)
-                    if user.id == user_compare.id:
-                        queue.pop()
-                        total_cleared += 1
+            user = utility.get_user(ctx)
+            total_cleared: int = queuehandler.dream_queue.clear_user_queue(user.id)
 
             embed=discord.Embed()
             embed.add_field(name='Items Cleared', value=f'``{total_cleared}`` dreams cleared from queue', inline=False)

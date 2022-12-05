@@ -8,6 +8,8 @@ A Discord bot interface for Stable Diffusion
 
 This is modified from AIYABOT for my Discord server. The goal of these modifications is to focus on using the bot as a tool to make refined images rather than one off generations. I have also removed many sources of delay which allows this bot to generate images significantly faster, especially if multiple people are using the bot.
 
+There is experimental support for multiple WebUI instances. You can try using this by adding URL, URL1, URL2, etc to your .env file. This also supports the use of USER1, PASS1, APIUSER1, APIPASS1, etc.
+
 ## Setup requirements
 
 - Set up [AUTOMATIC1111's Stable Diffusion AI Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui).

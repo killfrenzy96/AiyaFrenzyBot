@@ -17,6 +17,7 @@ from discord.ui import InputText, Modal, View
 from discord.ext import commands
 from typing import Optional
 
+from core import utility
 from core import queuehandler
 from core import settings
 from core import viewhandler
@@ -68,7 +69,7 @@ class Minigame:
         ephemeral = False
 
         try:
-            user = queuehandler.get_user(ctx)
+            user = utility.get_user(ctx)
 
             if self.running == False:
                 content = f'<@{user.id}> This game is over. The answer was ``{self.prompt}``.\n'
@@ -115,7 +116,7 @@ class Minigame:
 
     async def next_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str = None):
         loop = asyncio.get_running_loop()
-        user = queuehandler.get_user(ctx)
+        user = utility.get_user(ctx)
         content = None
         ephemeral = False
         print(f'Minigame Request -- {user.name}#{user.discriminator} -- {self.guild}')
@@ -123,7 +124,7 @@ class Minigame:
         try:
             # calculate total cost of queued items and reject if there is too expensive
             dream_cost = 2.0
-            queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
+            queue_cost = round(queuehandler.dream_queue.get_user_queue_cost(user.id), 2)
             print(f'Estimated total compute cost -- Dream: {dream_cost} Queue: {queue_cost} Total: {dream_cost + queue_cost}')
 
             if dream_cost + queue_cost > settings.read(self.guild)['max_compute']:
@@ -222,7 +223,7 @@ class Minigame:
 
     async def give_up(self, ctx: discord.ApplicationContext | discord.Interaction):
         loop = asyncio.get_running_loop()
-        user = queuehandler.get_user(ctx)
+        user = utility.get_user(ctx)
 
         if self.running == False:
             content = f'<@{user.id}> This game is over. The answer was ``{self.prompt}``.\n'
@@ -265,7 +266,7 @@ class Minigame:
         # randomize sampler
         steps = settings.read(self.guild)['default_steps']
         sampler = settings.global_var.sampler_names[random.randrange(0, len(settings.global_var.sampler_names))]
-        if sampler in queuehandler.GlobalQueue.slow_samplers: steps = int(steps / 2)
+        if sampler in settings.global_var.slow_samplers: steps = int(steps / 2)
 
         # insertert negative prompt to reduce chance of AI from getting stuck drawing text
         negative = '[text, word, words, language, written, writing, letter, letters, title, signature, watermark, username, artist name]'
@@ -300,7 +301,7 @@ class Minigame:
             message += f' Guess the prompt. {random_message}'
 
         # create draw object
-        draw_object = queuehandler.DrawObject(
+        draw_object = utility.DrawObject(
             cog=self,
             ctx=ctx,
             prompt=prompt,
@@ -323,7 +324,7 @@ class Minigame:
             clip_skip=1,
             script=None,
             message=message,
-            cache=False
+            write_to_cache=False
         )
 
         print(f'prompt: {prompt} negative:{negative} checkpoint:{model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
@@ -369,7 +370,7 @@ class Minigame:
             priority = 'lowest'
         else:
             priority = 'medium'
-        return queuehandler.process_dream(draw_object, priority)
+        return queuehandler.dream_queue.process_dream(draw_object, priority)
 
         # while game_iteration == self.game_iteration:
         #     await asyncio.sleep(0.1)
@@ -393,43 +394,36 @@ class Minigame:
         random_line.replace('\n', '')
         return random_line.strip()
 
-    def dream(self, queue_object: queuehandler.DrawObject, queue_continue: threading.Event):
-        user = queuehandler.get_user(queue_object.ctx)
+    def dream(self, queue_object: utility.DrawObject, web_ui: utility.WebUI, queue_continue: threading.Event):
+        user = utility.get_user(queue_object.ctx)
 
         try:
             if self.running == False:
                 # minigame has ended, avoid posting another window
                 self.view = self.view_last # allow user to use previous view
-                queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                     content=f'<@{user.id}> The game is over. The queue for new minigame images have been cancelled.', ephemeral=True, delete_after=30
                 ))
                 return
 
-            s = requests.Session()
-            if settings.global_var.api_auth:
-                s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
-
-            # send login payload to webui
-            if settings.global_var.gradio_auth:
-                login_payload = {
-                    'username': settings.global_var.username,
-                    'password': settings.global_var.password
-                }
-                s.post(settings.global_var.url + '/login', data=login_payload)
-            # else:
-            #     s.post(settings.global_var.url + '/login')
+            # get webui session
+            s = web_ui.get_session()
+            if s == None:
+                # no session, return the object to the queue handler to try again
+                queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+                return
 
             # construct a payload for data model
             if queue_object.data_model:
                 model_payload = {
                     'sd_model_checkpoint': queue_object.data_model
                 }
-                s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
+                s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=60)
 
             if queue_object.init_url:
-                url = f'{settings.global_var.url}/sdapi/v1/img2img'
+                url = f'{web_ui.url}/sdapi/v1/img2img'
             else:
-                url = f'{settings.global_var.url}/sdapi/v1/txt2img'
+                url = f'{web_ui.url}/sdapi/v1/txt2img'
 
             # safe for global queue to continue
             def continue_queue():
@@ -456,7 +450,7 @@ class Minigame:
                     responses.append(None)
 
                 def img2img(thread_index, thread_payload):
-                    responses[thread_index] = s.post(url=url, json=thread_payload)
+                    responses[thread_index] = s.post(url=url, json=thread_payload, timeout=60)
 
                 for index, payload in enumerate(payloads):
                     thread = threading.Thread(target=img2img, args=[index, payload], daemon=True)
@@ -479,13 +473,13 @@ class Minigame:
                 # end of workaround
             else:
                 # do normal batched payload
-                response = s.post(url=url, json=queue_object.payload)
+                response = s.post(url=url, json=queue_object.payload, timeout=60)
                 response_data = response.json()
 
             if self.running == False:
                 # minigame has ended, avoid posting another window
                 self.view = self.view_last # allow user to use previous view
-                queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                     content=f'<@{user.id}> The game is over. The queue for new minigame images have been cancelled.', ephemeral=True, delete_after=30
                 ))
                 return
@@ -513,7 +507,7 @@ class Minigame:
                         png_payload = {
                             'image': image_base64
                         }
-                        png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
+                        png_response = s.post(url=f'{web_ui.url}/sdapi/v1/png-info', json=png_payload, timeout=60)
 
                         metadata = PngImagePlugin.PngInfo()
                         epoch_time = int(time.time())
@@ -531,7 +525,7 @@ class Minigame:
                             buffer.seek(0)
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                        queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                             content=f'<@{user.id}> {queue_object.message}', files=files, view=queue_object.view
                         ))
                         queue_object.view = None
@@ -541,15 +535,22 @@ class Minigame:
                     self.view = self.view_last # allow user to use previous view
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
-                    queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+                    queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
             threading.Thread(target=post_dream, daemon=True).start()
+
+        except requests.exceptions.RequestException as e:
+            # connection error, return items to queue
+            time.sleep(5.0)
+            web_ui.reconnect()
+            queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+            return
 
         except Exception as e:
             self.view = self.view_last # allow user to use previous view
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+            queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
     # sanatize input strings
     def sanatize(self, input: str):
@@ -600,8 +601,8 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
             model_name: str = checkpoint
 
             loop = asyncio.get_running_loop()
-            host = queuehandler.get_user(ctx)
-            guild = queuehandler.get_guild(ctx)
+            host = utility.get_user(ctx)
+            guild = utility.get_guild(ctx)
 
             minigame = Minigame(host, guild)
             minigame.prompt = prompt
@@ -631,7 +632,7 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
 
 
 class MinigameView(View):
-    def __init__(self, minigame: Minigame, input_object: queuehandler.DrawObject):
+    def __init__(self, minigame: Minigame, input_object: utility.DrawObject):
         super().__init__(timeout=None)
         self.minigame = minigame
         self.input_object = input_object

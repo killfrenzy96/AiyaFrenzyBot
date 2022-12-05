@@ -3,7 +3,6 @@ import discord
 import os
 import sys
 from core import settings
-from core import consoleinput
 from core.logging import get_logger
 from dotenv import load_dotenv
 
@@ -113,6 +112,7 @@ async def shutdown(bot: discord.Bot):
     await bot.close()
 
 print('Starting Bot...')
+from core import consoleinput
 console_input = consoleinput.ConsoleInput(self)
 
 try:

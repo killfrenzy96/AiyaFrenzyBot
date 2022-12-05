@@ -9,6 +9,7 @@ from discord import option
 from discord.ext import commands
 from typing import Optional
 
+from core import utility
 from core import queuehandler
 from core import viewhandler
 from core import settings
@@ -48,8 +49,8 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
         try:
             # get guild id and user
-            guild = queuehandler.get_guild(ctx)
-            user = queuehandler.get_user(ctx)
+            guild = utility.get_guild(ctx)
+            user = utility.get_user(ctx)
 
             print(f'Identify Request -- {user.name}#{user.discriminator} -- {guild}')
 
@@ -97,7 +98,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
             # creates the upscale object out of local variables
             def get_identify_object():
-                queue_object = queuehandler.IdentifyObject(self, ctx, init_url, model, command, viewhandler.DeleteView(user.id))
+                queue_object = utility.IdentifyObject(self, ctx, init_url, model, command, viewhandler.DeleteView(user.id))
 
                 # construct a payload
                 payload = {
@@ -117,8 +118,8 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
             identify_object = get_identify_object()
 
             # calculate total cost of queued items and reject if there is too expensive
-            dream_cost = queuehandler.get_dream_cost(identify_object)
-            queue_cost = queuehandler.get_user_queue_cost(user.id)
+            dream_cost = queuehandler.dream_queue.get_dream_cost(identify_object)
+            queue_cost = queuehandler.dream_queue.get_user_queue_cost(user.id)
             if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
                 content = f'<@{user.id}> Please wait! You have too much queued up.'
                 ephemeral = True
@@ -132,7 +133,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                 priority: str = 'medium'
 
             # start the interrogation
-            queue_length = queuehandler.process_dream(identify_object, priority)
+            queue_length = queuehandler.dream_queue.process_dream(identify_object, priority)
             content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
 
         except Exception as e:
@@ -152,23 +153,16 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
             else:
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
-    def dream(self, queue_object: queuehandler.IdentifyObject, queue_continue: threading.Event):
-        user = queuehandler.get_user(queue_object.ctx)
+    def dream(self, queue_object: utility.IdentifyObject, web_ui: utility.WebUI, queue_continue: threading.Event):
+        user = utility.get_user(queue_object.ctx)
 
         try:
-            # send login payload to webui
-            with requests.Session() as s:
-                if settings.global_var.api_auth:
-                    s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
-
-                if settings.global_var.gradio_auth:
-                    login_payload = {
-                        'username': settings.global_var.username,
-                        'password': settings.global_var.password
-                    }
-                    s.post(settings.global_var.url + '/login', data=login_payload)
-                # else:
-                #     s.post(settings.global_var.url + '/login')
+            # get webui session
+            s = web_ui.get_session()
+            if s == None:
+                # no session, return the object to the queue handler to try again
+                queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+                return
 
             # safe for global queue to continue
             def continue_queue():
@@ -180,7 +174,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                 # combined model payload - iterate through all models and put them in the prompt
                 payloads: list[dict] = []
                 threads: list[threading.Thread] = []
-                responses: list[requests.Response] = []
+                responses: list[requests.Response | Exception] = []
                 for model in settings.global_var.identify_models:
                     new_payload = {}
                     new_payload.update(queue_object.payload)
@@ -192,7 +186,10 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                     responses.append(None)
 
                 def interrogate(thread_index, thread_payload):
-                    responses[thread_index] = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=thread_payload)
+                    try:
+                        responses[thread_index] = s.post(url=f'{web_ui.url}/sdapi/v1/interrogate', json=thread_payload, timeout=60)
+                    except Exception as e:
+                        responses[thread_index] = e
 
                 for index, payload in enumerate(payloads):
                     thread = threading.Thread(target=interrogate, args=[index, payload], daemon=True)
@@ -203,6 +200,10 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
                 for thread in threads:
                     thread.join()
+
+                for response in responses:
+                    if type(response) is not requests.Response:
+                        raise response
 
                 def post_dream():
                     try:
@@ -219,38 +220,47 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
                         content = f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{content}``'
 
-                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                        queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                             content=content, view=queue_object.view
                         ))
                         queue_object.view = None
+
                     except Exception as e:
                         content = f'Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
-                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+                        queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+
                 threading.Thread(target=post_dream, daemon=True).start()
             else:
                 # regular payload - get identify for the model specified
-                response = s.post(url=f'{settings.global_var.url}/sdapi/v1/interrogate', json=queue_object.payload)
+                response = s.post(url=f'{web_ui.url}/sdapi/v1/interrogate', json=queue_object.payload, timeout=60)
                 queue_object.payload = None
 
                 def post_dream():
                     try:
                         response_data = response.json()
                         content = response_data.get('caption')
-                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                        queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                             content=f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{content}``', view=queue_object.view
                         ))
                         queue_object.view = None
                     except Exception as e:
                         content = f'Something went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
-                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+                        queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
                 threading.Thread(target=post_dream, daemon=True).start()
+
+        except requests.exceptions.RequestException as e:
+            # connection error, return items to queue
+            time.sleep(5.0)
+            web_ui.reconnect()
+            queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+            return
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+            queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
 def setup(bot: discord.Bot):
     bot.add_cog(IdentifyCog(bot))

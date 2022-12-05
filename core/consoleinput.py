@@ -2,7 +2,9 @@ import asyncio
 import discord
 import traceback
 import threading
+
 from core import settings
+from core import queuehandler
 
 class ConsoleInput:
     def __init__(self, bot: discord.Bot):
@@ -12,8 +14,7 @@ class ConsoleInput:
         self.help_output = ('Valid commands:\n'
                            '  reload - reloads all settings.\n'
                            '  guild list - lists all guilds that Aiya is in.\n'
-                           '  guild leave (id) - leaves a guild.\n'
-                           '  exit - shuts down bot and exits the program.')
+                           '  guild leave (id) - leaves a guild.')
 
     def run(self):
         if self.input_thread == None:
@@ -40,6 +41,8 @@ class ConsoleInput:
                         settings.files_check()
                         print(f'> Reloading guilds')
                         settings.guilds_check(self.bot)
+                        print(f'> Resetup Dream Queue')
+                        queuehandler.dream_queue.setup()
                         print(f'Reload complete.')
 
                     case 'guild':
@@ -76,11 +79,6 @@ class ConsoleInput:
                                     print(f'Failed to leave Guild ID \'{guild_id}\'')
                             case other:
                                 print(self.help_output)
-
-                    case 'exit':
-                        print(f'Shutting down...')
-                        self.shutdown()
-                        asyncio.run(self.bot.close())
 
                     case other:
                         print(self.help_output)

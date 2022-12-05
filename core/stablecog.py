@@ -14,6 +14,7 @@ from discord import option
 from discord.ext import commands
 from typing import Optional
 
+from core import utility
 from core import queuehandler
 from core import viewhandler
 from core import settings
@@ -225,8 +226,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             command: str = None
 
             # get guild id and user
-            guild = queuehandler.get_guild(ctx)
-            user = queuehandler.get_user(ctx)
+            guild = utility.get_guild(ctx)
+            user = utility.get_user(ctx)
 
             print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
 
@@ -298,12 +299,12 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
                 args = get_draw_object_args()
-                dream_cost_draw_object = queuehandler.DrawObject(*args)
+                dream_cost_draw_object = utility.DrawObject(*args)
                 dream_cost_draw_object.width = _width
                 dream_cost_draw_object.height = _height
                 dream_cost_draw_object.steps = _steps
                 dream_cost_draw_object.batch = _count
-                return queuehandler.get_dream_cost(dream_cost_draw_object)
+                return queuehandler.dream_queue.get_dream_cost(dream_cost_draw_object)
             dream_compute_cost = get_dream_cost(width, height, steps, 1)
 
             # get settings
@@ -401,7 +402,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
             # calculate total cost of queued items and reject if there is too expensive
             dream_cost = round(get_dream_cost(width, height, steps, batch), 2)
-            queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
+            queue_cost = round(queuehandler.dream_queue.get_user_queue_cost(user.id), 2)
             print(f'Estimated total compute cost -- Dream: {dream_cost} Queue: {queue_cost} Total: {dream_cost + queue_cost}')
 
             if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
@@ -451,7 +452,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             # create draw object
             def get_draw_object(message: str = None):
                 args = get_draw_object_args()
-                queue_object = queuehandler.DrawObject(*args)
+                queue_object = utility.DrawObject(*args)
 
                 # create view to handle buttons
                 queue_object.view = viewhandler.DrawView(self, queue_object)
@@ -462,11 +463,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     print(queue_object.message) # log the command
                 else:
                     queue_object.message = message
-
-                # create persistent session since we'll need to do a few API calls
-                s = requests.Session()
-                if settings.global_var.api_auth:
-                    s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
 
                 # construct a payload
                 payload_prompt = queue_object.prompt
@@ -503,7 +499,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     })
 
                 # update payload if style is used
-                if queue_object.highres_fix:
+                if queue_object.style and queue_object.style != 'None':
                     payload.update({
                         'styles': [queue_object.style]
                     })
@@ -516,7 +512,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     override_settings['CLIP_stop_at_last_layers'] = queue_object.clip_skip
 
                 # update payload if facefix is used
-                if queue_object.facefix != None:
+                if queue_object.facefix != None and queue_object.facefix != 'None':
                     payload.update({
                         'restore_faces': True,
                     })
@@ -544,7 +540,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 else:
                     priority: str = 'medium'
 
-                queue_length = queuehandler.process_dream(get_draw_object(), priority)
+                queue_length = queuehandler.dream_queue.process_dream(get_draw_object(), priority)
             else:
                 if guild == 'private':
                     priority: str = 'lowest'
@@ -552,7 +548,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 else:
                     priority: str = 'low'
 
-                queue_length = queuehandler.process_dream(get_draw_object(), priority)
+                last_draw_object = get_draw_object()
+                queue_length = queuehandler.dream_queue.process_dream(last_draw_object, priority)
 
                 batch_count = 1
                 while batch_count < batch:
@@ -576,7 +573,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         clip_skip += increment_clip_skip
                         message += f'clip_skip:{clip_skip}'
 
-                    queuehandler.process_dream(get_draw_object(message), priority, False)
+                    draw_object = get_draw_object(message)
+                    draw_object.wait_for_dream = last_draw_object
+                    last_draw_object = draw_object
+                    queuehandler.dream_queue.process_dream(draw_object, priority, False)
 
             content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
             if batch > 1: content = content + f' - Batch: ``{batch}``'
@@ -604,24 +604,23 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
     # generate the image
-    def dream(self, queue_object: queuehandler.DrawObject, queue_continue: threading.Event):
-        user = queuehandler.get_user(queue_object.ctx)
+    def dream(self, queue_object: utility.DrawObject, web_ui: utility.WebUI, queue_continue: threading.Event):
+        user = utility.get_user(queue_object.ctx)
 
         try:
-            # create persistent session since we'll need to do a few API calls
-            s = requests.Session()
-            if settings.global_var.api_auth:
-                s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
+            # get webui session
+            s = web_ui.get_session()
+            if s == None:
+                # no session, return the object to the queue handler to try again
+                queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+                return
 
-            # send login payload to webui
-            if settings.global_var.gradio_auth:
-                login_payload = {
-                    'username': settings.global_var.username,
-                    'password': settings.global_var.password
+            # only send model payload if one is defined
+            if queue_object.data_model:
+                model_payload = {
+                    'sd_model_checkpoint': queue_object.data_model
                 }
-                s.post(settings.global_var.url + '/login', data=login_payload)
-            # else:
-            #     s.post(settings.global_var.url + '/login')
+                s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=60)
 
             # safe for global queue to continue
             def continue_queue():
@@ -629,18 +628,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 queue_continue.set()
             threading.Thread(target=continue_queue, daemon=True).start()
 
-            # only send model payload if one is defined
-            if queue_object.data_model:
-                model_payload = {
-                    'sd_model_checkpoint': queue_object.data_model
-                }
-                s.post(url=f'{settings.global_var.url}/sdapi/v1/options', json=model_payload)
-
             if queue_object.init_url:
-                url = f'{settings.global_var.url}/sdapi/v1/img2img'
+                url = f'{web_ui.url}/sdapi/v1/img2img'
             else:
-                url = f'{settings.global_var.url}/sdapi/v1/txt2img'
-            response = s.post(url=url, json=queue_object.payload)
+                url = f'{web_ui.url}/sdapi/v1/txt2img'
+            response = s.post(url=url, json=queue_object.payload, timeout=60)
             queue_object.payload = None
 
             def post_dream():
@@ -660,7 +652,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         png_payload = {
                             'image': 'data:image/png;base64,' + image_base64
                         }
-                        png_response = s.post(url=f'{settings.global_var.url}/sdapi/v1/png-info', json=png_payload)
+                        png_response = s.post(url=f'{web_ui.url}/sdapi/v1/png-info', json=png_payload, timeout=60)
 
                         metadata = PngImagePlugin.PngInfo()
                         epoch_time = int(time.time())
@@ -678,7 +670,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             buffer.seek(0)
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
-                        queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                        queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                            content=f'<@{user.id}> ``{queue_object.message}``', files=files, view=queue_object.view
                         ))
                         queue_object.view = None
@@ -686,16 +678,23 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 except Exception as e:
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
-                    queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+                    queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
             threading.Thread(target=post_dream, daemon=True).start()
+
+        except requests.exceptions.RequestException as e:
+            # connection error, return items to queue
+            time.sleep(5.0)
+            web_ui.reconnect()
+            queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+            return
 
         except Exception as e:
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
-            queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+            queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
-    async def dream_object(self, draw_object: queuehandler.DrawObject):
+    async def dream_object(self, draw_object: utility.DrawObject):
         loop = asyncio.get_running_loop()
         loop.create_task(self.dream_handler(ctx=draw_object.ctx,
             prompt=draw_object.prompt,
@@ -849,7 +848,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         script = get_param('script')
         if script not in self.scripts: script = None
 
-        return queuehandler.DrawObject(
+        return utility.DrawObject(
             cog=None,
             ctx=None,
             prompt=prompt,
