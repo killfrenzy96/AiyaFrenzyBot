@@ -57,7 +57,7 @@ class WebUI:
             if self.api_auth:
                 s.auth = (self.api_user, self.api_pass)
 
-            response_data = s.get(self.url + '/sdapi/v1/cmd-flags').json()
+            response_data = s.get(self.url + '/sdapi/v1/cmd-flags', timeout=60).json()
             if response_data['gradio_auth']:
                 self.gradio_auth = True
             else:
@@ -80,7 +80,7 @@ class WebUI:
         try:
             # get stable diffusion models
             # print('Retrieving stable diffusion models...')
-            response_data = s.get(self.url + '/sdapi/v1/sd-models').json()
+            response_data = s.get(self.url + '/sdapi/v1/sd-models', timeout=60).json()
             self.data_models = []
             for sd_model in response_data:
                 self.data_models.append(sd_model['title'])
@@ -168,7 +168,7 @@ class WebUI:
         def run():
             print(f'> Checking connection to WebUI at {self.url}')
             while self.check_status() == False:
-                print(f'> - Error: Retrying in 15 seconds...')
+                print(f'> - Retrying in 30 seconds...')
                 time.sleep(15)
             print(f'> Connected to {self.url}')
 
