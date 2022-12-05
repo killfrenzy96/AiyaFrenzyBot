@@ -450,7 +450,10 @@ class Minigame:
                     responses.append(None)
 
                 def img2img(thread_index, thread_payload):
-                    responses[thread_index] = s.post(url=url, json=thread_payload, timeout=60)
+                    try:
+                        responses[thread_index] = s.post(url=url, json=thread_payload, timeout=60)
+                    except Exception as e:
+                        responses[thread_index] = e
 
                 for index, payload in enumerate(payloads):
                     thread = threading.Thread(target=img2img, args=[index, payload], daemon=True)
@@ -461,6 +464,10 @@ class Minigame:
 
                 for thread in threads:
                     thread.join()
+
+                for response in responses:
+                    if type(response) is not requests.Response:
+                        raise response
 
                 response: requests.Response = None
                 response_data = None
