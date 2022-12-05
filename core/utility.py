@@ -111,7 +111,8 @@ class WebUI:
 
     # block code until connected to the WebUI
     def connect_blocking(self):
-        self.connect()
+        if self.reconnect_thread.is_alive() == False:
+            self.connect()
         self.reconnect_thread.join()
 
     # force a connection check
