@@ -124,6 +124,8 @@ class Minigame:
             # calculate total cost of queued items and reject if there is too expensive
             dream_cost = 2.0
             queue_cost = round(queuehandler.get_user_queue_cost(user.id), 2)
+            print(f'Estimated total compute cost -- Dream: {dream_cost} Queue: {queue_cost} Total: {dream_cost + queue_cost}')
+
             if dream_cost + queue_cost > settings.read(self.guild)['max_compute']:
                 print(f'Minigame rejected: Too much in queue already')
                 content = f'<@{user.id}> Please wait! You have too much queued up.'
@@ -181,7 +183,7 @@ class Minigame:
                                 self.prompt_adventure = f'({self.prompt}), ' + self.sanatize(image['prompt'])
                                 result_found = True
                                 break
-                except:
+                except Exception as e:
                     print(f'Dream rejected: Random prompt query failed.\n{e}\n{traceback.print_exc()}')
                     content = f'<@{user.id}> Random prompt query failed.'
                     ephemeral = True

@@ -97,6 +97,8 @@ class IdentifyObject:
 #any command that needs to wait on processing should use the dream thread
 class GlobalQueue:
     dream_thread = threading.Thread()
+    queue_inprogress: list[DrawObject | UpscaleObject | IdentifyObject] = []
+
     queue_high: list[DrawObject | UpscaleObject | IdentifyObject] = []
     queue_medium: list[DrawObject | UpscaleObject | IdentifyObject] = []
     queue_low: list[DrawObject | UpscaleObject | IdentifyObject] = []
@@ -121,7 +123,15 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
         if queue_object.init_url: dream_compute_cost *= max(0.2, queue_object.strength)
         dream_compute_cost += dream_compute_cost_add
         dream_compute_cost = max(1.0, dream_compute_cost)
-        dream_compute_cost *= float(queue_object.batch)
+
+        # use actual batch size from payload
+        batch = queue_object.batch
+        try:
+            batch = queue_object.payload['n_iter']
+        except:
+            pass
+
+        dream_compute_cost *= float(batch)
 
     elif type(queue_object) is UpscaleObject:
         dream_compute_cost = queue_object.resize
@@ -134,7 +144,7 @@ def get_dream_cost(queue_object: DrawObject | UpscaleObject | IdentifyObject):
 
 def get_user_queue_cost(user_id: int):
     queue_cost = 0.0
-    queue = GlobalQueue.queue_high + GlobalQueue.queue_medium + GlobalQueue.queue_low + GlobalQueue.queue_lowest
+    queue = GlobalQueue.queue_inprogress + GlobalQueue.queue_high + GlobalQueue.queue_medium + GlobalQueue.queue_low + GlobalQueue.queue_lowest
     for queue_object in queue:
         user = get_user(queue_object.ctx)
         if user and user.id == user_id:
@@ -152,11 +162,10 @@ def process_dream(queue_object: DrawObject | UpscaleObject | IdentifyObject, pri
     if print_info:
         # get queue length
         queue_index = 0
-        queue_length = 0
+        queue_length = len(GlobalQueue.queue_inprogress)
         while queue_index <= priority:
             queue_length += len(GlobalQueue.queues[queue_index])
             queue_index += 1
-        if GlobalQueue.dream_thread.is_alive(): queue_length += 1
 
         match priority:
             case 0: priority_string = 'High'
@@ -208,11 +217,12 @@ def process_queue():
         queue = GlobalQueue.queues[queue_index]
         if queue:
             queue_object = queue.pop(0)
+            GlobalQueue.queue_inprogress.append(queue_object)
             try:
-                # start next dream
+                # start next dream (older non-buffered queue)
                 # queue_object.cog.dream(queue_object)
 
-                # queue up dream while the current one is running
+                # queue up dream while the active thread is still running
                 if active_thread.is_alive() and buffer_thread.is_alive():
                     active_thread.join()
                     active_thread = buffer_thread
@@ -224,16 +234,19 @@ def process_queue():
                 active_thread = threading.Thread(target=queue_object.cog.dream, args=[queue_object, active_thread_event], daemon=True)
                 active_thread.start()
 
-                # wait for thread to complete, or event (indicating it is safe to continue)
+                # wait for active thread to complete, or event to activate (indicating it is safe to continue)
                 def wait_for_join():
                     active_thread.join()
                     active_thread_event.set()
+                    if GlobalQueue.queue_inprogress: GlobalQueue.queue_inprogress.pop(0)
                 wait_thread_join = threading.Thread(target=wait_for_join, daemon=True)
                 wait_thread_join.start()
                 active_thread_event.wait()
 
             except Exception as e:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
+                # reset inprogress list in case of failure
+                if GlobalQueue.queue_inprogress: GlobalQueue.queue_inprogress = []
             queue_index = 0
         else:
             queue_index += 1

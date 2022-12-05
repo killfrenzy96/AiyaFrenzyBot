@@ -257,7 +257,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     images = response.json()['images']
                     random_image = images[random.randrange(0, len(images))]
                     prompt = sanatize(random_image['prompt'])
-                except:
+                except Exception as e:
                     print(f'Dream rejected: Random prompt query failed.\n{e}\n{traceback.print_exc()}')
                     content = f'<@{user.id}> Random prompt query failed.'
                     ephemeral = True
