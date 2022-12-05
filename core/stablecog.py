@@ -250,10 +250,21 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         query = random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ')
                     else:
                         query = quote(query.strip())
-                    response = await loop.run_in_executor(None, requests.get, f'https://lexica.art/api/v1/search?q={query}')
+
+                    def get_request():
+                        try:
+                            return requests.get(f'https://lexica.art/api/v1/search?q={query}', timeout=5)
+                        except Exception as e:
+                            return e
+
+                    response = await loop.run_in_executor(None, get_request)
+                    if type(response) is not requests.Response:
+                        raise response
+
                     images = response.json()['images']
                     random_image = images[random.randrange(0, len(images))]
                     prompt = sanatize(random_image['prompt'])
+
                 except Exception as e:
                     print(f'Dream rejected: Random prompt query failed.\n{e}\n{traceback.print_exc()}')
                     content = f'<@{user.id}> Random prompt query failed.'

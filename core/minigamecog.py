@@ -162,7 +162,16 @@ class Minigame:
                 self.prompt_adventure = self.prompt
                 try:
                     query = quote(self.prompt.strip())
-                    response = await loop.run_in_executor(None, requests.get, f'https://lexica.art/api/v1/search?q={query}')
+                    def get_request():
+                        try:
+                            return requests.get(f'https://lexica.art/api/v1/search?q={query}', timeout=5)
+                        except Exception as e:
+                            return e
+
+                    response = await loop.run_in_executor(None, get_request)
+                    if type(response) is not requests.Response:
+                        raise response
+
                     images = response.json()['images']
 
                     # use random result
@@ -203,6 +212,7 @@ class Minigame:
 
             queue_length = await self.get_image_variation(ctx, prompt)
             if queue_length == None:
+                self.view = self.view_last
                 content = f'<@{user.id}> Sorry, I am currently offline.'
                 ephemeral = True
             else:
