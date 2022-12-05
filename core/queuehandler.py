@@ -398,6 +398,8 @@ class UploadQueue:
                 except:
                     pass
 
+            index = 0
+
         self.is_uploading = False
 
 dream_queue = DreamQueue()
