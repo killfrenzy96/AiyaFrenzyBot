@@ -62,7 +62,7 @@ class DreamQueueInstance:
                     active_thread.join()
                     active_thread_event.set()
                     try:
-                        self.queue_inprogress.remove(queue_object) # remove in progress object after completion
+                        self.queue_inprogress.pop(0) # remove in progress object after completion
                     except:
                         pass
                 wait_thread_join = threading.Thread(target=wait_for_join, daemon=True)
@@ -73,6 +73,10 @@ class DreamQueueInstance:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
                 # reset inprogress list in case of failure
                 if self.queue_inprogress: self.queue_inprogress = []
+
+        # do not end thread while buffer thread is still going
+        if buffer_thread.is_alive():
+            buffer_thread.join()
 
     def clear_user_queue(self, user_id: int):
         total_cleared: int = 0
