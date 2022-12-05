@@ -239,10 +239,11 @@ def process_queue():
             queue_index += 1
 
 class UploadObject:
-    def __init__(self, queue_object, content, embed = None, files = None, view = None, delete_after = None):
+    def __init__(self, queue_object, content, embed = None, ephemeral = None, files = None, view = None, delete_after = None):
         self.queue_object: DrawObject | UpscaleObject | IdentifyObject = queue_object
         self.content: str = content
         self.embed: discord.Embed = embed
+        self.ephemeral: bool = ephemeral
         self.files: list[discord.File] = files
         self.view: discord.ui.View = view
         self.delete_after: float = delete_after
@@ -268,13 +269,34 @@ def process_upload_queue():
             upload_object = GlobalUploadQueue.queue.pop(0)
             try:
                 # send message
-                message = await upload_object.queue_object.ctx.channel.send(
-                    content=upload_object.content,
-                    embed=upload_object.embed,
-                    files=upload_object.files,
-                    view=upload_object.view,
-                    delete_after=upload_object.delete_after
-                )
+                if upload_object.ephemeral:
+                    ctx = upload_object.queue_object.ctx
+                    if type(ctx) is discord.ApplicationContext:
+                        message = await ctx.send_response(
+                            content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                    elif type(ctx) is discord.Interaction:
+                        try:
+                            message = await ctx.response.send_message(
+                                content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                        except discord.InteractionResponded:
+                            view = upload_object.view
+                            if view == None: view = discord.MISSING
+                            message = await ctx.followup.send(
+                                content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=view, delete_after=upload_object.delete_after)
+                    elif type(ctx) is discord.Message:
+                        message = await ctx.reply(
+                            content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                    else:
+                        message = await ctx.channel.send(
+                            content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                else:
+                    message = await upload_object.queue_object.ctx.channel.send(
+                        content=upload_object.content,
+                        embed=upload_object.embed,
+                        files=upload_object.files,
+                        view=upload_object.view,
+                        delete_after=upload_object.delete_after
+                    )
 
                 # cache command
                 if type(upload_object.queue_object) is DrawObject and upload_object.queue_object.cache:

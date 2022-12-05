@@ -28,7 +28,8 @@ class Minigame:
         self.guild = guild
         self.id = random.randint(0, 0xFFFFFFFF)
         self.running = False
-        self.last_view: MinigameView = None
+        self.view: MinigameView = None
+        self.view_last: MinigameView = None
 
         self.minigame_id: int = None
         self.reveal_prompt: bool = False
@@ -325,8 +326,9 @@ class Minigame:
 
         print(f'prompt: {prompt} negative:{negative} checkpoint:{model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
 
+        self.view_last = self.view
         draw_object.view = MinigameView(self, draw_object)
-        self.last_view = draw_object.view
+        self.view = draw_object.view
 
         # construct a payload
         payload_prompt = draw_object.prompt
@@ -393,6 +395,14 @@ class Minigame:
         user = queuehandler.get_user(queue_object.ctx)
 
         try:
+            if self.running == False:
+                # minigame has ended, avoid posting another window
+                self.view = self.view_last # allow user to use previous view
+                queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                    content=f'<@{user.id}> The game is over. The queue for new minigame images have been cancelled.', ephemeral=True, delete_after=30
+                ))
+                return
+
             s = requests.Session()
             if settings.global_var.api_auth:
                 s.auth = (settings.global_var.api_user, settings.global_var.api_pass)
@@ -470,6 +480,14 @@ class Minigame:
                 response = s.post(url=url, json=queue_object.payload)
                 response_data = response.json()
 
+            if self.running == False:
+                # minigame has ended, avoid posting another window
+                self.view = self.view_last # allow user to use previous view
+                queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object,
+                    content=f'<@{user.id}> The game is over. The queue for new minigame images have been cancelled.', ephemeral=True, delete_after=30
+                ))
+                return
+
             queue_object.payload = None
             self.game_iteration += 1
 
@@ -518,6 +536,7 @@ class Minigame:
                         self.image_count += queue_object.batch
 
                 except Exception as e:
+                    self.view = self.view_last # allow user to use previous view
                     content = f'Something went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
@@ -525,6 +544,7 @@ class Minigame:
             threading.Thread(target=post_dream, daemon=True).start()
 
         except Exception as e:
+            self.view = self.view_last # allow user to use previous view
             content = f'Something went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.process_upload(queuehandler.UploadObject(queue_object=queue_object, content=content, delete_after=30))
@@ -634,7 +654,7 @@ class MinigameView(View):
                 return
 
             # only allow interaction with the latest post
-            if self.minigame.last_view != self:
+            if self.minigame.view != self:
                 loop.create_task(interaction.response.send_message('You may only interact with the latest image from the minigame.', ephemeral=True, delete_after=30))
                 return
 
@@ -663,7 +683,7 @@ class MinigameView(View):
                 return
 
             # only allow interaction with the latest post
-            if self.minigame.last_view != self:
+            if self.minigame.view != self:
                 loop.create_task(interaction.response.send_message('You may only interact with the latest image from the minigame.', ephemeral=True, delete_after=30))
                 return
 
@@ -718,7 +738,7 @@ class MinigameView(View):
                 return
 
             # only allow interaction with the latest post
-            if self.minigame.last_view != self:
+            if self.minigame.view != self:
                 loop.create_task(interaction.response.send_message('You may only interact with the latest image from the minigame.', ephemeral=True, delete_after=30))
                 return
 
