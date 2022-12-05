@@ -7,6 +7,7 @@ import discord
 class WebUI:
     def __init__(self, url: str, username: str, password: str, api_user: str, api_pass: str, api_auth = False, gradio_auth = False):
         self.online = False
+        self.online_last = None
         self.url = url
 
         self.username = username
@@ -133,6 +134,7 @@ class WebUI:
             self.online = False
             return False
 
+        self.online_last = time.time()
         self.online = True
         return True
 
@@ -150,10 +152,13 @@ class WebUI:
                         'password': self.password
                     }
                     s.post(self.url + '/login', data=login_payload, timeout=5)
-            #     else:
-            #         s.post(self.url + '/login', timeout=5)
-            # else:
-            #     s.get(self.url + '/sdapi/v1/cmd-flags', timeout=5)
+                else:
+                    s.post(self.url + '/login', timeout=5)
+
+            # if it's been a while since the last check for being online, do one now
+            elif time.time() > self.online_last + 30:
+                s.get(self.url + '/sdapi/v1/cmd-flags', timeout=5)
+            self.online_last = time.time()
             self.online = True
             return s
 
