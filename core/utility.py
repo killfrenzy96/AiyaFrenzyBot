@@ -170,7 +170,7 @@ class DrawObject(DreamObject):
         command += f' width:{self.width} height:{self.height} steps:{self.steps} guidance_scale:{self.guidance_scale} sampler:{self.sampler} seed:{self.seed}'
         if self.init_url:
             command += f' strength:{self.strength} init_url:{self.init_url}'
-        if self.style != None and self.facefix != 'None':
+        if self.style != None and self.style != 'None':
             command += f' style:{self.style}'
         if self.facefix != None and self.facefix != 'None':
             command += f' facefix:{self.facefix}'
