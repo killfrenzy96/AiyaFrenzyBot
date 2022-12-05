@@ -62,7 +62,7 @@ class DreamQueueInstance:
                     active_thread.join()
                     active_thread_event.set()
                     try:
-                        self.queue_inprogress.pop(0) # remove in progress object after completion
+                        self.queue_inprogress.remove(queue_object) # remove in progress object after completion
                     except:
                         pass
                 wait_thread_join = threading.Thread(target=wait_for_join, daemon=True)
