@@ -121,6 +121,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         'guidance_scale',
         float,
         description='Classifier-Free Guidance scale. Default: 7.0',
+        min_value=1,
         required=False,
     )
     @option(
@@ -139,7 +140,9 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @option(
         'strength',
         float,
-        description='The amount in which init_image will be altered (0.0 to 1.0).'
+        description='The amount in which init_image will be altered (0.0 to 1.0).',
+        min_value=0,
+        max_value=1,
     )
     @option(
         'init_image',
@@ -157,6 +160,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         'batch',
         int,
         description='The number of images to generate. This is \'Batch count\', not \'Batch size\'.',
+        min_value=1,
         required=False,
     )
     @option(
