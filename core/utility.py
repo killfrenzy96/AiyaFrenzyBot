@@ -7,6 +7,7 @@ import discord
 class WebUI:
     def __init__(self, url: str, username: str, password: str, api_user: str, api_pass: str, api_auth = False, gradio_auth = False):
         self.online = False
+        self.auth_rejected = False
         self.online_last = None
         self.url = url
 
@@ -40,11 +41,13 @@ class WebUI:
                 if (not self.api_pass) or (not self.api_user):
                     print(f'> Web UI API at {self.url} rejected me! If using --api-auth, '
                           'please check your .env file for APIUSER and APIPASS values.')
+                    self.auth_rejected = True
                     self.online = False
                     return False
             # lazy method to see if --api commandline argument is not set
             elif response.status_code == 404:
                 print(f'> Web UI API at {self.url} is unreachable! Please check Web UI COMMANDLINE_ARGS for --api.')
+                self.auth_rejected = True
                 self.online = False
                 return False
         except:
@@ -135,6 +138,7 @@ class WebUI:
             return False
 
         self.online_last = time.time()
+        self.auth_rejected = False
         self.online = True
         return True
 
@@ -159,6 +163,7 @@ class WebUI:
             elif time.time() > self.online_last + 30:
                 s.get(self.url + '/sdapi/v1/cmd-flags', timeout=5)
             self.online_last = time.time()
+            self.auth_rejected = False
             self.online = True
             return s
 
@@ -173,7 +178,11 @@ class WebUI:
         def run():
             print(f'> Checking connection to WebUI at {self.url}')
             while self.check_status() == False:
-                print(f'> - Retrying in 30 seconds...')
+                if self.auth_rejected:
+                    print(f'> - Request rejected! I will not try to reconnect to Web UI at {self.url}')
+                    break
+                else:
+                    print(f'> - Retrying in 30 seconds...')
                 time.sleep(30)
             print(f'> Connected to {self.url}')
 
