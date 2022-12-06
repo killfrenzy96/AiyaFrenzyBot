@@ -182,7 +182,7 @@ class WebUI:
     # continually retry a connection to the webui
     def connect(self):
         def run():
-            print(f'> Checking connection to WebUI at {self.url}')
+            print(f'> Connecting to WebUI at {self.url}')
             while self.check_status() == False:
                 if self.stopped: return None
                 if self.auth_rejected:
@@ -211,7 +211,6 @@ class WebUI:
     def reconnect(self):
         if self.stopped: return None
         if self.reconnect_thread.is_alive() == False:
-            print(f'> Connection ended to Web UI at {self.url}')
             self.online = False
             self.connect()
 

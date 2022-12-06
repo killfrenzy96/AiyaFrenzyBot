@@ -36,13 +36,6 @@ class ConsoleInput:
                         # print('> Reloading config')
                         settings.startup_check()
 
-                        # print('> Reconnect to WebUI')
-                        for index, web_ui in enumerate(settings.global_var.web_ui):
-                            if index == 0:
-                                web_ui.connect_blocking()
-                            else:
-                                web_ui.connect()
-
                         # print('> Clearing guilds cache')
                         settings.global_var.guilds_cache = None
 
