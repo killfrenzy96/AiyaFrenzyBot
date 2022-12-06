@@ -110,8 +110,6 @@ class DreamQueueInstance:
         if type(queue_object) is utility.DrawObject:
             if queue_object.data_model not in self.web_ui.data_models:
                 return False
-            if queue_object.style != None and queue_object.style != 'None' and queue_object.style not in self.web_ui.style_names:
-                return False
 
         if type(queue_object) is utility.UpscaleObject:
             if queue_object.upscaler_1 and queue_object.upscaler_1 not in self.web_ui.upscaler_names:

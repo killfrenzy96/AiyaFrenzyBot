@@ -214,8 +214,10 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                         content: str = ''
                         for index, response in enumerate(responses):
                             response_data = response.json()
-                            if index > 0: content += ', '
-                            content += response_data.get('caption')
+                            caption = response_data.get('caption')
+                            if caption:
+                                if content: content += ', '
+                                content += caption
 
                         content = content.encode('utf-8').decode('unicode_escape')
                         content = content.replace('\\(', '')

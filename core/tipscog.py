@@ -66,9 +66,12 @@ class TipsView(View):
 
         style_list = ''
         for key, value in settings.global_var.style_names.items():
-            if value == '':
-                value = ' '
-            style_list = style_list + f'\n{key} - ``{value}``'
+            values: list[str] = value.split('\n')
+            style_prompt = values[0]
+            style_negative = values[1]
+            if style_prompt == '': style_prompt = ' '
+            if style_negative == '': style_negative = ' '
+            style_list = style_list + f'\n{key} - prompt:``{style_prompt}`` negative:``{style_negative}``'
         embed_styles = discord.Embed(title='Styles list', description=style_list)
         embed_styles.colour = settings.global_var.embed_color
 

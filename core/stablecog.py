@@ -475,9 +475,32 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 payload_prompt = queue_object.prompt
                 if token: payload_prompt = f'{token} {payload_prompt}'
 
+                payload_negative = queue_object.negative
+
+                # update prompt if style is used
+                if queue_object.style and queue_object.style != 'None' and queue_object.style in settings.global_var.style_names:
+                    # payload.update({
+                    #     'styles': [queue_object.style]
+                    # })
+                    values: list[str] = settings.global_var.style_names[queue_object.style].split('\n')
+                    style_prompt = values[0]
+                    style_negative = values[1]
+
+                    if style_prompt:
+                        if payload_prompt:
+                            payload_prompt += ', ' + style_prompt
+                        else:
+                            payload_prompt = style_prompt
+
+                    if style_negative:
+                        if payload_negative:
+                            payload_negative += ', ' + style_negative
+                        else:
+                            payload_negative = style_negative
+
                 payload = {
                     'prompt': payload_prompt,
-                    'negative_prompt': queue_object.negative,
+                    'negative_prompt': payload_negative,
                     'steps': queue_object.steps,
                     'width': queue_object.width,
                     'height': queue_object.height,
@@ -503,12 +526,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     payload.update({
                         'enable_hr': queue_object.highres_fix,
                         'denoising_strength': queue_object.strength
-                    })
-
-                # update payload if style is used
-                if queue_object.style and queue_object.style != 'None':
-                    payload.update({
-                        'styles': [queue_object.style]
                     })
 
                 # add any options that would go into the override_settings

@@ -109,7 +109,7 @@ class WebUI:
             # print('Retrieving styles...')
             response_data = s.get(self.url + '/sdapi/v1/prompt-styles', timeout=60).json()
             for style in response_data:
-                self.style_names[style['name']] = style['prompt']
+                self.style_names[style['name']] = style['prompt'] + '\n' + style['negative_prompt']
             # print(f'- Styles count: {len(self.style_names)}')
 
             # get face fix models
