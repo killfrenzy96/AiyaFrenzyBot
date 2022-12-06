@@ -117,7 +117,7 @@ console_input = consoleinput.ConsoleInput(self)
 
 try:
     console_input.run()
-    self.run(os.getenv('TOKEN'))
+    self.run(settings.get_env_var('TOKEN'))
 except KeyboardInterrupt:
     self.logger.info('Keyboard interrupt received. Exiting.')
     asyncio.run(shutdown(self))

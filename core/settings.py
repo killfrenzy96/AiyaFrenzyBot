@@ -2,7 +2,7 @@ import csv
 import discord
 import json
 import os
-import time
+import configparser
 import threading
 
 from core import utility
@@ -41,6 +41,7 @@ class GlobalVar:
     identify_models: list[str] = []
     messages: list[str] = []
 
+    config_cache: dict = None
     dream_cache: dict = None
     dream_cache_thread = threading.Thread()
     guilds_cache: dict = None
@@ -86,27 +87,52 @@ def update(guild_id: str, sett: str, value):
     global_var.guilds_cache_thread = threading.Thread(target=run)
     global_var.guilds_cache_thread.start()
 
-def get_env_var_with_default(var: str, default: str) -> str:
-    ret = os.getenv(var)
+def get_env_var(var: str, default: str = None):
+    try:
+        ret = global_var.config_cache[var]
+    except:
+        ret = os.getenv(var)
     return ret if ret is not None else default
 
+def get_config(file_path: str):
+    try:
+        config = {}
+        with open(file_path) as f:
+            for line in f:
+                if line.startswith('#'):
+                    continue
+                key, val = line.split('=', 1)
+                config[key.strip()] = val.strip()
+        print(f'Loaded config at {file_path}')
+        return config
+    except:
+        return None
+
 def startup_check():
+    # load config file if it exists
+    config_path = get_env_var('CONFIG', 'resources/config.txt')
+    if config_path: global_var.config_cache = get_config(config_path)
+
+    # cleanup current web ui array if reloading
+    for web_ui in global_var.web_ui:
+        web_ui.stop()
+
     # connect to WebUI URL access points
     global_var.web_ui = []
     index = 0
     while True:
         if index == 0:
-            url = get_env_var_with_default('URL', 'http://127.0.0.1:7860').rstrip('/')
+            url = get_env_var('URL', 'http://127.0.0.1:7860').rstrip('/')
             suffix = ''
         else:
-            url = os.getenv(f'URL{index}')
+            url = get_env_var(f'URL{index}')
             if not url: break
             suffix = str(index)
 
-        username = os.getenv(f'USER{suffix}')
-        password = os.getenv(f'PASS{suffix}')
-        api_user = os.getenv(f'APIUSER{suffix}')
-        api_pass = os.getenv(f'APIPASS{suffix}')
+        username = get_env_var(f'USER{suffix}')
+        password = get_env_var(f'PASS{suffix}')
+        api_user = get_env_var(f'APIUSER{suffix}')
+        api_pass = get_env_var(f'APIPASS{suffix}')
 
         web_ui = utility.WebUI(url, username, password, api_user, api_pass)
 
@@ -119,7 +145,7 @@ def startup_check():
         global_var.web_ui.append(web_ui)
         index += 1
 
-    global_var.dir = get_env_var_with_default('DIR', 'outputs')
+    global_var.dir = get_env_var('DIR', 'outputs')
     print(f'Using outputs directory: {global_var.dir}')
 
 def files_check():

@@ -7,6 +7,7 @@ import discord
 class WebUI:
     def __init__(self, url: str, username: str, password: str, api_user: str, api_pass: str, api_auth = False, gradio_auth = False):
         self.online = False
+        self.stopped = False
         self.auth_rejected = False
         self.online_last = None
         self.url = url
@@ -32,6 +33,7 @@ class WebUI:
 
     # check connection to WebUI and authentication
     def check_status(self):
+        if self.stopped: return False
         try:
             response = requests.get(self.url + '/sdapi/v1/cmd-flags')
             # lazy method to see if --api-auth commandline argument is set
@@ -56,6 +58,7 @@ class WebUI:
             return False
 
         # check gradio authentication
+        if self.stopped: return False
         try:
             s = requests.Session()
             if self.api_auth:
@@ -81,6 +84,7 @@ class WebUI:
             return False
 
         # retrieve instance configuration
+        if self.stopped: return False
         try:
             # get stable diffusion models
             # print('Retrieving stable diffusion models...')
@@ -137,6 +141,7 @@ class WebUI:
             self.online = False
             return False
 
+        if self.stopped: return False
         self.online_last = time.time()
         self.auth_rejected = False
         self.online = True
@@ -144,6 +149,7 @@ class WebUI:
 
     # return a request session
     def get_session(self):
+        if self.stopped: return None
         try:
             s = requests.Session()
             if self.api_auth:
@@ -178,30 +184,41 @@ class WebUI:
         def run():
             print(f'> Checking connection to WebUI at {self.url}')
             while self.check_status() == False:
+                if self.stopped: return None
                 if self.auth_rejected:
                     print(f'> - Request rejected! I will not try to reconnect to Web UI at {self.url}')
                     break
                 else:
                     print(f'> - Retrying in 30 seconds...')
                 time.sleep(30)
+                if self.auth_rejected:
+                    break
             print(f'> Connected to {self.url}')
 
+        if self.stopped: return None
         if self.reconnect_thread.is_alive() == False:
             self.reconnect_thread = threading.Thread(target=run, daemon=True)
             self.reconnect_thread.start()
 
     # block code until connected to the WebUI
     def connect_blocking(self):
+        if self.stopped: return None
         if self.reconnect_thread.is_alive() == False:
             self.connect()
         self.reconnect_thread.join()
 
     # force a connection check
     def reconnect(self):
+        if self.stopped: return None
         if self.reconnect_thread.is_alive() == False:
             print(f'> Connection ended to Web UI at {self.url}')
             self.online = False
             self.connect()
+
+    # stop all further connections on this web ui
+    def stop(self):
+        self.online = False
+        self.stopped = True
 
 
 # base queue object from dreams

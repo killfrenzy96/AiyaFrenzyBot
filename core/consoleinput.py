@@ -31,24 +31,34 @@ class ConsoleInput:
                 input_parts = console_input.split(' ')
                 match input_parts[0]:
                     case 'reload':
-                        print(f'Reloading settings...')
-                        print(f'> Reconnect to WebUI')
+                        print('Reloading settings...')
+
+                        # print('> Reloading config')
+                        settings.startup_check()
+
+                        # print('> Reconnect to WebUI')
                         for index, web_ui in enumerate(settings.global_var.web_ui):
                             if index == 0:
                                 web_ui.connect_blocking()
                             else:
                                 web_ui.connect()
-                        print(f'> Clearing guilds cache')
+
+                        # print('> Clearing guilds cache')
                         settings.global_var.guilds_cache = None
-                        print(f'> Clearing dream cache')
+
+                        # print('> Clearing dream cache')
                         settings.global_var.dream_cache = None
-                        print(f'> Reloading files')
+
+                        # print('> Reloading files')
                         settings.files_check()
-                        print(f'> Reloading guilds')
+
+                        # print('> Reloading guilds')
                         settings.guilds_check(self.bot)
-                        print(f'> Resetup Dream Queue')
+
+                        # print('> Resetup dream queue')
                         queuehandler.dream_queue.setup()
-                        print(f'Reload complete.')
+
+                        print('Reload complete.')
 
                     case 'guild':
                         if len(input_parts) < 2:

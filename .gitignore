@@ -5,10 +5,9 @@ venv
 
 outputs/*.png
 outputs/*.jpeg
-resources/dream-cache.txt
-resources/dream-cache-old.txt
 resources/models.csv
 resources/stats.txt
+resources/*.txt
 resources/*.json
 
 .env
