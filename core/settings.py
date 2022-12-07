@@ -275,11 +275,12 @@ def get_dream_command(message_id: int):
 
     def read_cache(file_path: str):
         try:
-            with open(file_path, 'r') as f:
-                reader = csv.reader(f, delimiter='`')
-                for row in reader:
-                    if len(row) == 2:
-                        global_var.dream_cache.update({int(row[0]): row[1]})
+            with open(file_path) as f:
+                for line in f:
+                    if line.startswith('#'):
+                        continue
+                    key, val = line.split('=', 1)
+                    global_var.dream_cache.update({int(key.strip()): val.strip()})
             print(f'- Loaded dream cache: {file_path}')
         except FileNotFoundError:
             pass
@@ -299,7 +300,7 @@ dream_cache_write_thread = threading.Thread()
 def append_dream_command(message_id: int, command: str):
     def run():
         if get_dream_command(message_id) == None:
-            dream_cache_line = str(message_id) + '`' + command + '\n'
+            dream_cache_line = str(message_id) + '=' + command.replace('\n', ' ').strip() + '\n'
 
             # archive file if it's too big (over 1MB)
             try:
