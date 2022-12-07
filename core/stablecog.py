@@ -559,8 +559,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
             # start the dream
             priority = int(settings.read(guild)['priority'])
-            if queue_cost > 0.0: priority += 1
-            if dream_cost + queue_cost > settings.read(guild)['max_compute']: priority += 1
+            if dream_cost + queue_cost > settings.read(guild)['max_compute']:
+                priority += 2
+            elif queue_cost > 0.0:
+                priority += 1
 
             if batch == 1:
                 queue_length = queuehandler.dream_queue.process_dream(get_draw_object(), priority)

@@ -127,7 +127,10 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
             priority = int(settings.read(guild)['priority'])
             if queue_cost > 0.0: priority += 1
-            if dream_cost + queue_cost > settings.read(guild)['max_compute']: priority += 1
+            if dream_cost + queue_cost > settings.read(guild)['max_compute']:
+                priority += 2
+            elif queue_cost > 0.0:
+                priority += 1
 
             # start the interrogation
             queue_length = queuehandler.dream_queue.process_dream(identify_object, priority)
