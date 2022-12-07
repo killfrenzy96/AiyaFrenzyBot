@@ -379,10 +379,7 @@ class Minigame:
         #increment number of images generated
         settings.increment_stats(self.batch)
 
-        if self.guild == 'private':
-            priority = 'lowest'
-        else:
-            priority = 'medium'
+        priority = int(settings.read(self.guild)['priority']) + 1
         return queuehandler.dream_queue.process_dream(draw_object, priority)
 
         # while game_iteration == self.game_iteration:
@@ -423,7 +420,7 @@ class Minigame:
             s = web_ui.get_session()
             if s == None:
                 # no session, return the object to the queue handler to try again
-                queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+                queuehandler.dream_queue.process_dream(queue_object, 0, False)
                 return
 
             # construct a payload for data model
@@ -563,7 +560,7 @@ class Minigame:
             # connection error, return items to queue
             time.sleep(5.0)
             web_ui.reconnect()
-            queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+            queuehandler.dream_queue.process_dream(queue_object, 0, False)
             return
 
         except Exception as e:

@@ -6,8 +6,8 @@ venv
 outputs/*.png
 outputs/*.jpeg
 resources/models.csv
-resources/stats.txt
 resources/*.txt
+resources/*.cfg
 resources/*.json
 
 .env

@@ -134,27 +134,18 @@ class DreamQueueInstance:
 class DreamQueue:
     def __init__(self):
         self.dream_instances: list[DreamQueueInstance] = []
-
         self.dream_thread = threading.Thread()
-        self.queue_high: list[utility.DreamObject] = []
-        self.queue_medium: list[utility.DreamObject] = []
-        self.queue_low: list[utility.DreamObject] = []
-        self.queue_lowest: list[utility.DreamObject] = []
 
-        self.queues: list[list[utility.DreamObject]] = [self.queue_high, self.queue_medium, self.queue_low, self.queue_lowest]
+        # a separate list of queues sorted by their priority, ranging from 0 to 9
+        self.queues: list[list[utility.DreamObject]] = [[]] * 10
 
     def setup(self):
         self.dream_instances = []
         for web_ui in settings.global_var.web_ui:
             self.dream_instances.append(DreamQueueInstance(web_ui))
 
-    def process_dream(self, queue_object: utility.DreamObject, priority: str | int = 1, extended = True):
-        if type(priority) is str:
-            match priority:
-                case 'high': priority = 0
-                case 'medium': priority = 1
-                case 'low': priority = 2
-                case 'lowest': priority = 3
+    def process_dream(self, queue_object: utility.DreamObject, priority: int = 4, extended = True):
+        priority = max(1, min(9, priority))
 
         if extended:
             valid_instances = self.get_valid_instances(queue_object)
@@ -165,12 +156,7 @@ class DreamQueue:
             # get queue length
             queue_length = self.get_queue_length(priority)
 
-            match priority:
-                case 0: priority_string = 'High'
-                case 1: priority_string = 'Medium'
-                case 2: priority_string = 'Low'
-                case 3: priority_string = 'Lowest'
-            print(f'Dream Priority: {priority_string} - Queue: {queue_length}')
+            print(f'Dream Priority: {priority} - Queue: {queue_length}')
 
         # append dream to queue
         if type(priority) is int:
@@ -281,14 +267,12 @@ class DreamQueue:
         for dream_instance in self.dream_instances:
             queue += dream_instance.queue_inprogress + dream_instance.queue
 
-        # collect queues from global dream queue
-        queue += self.queue_high + self.queue_medium + self.queue_low + self.queue_lowest
-
         # calculate dream cost of all queues the user has
-        for queue_object in queue:
-            user = utility.get_user(queue_object.ctx)
-            if user and user.id == user_id:
-                queue_cost += self.get_dream_cost(queue_object)
+        for queue in self.queues:
+            for queue_object in queue:
+                user = utility.get_user(queue_object.ctx)
+                if user and user.id == user_id:
+                    queue_cost += self.get_dream_cost(queue_object)
         return queue_cost
 
     # get estimate of the compute cost of a dream

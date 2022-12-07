@@ -20,6 +20,7 @@ template = {
     'max_count': 16,
     'clip_skip': 1,
     'data_model': 'Default',
+    'priority': 3, # lower priority gets placed in front of the queue
     'max_compute': 6.0,
     'max_compute_batch': 16.0,
     'max_compute_queue': 16.0
@@ -79,7 +80,7 @@ def read(guild_id: str):
 def update(guild_id: str, sett: str, value):
     def run():
         settings = read(guild_id)
-        settings[sett] = value
+        if sett: settings[sett] = value
         with open(path + guild_id + '.json', 'w') as configfile:
             json.dump(settings, configfile)
     if global_var.guilds_cache_thread.is_alive(): global_var.guilds_cache_thread.join()
@@ -247,11 +248,13 @@ def guilds_check(self: discord.Bot):
     # guild settings files. has to be done after on_ready
     guilds = self.guilds + [guild_private]
     for guild in guilds:
+        guild_string = str(guild.id)
         try:
-            read(str(guild.id))
+            read(guild_string)
+            update(guild_string, None, None) # update file template
             print(f'I\'m using local settings for {guild.id} a.k.a {guild}.')
         except FileNotFoundError:
-            build(str(guild.id))
+            build(guild_string)
             print(f'Creating new settings file for {guild.id} a.k.a {guild}.')
 
 

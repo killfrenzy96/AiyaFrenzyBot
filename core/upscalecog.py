@@ -207,12 +207,9 @@ class UpscaleCog(commands.Cog):
                 ephemeral = True
                 raise Exception()
 
-            if guild == 'private':
-                priority: str = 'lowest'
-            elif queue_cost == 0.0:
-                priority: str = 'high'
-            else:
-                priority: str = 'medium'
+            priority = int(settings.read(guild)['priority'])
+            if queue_cost > 0.0: priority += 1
+            if dream_cost + queue_cost > settings.read(guild)['max_compute']: priority += 1
 
             # start the upscaling
             queue_length = queuehandler.dream_queue.process_dream(upscale_object, priority)
@@ -248,7 +245,7 @@ class UpscaleCog(commands.Cog):
             s = web_ui.get_session()
             if s == None:
                 # no session, return the object to the queue handler to try again
-                queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+                queuehandler.dream_queue.process_dream(queue_object, 0, False)
                 return
 
             # safe for global queue to continue
@@ -306,7 +303,7 @@ class UpscaleCog(commands.Cog):
             # connection error, return items to queue
             time.sleep(5.0)
             web_ui.reconnect()
-            queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+            queuehandler.dream_queue.process_dream(queue_object, 0, False)
             return
 
         except Exception as e:

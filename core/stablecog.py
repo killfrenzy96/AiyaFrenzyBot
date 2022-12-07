@@ -558,24 +558,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 return queue_object
 
             # start the dream
-            if batch == 1:
-                if guild == 'private':
-                    priority: str = 'lowest'
-                elif queue_cost == 0.0: # if user does not have a dream in process, they get high priority
-                    priority: str = 'high'
-                elif dream_cost + queue_cost > setting_max_compute: # if user user has a lot in queue, they get low priority
-                    priority: str = 'low'
-                else:
-                    priority: str = 'medium'
+            priority = int(settings.read(guild)['priority'])
+            if queue_cost > 0.0: priority += 1
+            if dream_cost + queue_cost > settings.read(guild)['max_compute']: priority += 1
 
+            if batch == 1:
                 queue_length = queuehandler.dream_queue.process_dream(get_draw_object(), priority)
             else:
-                if guild == 'private':
-                    priority: str = 'lowest'
-                # batched items go into the low priority queue
-                else:
-                    priority: str = 'low'
-
                 last_draw_object = get_draw_object()
                 queue_length = queuehandler.dream_queue.process_dream(last_draw_object, priority)
 
@@ -645,7 +634,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             s = web_ui.get_session()
             if s == None:
                 # no session, return the object to the queue handler to try again
-                queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+                queuehandler.dream_queue.process_dream(queue_object, 0, False)
                 return
 
             # only send model payload if one is defined
@@ -719,7 +708,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             # connection error, return items to queue
             time.sleep(5.0)
             web_ui.reconnect()
-            queuehandler.dream_queue.process_dream(queue_object, 'high', False)
+            queuehandler.dream_queue.process_dream(queue_object, 0, False)
             return
 
         except Exception as e:
