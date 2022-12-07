@@ -34,7 +34,7 @@ To generate an image from text, use the /dream command and include your prompt a
 - negative prompts
 - swap model/checkpoint (_see [wiki](https://github.com/Kilvoctu/aiyabot/wiki/Model-swapping)_)
 - sampling steps
-- width/height (up to 1280)
+- width/height (up to 1024)
 - CFG scale
 - sampling method
 - seed
@@ -44,6 +44,7 @@ To generate an image from text, use the /dream command and include your prompt a
 - Web UI styles
 - face restoration
 - tiling
+- high-res fix
 - CLIP skip
 
 #### Bonus features

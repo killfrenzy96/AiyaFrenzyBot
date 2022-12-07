@@ -108,14 +108,14 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         int,
         description='Width of the generated image. Default: 512',
         required=False,
-        choices = [x for x in range(192, 1281, 64)]
+        choices = [x for x in range(192, 1025, 64)]
     )
     @option(
         'height',
         int,
         description='Height of the generated image. Default: 512',
         required=False,
-        choices = [x for x in range(192, 1281, 64)]
+        choices = [x for x in range(192, 1025, 64)]
     )
     @option(
         'guidance_scale',
