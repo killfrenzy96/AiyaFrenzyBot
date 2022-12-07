@@ -113,12 +113,8 @@ def startup_check():
     config_path = get_env_var('CONFIG', 'resources/config.cfg')
     if config_path: global_var.config_cache = get_config(config_path)
 
-    # cleanup current web ui array if reloading
-    for web_ui in global_var.web_ui:
-        web_ui.stop()
-
     # connect to WebUI URL access points
-    global_var.web_ui = []
+    web_ui_list = []
     index = 0
     while True:
         if index == 0:
@@ -143,8 +139,15 @@ def startup_check():
             else:
                 web_ui.connect()
 
-            global_var.web_ui.append(web_ui)
+            web_ui_list.append(web_ui)
         index += 1
+
+    # cleanup current web ui array (only needed when reloading)
+    for web_ui in global_var.web_ui:
+        web_ui.stop()
+
+    # apply new webui list
+    global_var.web_ui = web_ui_list
 
     print(f'WebUI Endpoints: {len(global_var.web_ui)}')
 
