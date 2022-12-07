@@ -198,9 +198,16 @@ class DreamQueue:
                     else:
                         # start dream on any available webui instance
                         for dream_instance in valid_instances:
-                            if dream_instance.is_ready():
+                            if dream_instance.is_ready(1):
                                 target_dream_instance = dream_instance
                                 break
+
+                        # all instances busy, buffer dream on current instances
+                        if target_dream_instance == None:
+                            for dream_instance in valid_instances:
+                                if dream_instance.is_ready(2):
+                                    target_dream_instance = dream_instance
+                                    break
 
                         if target_dream_instance == None:
                             # no instance is suitable, try next item in line
