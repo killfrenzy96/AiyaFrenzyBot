@@ -109,7 +109,7 @@ def get_config(file_path: str):
 
 def startup_check():
     # load config file if it exists
-    config_path = get_env_var('CONFIG', 'resources/config.txt')
+    config_path = get_env_var('CONFIG', 'resources/config.cfg')
     if config_path: global_var.config_cache = get_config(config_path)
 
     # cleanup current web ui array if reloading
