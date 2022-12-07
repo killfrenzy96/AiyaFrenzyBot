@@ -1,14 +1,14 @@
-# AIYA
+# AIYA Frenzy Bot
 
-A Discord bot interface for Stable Diffusion
+A Discord bot interface for Stable Diffusion. This is a fork of the AIYA Bot. you can find the original [here](https://github.com/Kilvoctu/aiyabot).
 
-<img src=https://raw.githubusercontent.com/Kilvoctu/kilvoctu.github.io/master/pics/preview.png  width=50% height=50%>
+<img src=https://user-images.githubusercontent.com/32452698/206232000-34325431-82f2-4280-9f08-f6509068e1da.png width=50% height=50%>
 
 # Modifications
 
-This is modified from AIYABOT for my Discord server. The goal of these modifications is to focus on using the bot as a tool to make refined images rather than one off generations. I have also removed many sources of delay which allows this bot to generate images significantly faster, especially if multiple people are using the bot.
+This is modified from AIYABOT for my Discord server. The goal of these modifications is to focus on using the bot as a tool to make refined images rather than one off generations. I have also removed many sources of delay which allows this bot to generate images significantly faster, especially if multiple people are using this bot.
 
-There is experimental support for multiple WebUI instances. You can try using this by adding URL, URL1, URL2, etc to your .env file. This also supports the use of USER1, PASS1, APIUSER1, APIPASS1, etc.
+There is now support for multiple WebUI instances. You can try using this by adding URL, URL1, URL2, etc to your .env file. This also supports the use of USER1, PASS1, APIUSER1, APIPASS1, etc. AIYA Frenzy Bot will use all WebUI instances to speed up batched or queued image generation.
 
 ## Setup requirements
 
@@ -27,7 +27,7 @@ TOKEN = put your bot token here
 
 To generate an image from text, use the /dream command and include your prompt as the query.
 
-<img src=https://raw.githubusercontent.com/Kilvoctu/kilvoctu.github.io/master/pics/preview2.png>
+<img src=https://user-images.githubusercontent.com/32452698/206229800-13944231-5ee2-422b-8ce0-58e48c842d8e.png>
 
 ### Currently supported options
 
