@@ -231,8 +231,7 @@ class DreamObject:
         self.wait_for_dream = wait_for_dream
         self.payload = payload
         self.uploaded = False
-        self.payload_attempts = 0
-        self.upload_attempts = 0
+        self.dream_attempts = 0
 
 # the queue object for txt2image and img2img
 class DrawObject(DreamObject):
@@ -320,6 +319,7 @@ class UploadObject:
         self.files: list[discord.File] = files
         self.view: discord.ui.View = view
         self.delete_after: float = delete_after
+        self.upload_attempts = 0
 
 def get_guild(ctx: discord.ApplicationContext | discord.Interaction | discord.Message):
     try:

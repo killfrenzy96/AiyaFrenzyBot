@@ -147,6 +147,13 @@ class DreamQueue:
     def process_dream(self, queue_object: utility.DreamObject, priority: int = 4, extended = True):
         priority = max(1, min(9, priority))
 
+        # reject dream if it has been through the dream process too many times
+        queue_object.dream_attempts += 1
+        if queue_object.dream_attempts > 3:
+            user = utility.get_user(queue_object.ctx)
+            content = f'<@{user.id}> Something went wrong.'
+            upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
+
         if extended:
             valid_instances = self.get_valid_instances(queue_object)
             if len(valid_instances) == 0:
@@ -345,6 +352,13 @@ class UploadQueue:
                     index += 1
                     continue
 
+                # reject upload if it has been through the upload process too many times
+                upload_object.upload_attempts += 1
+                if upload_object.upload_attempts > 3:
+                    upload_object.queue_object.uploaded = True
+                    self.queue.remove(upload_object)
+                    continue
+
                 # send message
                 ctx = upload_object.queue_object.ctx
                 if upload_object.ephemeral:
@@ -370,12 +384,14 @@ class UploadQueue:
                     message = await ctx.channel.send(
                         content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
 
+                # mark as uploaded
                 upload_object.queue_object.uploaded = True
 
                 # cache command
                 if type(upload_object.queue_object) is utility.DrawObject and upload_object.queue_object.write_to_cache:
                     settings.append_dream_command(message.id, upload_object.queue_object.get_command())
 
+                # remove from queue
                 self.queue.remove(upload_object)
 
             except (requests.exceptions.RequestException, asyncio.exceptions.TimeoutError) as e:
