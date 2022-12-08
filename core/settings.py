@@ -42,11 +42,14 @@ class GlobalVar:
     identify_models: list[str] = []
     messages: list[str] = []
 
+    images_generated: int
     config_cache: dict = None
     dream_cache: dict = None
-    dream_cache_thread = threading.Thread()
     guilds_cache: dict = None
-    guilds_cache_thread = threading.Thread()
+
+    dream_write_thread = threading.Thread()
+    guilds_write_thread = threading.Thread()
+    stats_write_thread = threading.Thread()
 
     slow_samplers = [
         'Heun', 'DPM2', 'DPM2 a', 'DPM++ 2S a',
@@ -55,14 +58,15 @@ class GlobalVar:
 
 global_var = GlobalVar()
 
+# read/write guild settings
 def build(guild_id: str):
     def run():
         settings = json.dumps(template)
         with open(path + guild_id + '.json', 'w') as configfile:
             configfile.write(settings)
-    if global_var.guilds_cache_thread.is_alive(): global_var.guilds_cache_thread.join()
-    global_var.guilds_cache_thread = threading.Thread(target=run)
-    global_var.guilds_cache_thread.start()
+    if global_var.guilds_write_thread.is_alive(): global_var.guilds_write_thread.join()
+    global_var.guilds_write_thread = threading.Thread(target=run)
+    global_var.guilds_write_thread.start()
 
 def read(guild_id: str):
     if global_var.guilds_cache:
@@ -84,9 +88,9 @@ def update(guild_id: str, sett: str, value):
         if sett: settings[sett] = value
         with open(path + guild_id + '.json', 'w') as configfile:
             json.dump(settings, configfile)
-    if global_var.guilds_cache_thread.is_alive(): global_var.guilds_cache_thread.join()
-    global_var.guilds_cache_thread = threading.Thread(target=run)
-    global_var.guilds_cache_thread.start()
+    if global_var.guilds_write_thread.is_alive(): global_var.guilds_write_thread.join()
+    global_var.guilds_write_thread = threading.Thread(target=run)
+    global_var.guilds_write_thread.start()
 
 def get_env_var(var: str, default: str = None):
     try:
@@ -163,6 +167,11 @@ def files_check():
         print(f'Uh oh, stats.txt missing. Creating a new one.')
         with open('resources/stats.txt', 'w') as f:
             f.write('0')
+
+    # read stats
+    with open('resources/stats.txt', 'r') as f:
+        data = list(map(int, f.readlines()))
+    global_var.images_generated = data[0]
 
     header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution']
     unset_model = ['Default', '', '', '']
@@ -301,7 +310,6 @@ def get_dream_command(message_id: int):
 
 
 # append command to dream command cache
-dream_cache_write_thread = threading.Thread()
 def append_dream_command(message_id: int, command: str):
     def run():
         if get_dream_command(message_id) == None:
@@ -332,17 +340,18 @@ def append_dream_command(message_id: int, command: str):
                 with open('resources/dream-cache.txt', 'w') as f:
                     f.write(dream_cache_line)
 
-    if global_var.dream_cache_thread.is_alive(): global_var.dream_cache_thread.join()
-    global_var.dream_cache_thread = threading.Thread(target=run)
-    global_var.dream_cache_thread.start()
+    if global_var.dream_write_thread.is_alive(): global_var.dream_write_thread.join()
+    global_var.dream_write_thread = threading.Thread(target=run)
+    global_var.dream_write_thread.start()
 
 
 # increment number of images generated
 def increment_stats(count: int = 1):
     def run():
-        with open('resources/stats.txt', 'r') as f:
-            data = list(map(int, f.readlines()))
-        data[0] = data[0] + count
+        global_var.images_generated += count
         with open('resources/stats.txt', 'w') as f:
-            f.write('\n'.join(str(x) for x in data))
-    threading.Thread(target=run).start()
+            f.write(str(global_var.images_generated))
+
+    if global_var.stats_write_thread.is_alive(): global_var.stats_write_thread.join()
+    global_var.stats_write_thread = threading.Thread(target=run)
+    global_var.stats_write_thread.start()

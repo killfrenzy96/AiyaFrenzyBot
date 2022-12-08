@@ -29,10 +29,8 @@ self.load_extension('core.minigamecog')
 #stats slash command
 @self.slash_command(name='stats', description='How many images have I generated?')
 async def stats(ctx: discord.ApplicationContext):
-    with open('resources/stats.txt', 'r') as f:
-        data = list(map(int, f.readlines()))
-    embed = discord.Embed(title='Art generated', description=f'I have created {data[0]} pictures!', color=settings.global_var.embed_color)
-    await ctx.respond(embed=embed)
+    embed = discord.Embed(title='Art generated', description=f'I have created {settings.global_var.images_generated} pictures!', color=settings.global_var.embed_color)
+    await ctx.respond(content=f'<@{ctx.user.id}>', embed=embed)
 
 @self.event
 async def on_ready():
