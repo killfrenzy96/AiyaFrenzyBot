@@ -5,7 +5,7 @@ import discord
 
 # WebUI access point
 class WebUI:
-    def __init__(self, url: str, username: str, password: str, api_user: str, api_pass: str, api_auth = False, gradio_auth = False):
+    def __init__(self, url: str, username: str = None, password: str = None, api_user: str = None, api_pass: str = None, flags: str = None):
         self.online = False
         self.stopped = False
         self.auth_rejected = False
@@ -14,11 +14,18 @@ class WebUI:
 
         self.username = username
         self.password = password
-        self.gradio_auth = gradio_auth
+        self.gradio_auth = False
 
         self.api_user = api_user
         self.api_pass = api_pass
-        self.api_auth = api_auth
+        self.api_auth = False
+
+        # flags, currently used to disable identify on certain webui endpoints
+        # valid flags: --no-dream --no-upscale --no-identify
+        if flags:
+            self.flags = flags
+        else:
+            self.flags = ''
 
         self.reconnect_thread: threading.Thread = threading.Thread()
 

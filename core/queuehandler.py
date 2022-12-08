@@ -108,13 +108,21 @@ class DreamQueueInstance:
 
         # check if models exist in this Web UI instance
         if type(queue_object) is utility.DrawObject:
+            if '--no-dream' in self.web_ui.flags:
+                return False
             if queue_object.data_model not in self.web_ui.data_models:
                 return False
 
-        if type(queue_object) is utility.UpscaleObject:
+        elif type(queue_object) is utility.UpscaleObject:
+            if '--no-upscale' in self.web_ui.flags:
+                return False
             if queue_object.upscaler_1 and queue_object.upscaler_1 not in self.web_ui.upscaler_names:
                 return False
             if queue_object.upscaler_2 and queue_object.upscaler_2 not in self.web_ui.upscaler_names:
+                return False
+
+        elif type(queue_object) is utility.IdentifyObject:
+            if '--no-identify' in self.web_ui.flags:
                 return False
 
         return True

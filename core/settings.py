@@ -135,8 +135,9 @@ def startup_check():
             password = get_env_var(f'PASS{suffix}')
             api_user = get_env_var(f'APIUSER{suffix}')
             api_pass = get_env_var(f'APIPASS{suffix}')
+            flags = get_env_var(f'FLAGS{suffix}')
 
-            web_ui = utility.WebUI(url, username, password, api_user, api_pass)
+            web_ui = utility.WebUI(url, username, password, api_user, api_pass, flags)
 
             # check if Web UI is running
             if index == 0:
