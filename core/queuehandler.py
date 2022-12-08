@@ -190,16 +190,19 @@ class DreamQueue:
         queue_index = 0
         items_skipped = 0
 
-        while priority_index < len(self.queues) or items_skipped != 0:
+        while True:
+            if priority_index >= len(self.queues):
+                if items_skipped:
+                    priority_index = 0
+                    items_skipped = 0
+                else:
+                    break
+
             queue = self.queues[priority_index]
             if queue:
                 if queue_index >= len(queue):
-                    if items_skipped == 0:
-                        break
-                    else:
-                        time.sleep(0.1)
-                        queue_index = 0
-                        items_skipped = 0
+                    time.sleep(0.1)
+                    queue_index = 0
                 queue_object = queue[queue_index]
                 try:
                     # Pick appropiate dream instance
