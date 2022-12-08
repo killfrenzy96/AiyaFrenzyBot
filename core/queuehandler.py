@@ -363,8 +363,12 @@ class UploadQueue:
                 ctx = upload_object.queue_object.ctx
                 if upload_object.ephemeral:
                     if type(ctx) is discord.ApplicationContext:
-                        message = await ctx.send_response(
-                            content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                        try:
+                            message = await ctx.send_response(
+                                content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                        except discord.InteractionResponded:
+                            message = await ctx.send_followup(
+                                content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
                     elif type(ctx) is discord.Interaction:
                         try:
                             message = await ctx.response.send_message(
