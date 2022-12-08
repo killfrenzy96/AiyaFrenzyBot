@@ -269,7 +269,7 @@ class Minigame:
                 data_model = full_name
                 token = settings.global_var.model_tokens[display_name]
 
-        if self.images_base64:
+        if self.adventure == False or self.images_base64:
             guidance_scale = round(4.0 + random.random() * 8.0, 2)
             init_url = 'dummy' # minigame only uses cached images
         else:
@@ -366,7 +366,7 @@ class Minigame:
             'n_iter': draw_object.batch
         }
 
-        if init_url and self.images_base64:
+        if self.adventure and init_url and self.images_base64:
             # update payload if image_base64 is available
             img_payload = {
                 'init_images': self.images_base64,
@@ -430,18 +430,13 @@ class Minigame:
                 }
                 s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=60)
 
-            if queue_object.init_url:
-                url = f'{web_ui.url}/sdapi/v1/img2img'
-            else:
-                url = f'{web_ui.url}/sdapi/v1/txt2img'
-
             # safe for global queue to continue
             def continue_queue():
                 time.sleep(0.1)
                 queue_continue.set()
             threading.Thread(target=continue_queue, daemon=True).start()
 
-            if queue_object.init_url:
+            if self.adventure and queue_object.init_url:
                 # workaround for batched init_images payload not working correctly on AUTOMATIC1111
                 images: list[str] = queue_object.payload['init_images']
                 payloads: list[dict] = []
@@ -461,7 +456,7 @@ class Minigame:
 
                 def img2img(thread_index, thread_payload):
                     try:
-                        responses[thread_index] = s.post(url=url, json=thread_payload, timeout=60)
+                        responses[thread_index] = s.post(url=f'{web_ui.url}/sdapi/v1/img2img', json=thread_payload, timeout=60)
                     except Exception as e:
                         responses[thread_index] = e
 
@@ -490,7 +485,7 @@ class Minigame:
                 # end of workaround
             else:
                 # do normal batched payload
-                response = s.post(url=url, json=queue_object.payload, timeout=60)
+                response = s.post(url=f'{web_ui.url}/sdapi/v1/txt2img', json=queue_object.payload, timeout=60)
                 response_data = response.json()
 
             if self.running == False:
