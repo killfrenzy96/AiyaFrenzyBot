@@ -122,8 +122,8 @@ class Minigame:
 
         try:
             # calculate total cost of queued items and reject if there is too expensive
-            dream_cost = 2.0
-            queue_cost = round(queuehandler.dream_queue.get_user_queue_cost(user.id), 2)
+            dream_cost = self.batch
+            queue_cost = round(queuehandler.dream_queue.get_user_queue_cost(user.id), self.batch)
             print(f'Estimated total compute cost -- Dream: {dream_cost} Queue: {queue_cost} Total: {dream_cost + queue_cost}')
 
             if dream_cost + queue_cost > settings.read(self.guild)['max_compute']:
