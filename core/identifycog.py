@@ -92,13 +92,13 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                 ephemeral = True
                 raise Exception()
 
-            # log the command
-            command = f'/identify init_url:{init_url} model:{model}'
-            print(command)
-
             # creates the upscale object out of local variables
             def get_identify_object():
-                queue_object = utility.IdentifyObject(self, ctx, init_url, model, command, viewhandler.DeleteView(user.id))
+                queue_object = utility.IdentifyObject(self, ctx, init_url, model, viewhandler.DeleteView(user.id))
+
+                # send message with queue object
+                queue_object.message = queue_object.get_command()
+                print(queue_object.message) # log the command
 
                 # construct a payload
                 payload = {
@@ -135,7 +135,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
             # start the interrogation
             queue_length = queuehandler.dream_queue.process_dream(identify_object, priority)
             if queue_length == None:
-                content = f'<@{user.id}> Sorry, I am currently offline.'
+                content = f'<@{user.id}> Sorry, I cannot handle this request right now.'
                 ephemeral = True
             else:
                 content = f'<@{user.id}> I\'m identifying the image! Queue: ``{queue_length}``'
@@ -224,7 +224,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                         content = content.replace('\\)', '')
                         content = content.replace('_', ' ')
 
-                        content = f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{content}``'
+                        content = f'<@{user.id}> ``{queue_object.message}``\nI think this is ``{content}``'
 
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                             content=content, view=queue_object.view
@@ -232,7 +232,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                         queue_object.view = None
 
                     except Exception as e:
-                        content = f'<@{user.id}> Something went wrong.\n{e}'
+                        content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -247,11 +247,11 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                         response_data = response.json()
                         content = response_data.get('caption')
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
-                            content=f'<@{user.id}> ``{queue_object.command}``\nI think this is ``{content}``', view=queue_object.view
+                            content=f'<@{user.id}> ``{queue_object.message}``\nI think this is ``{content}``', view=queue_object.view
                         ))
                         queue_object.view = None
                     except Exception as e:
-                        content = f'<@{user.id}> Something went wrong.\n{e}'
+                        content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
                         print(content + f'\n{traceback.print_exc()}')
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
                 threading.Thread(target=post_dream, daemon=True).start()
@@ -264,7 +264,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
             return
 
         except Exception as e:
-            content = f'<@{user.id}> Something went wrong.\n{e}'
+            content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 

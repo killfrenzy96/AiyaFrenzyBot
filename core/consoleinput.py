@@ -2,6 +2,7 @@ import asyncio
 import discord
 import traceback
 import threading
+
 from core import settings
 from core import queuehandler
 
@@ -13,7 +14,8 @@ class ConsoleInput:
         self.help_output = ('Valid commands:\n'
                            '  reload - reloads all settings.\n'
                            '  guild list - lists all guilds that Aiya is in.\n'
-                           '  guild leave (id) - leaves a guild.')
+                           '  guild leave (id) - leaves a guild.\n'
+                           '  status - show web ui online and queue status.')
 
     def run(self):
         if self.input_thread == None:
@@ -87,6 +89,24 @@ class ConsoleInput:
                                     print(f'Failed to leave Guild ID \'{guild_id}\'')
                             case other:
                                 print(self.help_output)
+
+                    case 'status':
+                        for dream_instance in queuehandler.dream_queue.dream_instances:
+                            web_ui = dream_instance.web_ui
+
+                            message = web_ui.url
+                            if web_ui.online:
+                                message += ' - ONLINE'
+                            else:
+                                message += f' - OFFLINE'
+                                if web_ui.reconnect_thread.is_alive():
+                                    message += f',RECONNECTING'
+                                else:
+                                    message += f',DISABLED'
+                            message += f' - Queue:{dream_instance.get_queue_length()}'
+                            print(message)
+
+                        print(f'Total Queue:{queuehandler.dream_queue.get_queue_length()}')
 
                     case other:
                         print(self.help_output)

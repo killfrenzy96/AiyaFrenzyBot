@@ -35,7 +35,7 @@ class WebUI:
     def check_status(self):
         if self.stopped: return False
         try:
-            response = requests.get(self.url + '/sdapi/v1/cmd-flags')
+            response = requests.get(self.url + '/sdapi/v1/cmd-flags', timeout=30)
             # lazy method to see if --api-auth commandline argument is set
             if response.status_code == 401:
                 self.api_auth = True
@@ -53,7 +53,8 @@ class WebUI:
                 self.online = False
                 return False
         except:
-            print(f'> Connection failed to Web UI at {self.url}')
+            if self.online == True:
+                print(f'> Connection failed to Web UI at {self.url}')
             self.online = False
             return False
 
@@ -64,7 +65,7 @@ class WebUI:
             if self.api_auth:
                 s.auth = (self.api_user, self.api_pass)
 
-            response_data = s.get(self.url + '/sdapi/v1/cmd-flags', timeout=60).json()
+            response_data = s.get(self.url + '/sdapi/v1/cmd-flags', timeout=30).json()
             if response_data['gradio_auth']:
                 self.gradio_auth = True
             else:
@@ -75,7 +76,7 @@ class WebUI:
                     'username': self.username,
                     'password': self.password
                 }
-                s.post(self.url + '/login', data=login_payload, timeout=60)
+                s.post(self.url + '/login', data=login_payload, timeout=30)
             else:
                 s.post(self.url + '/login', timeout=60)
         except Exception as e:
@@ -88,7 +89,7 @@ class WebUI:
         try:
             # get stable diffusion models
             # print('Retrieving stable diffusion models...')
-            response_data = s.get(self.url + '/sdapi/v1/sd-models', timeout=60).json()
+            response_data = s.get(self.url + '/sdapi/v1/sd-models', timeout=30).json()
             self.data_models = []
             for sd_model in response_data:
                 self.data_models.append(sd_model['title'])
@@ -96,7 +97,7 @@ class WebUI:
 
             # get samplers
             # print('Retrieving samplers...')
-            response_data = s.get(self.url + '/sdapi/v1/samplers', timeout=60).json()
+            response_data = s.get(self.url + '/sdapi/v1/samplers', timeout=30).json()
             for sampler in response_data:
                 self.sampler_names.append(sampler['name'])
 
@@ -107,21 +108,21 @@ class WebUI:
 
             # get styles
             # print('Retrieving styles...')
-            response_data = s.get(self.url + '/sdapi/v1/prompt-styles', timeout=60).json()
+            response_data = s.get(self.url + '/sdapi/v1/prompt-styles', timeout=30).json()
             for style in response_data:
                 self.style_names[style['name']] = style['prompt'] + '\n' + style['negative_prompt']
             # print(f'- Styles count: {len(self.style_names)}')
 
             # get face fix models
             # print('Retrieving face fix models...')
-            response_data = s.get(self.url + '/sdapi/v1/face-restorers', timeout=60).json()
+            response_data = s.get(self.url + '/sdapi/v1/face-restorers', timeout=30).json()
             for facefix_model in response_data:
                 self.facefix_models.append(facefix_model['name'])
             # print(f'- Face fix models count: {len(self.facefix_models)}')
 
             # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
             # print('Retrieving upscaler models...')
-            config = s.get(self.url + '/config/', timeout=60).json()
+            config = s.get(self.url + '/config/', timeout=30).json()
             try:
                 for item in config['components']:
                     try:
@@ -174,7 +175,8 @@ class WebUI:
             return s
 
         except Exception as e:
-            print(f'> Connection failed to Web UI at {self.url}')
+            if self.online == True:
+                print(f'> Connection failed to Web UI at {self.url}')
             self.online = False
             self.connect() # attempt to reconnect
             return None
@@ -188,8 +190,6 @@ class WebUI:
                 if self.auth_rejected:
                     print(f'> - Request rejected! I will not try to reconnect to Web UI at {self.url}')
                     break
-                else:
-                    print(f'> - Retrying in 30 seconds...')
                 time.sleep(30)
                 if self.auth_rejected:
                     break
@@ -286,7 +286,7 @@ class DrawObject(DreamObject):
 
 # the queue object for extras - upscale
 class UpscaleObject(DreamObject):
-    def __init__(self, cog, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, command,
+    def __init__(self, cog, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength,
                  gfpgan, codeformer, upscale_first,
                  view = None, message = None, write_to_cache = False, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
@@ -295,19 +295,33 @@ class UpscaleObject(DreamObject):
         self.upscaler_1: str = upscaler_1
         self.upscaler_2: str = upscaler_2
         self.upscaler_2_strength: float = upscaler_2_strength
-        self.command: str = command
         self.gfpgan: float = gfpgan
         self.codeformer: float = codeformer
         self.upscale_first: bool = upscale_first
 
+    def get_command(self):
+        command = f'/upscale init_url:{self.init_url} resize:{self.resize} upscaler_1:{self.upscaler_1}'
+        if self.upscaler_2 != None:
+            command += f' upscaler_2:{self.upscaler_2} upscaler_2_strength:{self.upscaler_2_strength}'
+        if self.gfpgan:
+            command += f' gfpgan:{self.gfpgan}'
+        if self.codeformer:
+            command += f' codeformer:{self.codeformer}'
+        if self.upscale_first:
+            command += f' upscale_first:{self.upscale_first}'
+        return command
+
 # the queue object for identify (interrogate)
 class IdentifyObject(DreamObject):
-    def __init__(self, cog, ctx, init_url, model, command,
+    def __init__(self, cog, ctx, init_url, model,
                  view = None, message = None, write_to_cache = False, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.init_url: str = init_url
         self.model: str = model
-        self.command: str = command
+
+    def get_command(self):
+        command = f'/identify init_url:{self.init_url} model:{self.model}'
+        return command
 
 # the queue object for discord uploads
 class UploadObject:

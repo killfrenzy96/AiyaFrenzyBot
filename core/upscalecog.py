@@ -168,15 +168,13 @@ class UpscaleCog(commands.Cog):
                 append_options = append_options + '\nUpscaler 2: ``' + str(upscaler_2) + '``'
                 append_options = append_options + ' - Strength: ``' + str(upscaler_2_strength) + '``'
 
-            #log the command
-            command = f'/upscale init_url:{init_url} resize:{resize} upscaler_1:{upscaler_1}'
-            if upscaler_2 != None:
-                command = command + f' upscaler_2:{upscaler_2} upscaler_2_strength:{upscaler_2_strength}'
-            print(command)
-
             #creates the upscale object out of local variables
             def get_upscale_object():
-                queue_object = utility.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, command, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
+                queue_object = utility.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
+
+                # send message with queue object
+                queue_object.message = queue_object.get_command()
+                print(queue_object.message) # log the command
 
                 #construct a payload
                 payload = {
@@ -216,7 +214,7 @@ class UpscaleCog(commands.Cog):
             # start the upscaling
             queue_length = queuehandler.dream_queue.process_dream(upscale_object, priority)
             if queue_length == None:
-                content = f'<@{user.id}> Sorry, I am currently offline.'
+                content = f'<@{user.id}> Sorry, I cannot handle this request right now.'
                 ephemeral = True
             else:
                 content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
@@ -290,12 +288,12 @@ class UpscaleCog(commands.Cog):
                         buffer.seek(0)
 
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
-                            content=f'<@{user.id}> ``{queue_object.command}``', files=[discord.File(fp=buffer, filename=file_path)], view=queue_object.view
+                            content=f'<@{user.id}> ``{queue_object.message}``', files=[discord.File(fp=buffer, filename=file_path)], view=queue_object.view
                         ))
                         queue_object.view = None
 
                 except Exception as e:
-                    content = f'<@{user.id}> Something went wrong.\n{e}'
+                    content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -309,7 +307,7 @@ class UpscaleCog(commands.Cog):
             return
 
         except Exception as e:
-            content = f'<@{user.id}> Something went wrong.\n{e}'
+            content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 

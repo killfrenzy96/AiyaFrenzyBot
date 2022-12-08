@@ -199,7 +199,7 @@ class DreamQueue:
                         queue.pop(queue_index)
                         queue_index = 0
                         user = utility.get_user(queue_object.ctx)
-                        content = f'<@{user.id}> Sorry, I am currently offline.'
+                        content = f'<@{user.id}> ``{queue_object.message}``\nSorry, I cannot handle this request right now.'
                         upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, ephemeral=True, delete_after=30))
 
                     else:
@@ -258,9 +258,14 @@ class DreamQueue:
                 valid_instances.append(dream_instance)
         return valid_instances
 
-    def get_queue_length(self, priority: int):
+    def get_queue_length(self, priority: int = None):
         queue_index = 0
         queue_length = 0
+
+        if priority == None:
+            priority = len(self.queues[queue_index]) - 1
+        else:
+            priority = max(1, min(9, priority))
 
         # get length of global dream queue
         while queue_index <= priority:
@@ -366,14 +371,16 @@ class UploadQueue:
                         try:
                             message = await ctx.send_response(
                                 content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
-                        except discord.InteractionResponded:
+                        except (discord.InteractionResponded, RuntimeError):
+                            view = upload_object.view
+                            if view == None: view = discord.MISSING
                             message = await ctx.send_followup(
-                                content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                                content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=view, delete_after=upload_object.delete_after)
                     elif type(ctx) is discord.Interaction:
                         try:
                             message = await ctx.response.send_message(
                                 content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
-                        except discord.InteractionResponded:
+                        except (discord.InteractionResponded, RuntimeError):
                             view = upload_object.view
                             if view == None: view = discord.MISSING
                             message = await ctx.followup.send(

@@ -604,7 +604,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         queuehandler.dream_queue.process_dream(draw_object, priority, False)
 
             if queue_length == None:
-                content = f'<@{user.id}> Sorry, I am currently offline.'
+                content = f'<@{user.id}> Sorry, I cannot handle this request right now.'
                 ephemeral = True
             else:
                 content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
@@ -705,7 +705,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         queue_object.view = None
 
                 except Exception as e:
-                    content = f'<@{user.id}> Something went wrong.\n{e}'
+                    content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -719,7 +719,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             return
 
         except Exception as e:
-            content = f'<@{user.id}> Something went wrong.\n{e}'
+            content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 

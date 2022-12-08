@@ -213,7 +213,7 @@ class Minigame:
             queue_length = await self.get_image_variation(ctx, prompt)
             if queue_length == None:
                 self.view = self.view_last
-                content = f'<@{user.id}> Sorry, I am currently offline.'
+                content = f'<@{user.id}> Sorry, I cannot handle this request right now.'
                 ephemeral = True
             else:
                 content += f' Queue: ``{queue_length}``'
@@ -545,7 +545,7 @@ class Minigame:
 
                 except Exception as e:
                     self.view = self.view_last # allow user to use previous view
-                    content = f'<@{user.id}> Something went wrong.\n{e}'
+                    content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
                     print(content + f'\n{traceback.print_exc()}')
                     queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
@@ -560,7 +560,7 @@ class Minigame:
 
         except Exception as e:
             self.view = self.view_last # allow user to use previous view
-            content = f'<@{user.id}> Something went wrong.\n{e}'
+            content = f'<@{user.id}> ``{queue_object.message}``\nSomething went wrong.\n{e}'
             print(content + f'\n{traceback.print_exc()}')
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
