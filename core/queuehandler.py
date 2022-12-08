@@ -190,7 +190,7 @@ class DreamQueue:
         queue_index = 0
         items_skipped = 0
 
-        while priority_index < len(self.queues):
+        while priority_index < len(self.queues) or items_skipped != 0:
             queue = self.queues[priority_index]
             if queue:
                 if queue_index >= len(queue):
