@@ -35,6 +35,7 @@ class GlobalVar:
     sampler_names: list[str] = []
     model_names = {}
     model_tokens = {}
+    model_resolutions = {}
     style_names = {}
     facefix_models: list[str] = []
     upscaler_names: list[str] = []
@@ -163,8 +164,8 @@ def files_check():
         with open('resources/stats.txt', 'w') as f:
             f.write('0')
 
-    header = ['display_name', 'model_full_name', 'activator_token']
-    unset_model = ['Default', '', '']
+    header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution']
+    unset_model = ['Default', '', '', '']
     make_model_file = True
     replace_model_file = False
 
@@ -176,7 +177,7 @@ def files_check():
             for i, row in enumerate(reader):
                 # if header is missing columns, reformat the file
                 if i == 0:
-                    if len(row)<3:
+                    if len(row)<4:
                         with open('resources/models.csv', 'r') as fp:
                             reader = csv.DictReader(fp, fieldnames=header, delimiter = '|')
                             with open('resources/models2.csv', 'w', newline='') as fh:
@@ -185,7 +186,6 @@ def files_check():
                                 header = next(reader)
                                 writer.writerows(reader)
                                 replace_model_file = True
-                        break # no need to run this multiple times
                 # if first row has data, do nothing
                 if i == 1:
                     make_model_file = False
@@ -207,6 +207,11 @@ def files_check():
         for row in model_data[1:]:
             global_var.model_names[row[0]] = row[1]
             global_var.model_tokens[row[0]] = row[2]
+            try:
+                resolution = int(int(row[3]) / 64) * 64
+                global_var.model_resolutions[row[0]] = resolution
+            except:
+                global_var.model_resolutions[row[0]] = 512
 
     print(f'- Checkpoint models count: {len(global_var.model_names)}')
 

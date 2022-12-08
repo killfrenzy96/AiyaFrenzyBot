@@ -208,7 +208,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             prompt: str, negative: str = None,
                             checkpoint: Optional[str] = None,
                             steps: Optional[int] = -1,
-                            width: Optional[int] = 512, height: Optional[int] = 512,
+                            width: Optional[int] = None,
+                            height: Optional[int] = None,
                             guidance_scale: Optional[float] = 7.0,
                             sampler: Optional[str] = None,
                             seed: Optional[int] = -1,
@@ -297,6 +298,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     checkpoint = display_name
                     data_model = full_name
                     token = settings.global_var.model_tokens[display_name]
+                    if width == None:
+                        width = settings.global_var.model_resolutions[display_name]
+                    if height == None:
+                        height = settings.global_var.model_resolutions[display_name]
 
             if seed == -1: seed = random.randint(0, 0xFFFFFFFF)
 
