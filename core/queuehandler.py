@@ -188,13 +188,18 @@ class DreamQueue:
     def process_queue(self):
         priority_index = 0
         queue_index = 0
+        items_skipped = 0
 
-        while priority_index < len(self.queues) or queue_index != 0:
+        while priority_index < len(self.queues):
             queue = self.queues[priority_index]
             if queue:
                 if queue_index >= len(queue):
-                    time.sleep(0.1)
-                    queue_index = 0
+                    if items_skipped == 0:
+                        break
+                    else:
+                        time.sleep(0.1)
+                        queue_index = 0
+                        items_skipped = 0
                 queue_object = queue[queue_index]
                 try:
                     # Pick appropiate dream instance
@@ -227,6 +232,7 @@ class DreamQueue:
                         if target_dream_instance == None:
                             # no instance is suitable, try next item in line
                             queue_index += 1
+                            items_skipped += 1
                         else:
                             # start the dream in the instance
                             queue.pop(queue_index)
