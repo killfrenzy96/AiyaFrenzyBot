@@ -364,13 +364,21 @@ class UploadQueue:
             if index >= len(self.queue):
                 await asyncio.sleep(0.1)
                 index = 0
-                # print('reset index')
-            upload_object = self.queue[index]
+
+            if self.queue:
+                upload_object = self.queue[index]
+            else:
+                break
 
             try:
                 dream_wait: utility.DreamObject = upload_object.queue_object.wait_for_dream
                 if dream_wait and dream_wait.uploaded == False:
                     # skip this object for now
+                    index += 1
+                    continue
+
+                if upload_object.is_uploading:
+                    # skip object if it is already uploading
                     index += 1
                     continue
 
@@ -381,46 +389,8 @@ class UploadQueue:
                     self.queue.remove(upload_object)
                     continue
 
-                # send message
-                ctx = upload_object.queue_object.ctx
-                if upload_object.ephemeral:
-                    if type(ctx) is discord.ApplicationContext:
-                        try:
-                            message = await ctx.send_response(
-                                content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
-                        except (discord.InteractionResponded, RuntimeError):
-                            view = upload_object.view
-                            if view == None: view = discord.MISSING
-                            message = await ctx.send_followup(
-                                content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=view, delete_after=upload_object.delete_after)
-                    elif type(ctx) is discord.Interaction:
-                        try:
-                            message = await ctx.response.send_message(
-                                content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
-                        except (discord.InteractionResponded, RuntimeError):
-                            view = upload_object.view
-                            if view == None: view = discord.MISSING
-                            message = await ctx.followup.send(
-                                content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=view, delete_after=upload_object.delete_after)
-                    elif type(ctx) is discord.Message:
-                        message = await ctx.reply(
-                            content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
-                    else:
-                        message = await ctx.channel.send(
-                            content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
-                else:
-                    message = await ctx.channel.send(
-                        content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
-
-                # mark as uploaded
-                upload_object.queue_object.uploaded = True
-
-                # cache command
-                if type(upload_object.queue_object) is utility.DrawObject and upload_object.queue_object.write_to_cache:
-                    settings.append_dream_command(message.id, upload_object.queue_object.get_command())
-
-                # remove from queue
-                self.queue.remove(upload_object)
+                upload_object.is_uploading = True
+                asyncio.run_coroutine_threadsafe(self.send_message(upload_object), self.event_loop)
 
             except (requests.exceptions.RequestException, asyncio.exceptions.TimeoutError) as e:
                 # connection error, return items to queue
@@ -436,8 +406,65 @@ class UploadQueue:
                     pass
 
             index = 0
-
         self.is_uploading = False
+
+    # send message
+    async def send_message(self, upload_object: utility.UploadObject):
+        try:
+            ctx = upload_object.queue_object.ctx
+            if upload_object.ephemeral:
+                if type(ctx) is discord.ApplicationContext:
+                    try:
+                        message = await ctx.send_response(
+                            content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                    except (discord.InteractionResponded, RuntimeError):
+                        view = upload_object.view
+                        if view == None: view = discord.MISSING
+                        message = await ctx.send_followup(
+                            content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=view, delete_after=upload_object.delete_after)
+                elif type(ctx) is discord.Interaction:
+                    try:
+                        message = await ctx.response.send_message(
+                            content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                    except (discord.InteractionResponded, RuntimeError):
+                        view = upload_object.view
+                        if view == None: view = discord.MISSING
+                        message = await ctx.followup.send(
+                            content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=view, delete_after=upload_object.delete_after)
+                elif type(ctx) is discord.Message:
+                    message = await ctx.reply(
+                        content=upload_object.content, embed=upload_object.embed, ephemeral=upload_object.ephemeral, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+                else:
+                    message = await ctx.channel.send(
+                        content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+            else:
+                message = await ctx.channel.send(
+                    content=upload_object.content, embed=upload_object.embed, files=upload_object.files, view=upload_object.view, delete_after=upload_object.delete_after)
+
+            # mark as uploaded
+            upload_object.queue_object.uploaded = True
+
+            # cache command
+            if type(upload_object.queue_object) is utility.DrawObject and upload_object.queue_object.write_to_cache:
+                settings.append_dream_command(message.id, upload_object.queue_object.get_command())
+
+            # remove from queue
+            self.queue.remove(upload_object)
+
+        except (requests.exceptions.RequestException, asyncio.exceptions.TimeoutError) as e:
+            # connection error, return items to queue
+            print(f'Upload connection error, retrying:\n{e}\n{traceback.print_exc()}')
+            await asyncio.sleep(5.0)
+
+        except Exception as e:
+            print(f'Upload failure:\n{e}\n{traceback.print_exc()}')
+            upload_object.queue_object.uploaded = True
+            try:
+                self.queue.remove(upload_object)
+            except:
+                pass
+
+        upload_object.is_uploading = False
 
 dream_queue = DreamQueue()
 upload_queue = UploadQueue()

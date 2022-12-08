@@ -340,6 +340,7 @@ class UploadObject:
         self.files: list[discord.File] = files
         self.view: discord.ui.View = view
         self.delete_after: float = delete_after
+        self.is_uploading = False
         self.upload_attempts = 0
 
 def get_guild(ctx: discord.ApplicationContext | discord.Interaction | discord.Message):
