@@ -145,7 +145,9 @@ class DreamQueue:
         self.dream_thread = threading.Thread()
 
         # a separate list of queues sorted by their priority, ranging from 0 to 9
-        self.queues: list[list[utility.DreamObject]] = [[]] * 10
+        self.queues: list[list[utility.DreamObject]] = []
+        for i in range(10):
+            self.queues.append([])
 
     def setup(self):
         self.dream_instances = []
@@ -153,7 +155,7 @@ class DreamQueue:
             self.dream_instances.append(DreamQueueInstance(web_ui))
 
     def process_dream(self, queue_object: utility.DreamObject, priority: int = 4, extended = True):
-        priority = max(1, min(9, priority))
+        priority = max(0, min(len(self.queues) - 1, priority))
 
         # reject dream if it has been through the dream process too many times
         queue_object.dream_attempts += 1
@@ -280,9 +282,9 @@ class DreamQueue:
         queue_length = 0
 
         if priority == None:
-            priority = len(self.queues[queue_index]) - 1
+            priority = len(self.queues) - 1
         else:
-            priority = max(1, min(9, priority))
+            priority = max(0, min(len(self.queues) - 1, priority))
 
         # get length of global dream queue
         while queue_index <= priority:
@@ -297,18 +299,22 @@ class DreamQueue:
 
     def get_user_queue_cost(self, user_id: int):
         queue_cost = 0.0
-        queue: list[utility.DreamObject] = []
 
-        # collect queues from dream instances
-        for dream_instance in self.dream_instances:
-            queue += dream_instance.queue_inprogress + dream_instance.queue
-
-        # calculate dream cost of all queues the user has
-        for queue in self.queues:
+        # collect queues of global dream queue
+        for index, queue in enumerate(self.queues):
             for queue_object in queue:
                 user = utility.get_user(queue_object.ctx)
-                if user and user.id == user_id:
+                if user and user.id == user_id and queue_object.payload:
                     queue_cost += self.get_dream_cost(queue_object)
+
+        # collect queues of all dream isntances
+        for dream_instance in self.dream_instances:
+            queue = dream_instance.queue + dream_instance.queue_inprogress
+            for queue_object in queue:
+                user = utility.get_user(queue_object.ctx)
+                if user and user.id == user_id and queue_object.payload:
+                    queue_cost += self.get_dream_cost(queue_object)
+
         return queue_cost
 
     # get estimate of the compute cost of a dream
