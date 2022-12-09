@@ -275,7 +275,7 @@ class UpscaleCog(commands.Cog):
                         except Exception as e:
                             print(f'Unable to save image: {file_path}\n{traceback.print_exc()}')
                     else:
-                        print(f'Received image: {int(time.time())}-{queue_object.seed}-{file_name[0:120]}-{i}.png')
+                        print(f'Received image: {int(time.time())}-x{queue_object.resize}-{self.file_name[0:120]}.png')
 
                     # post to discord
                     with io.BytesIO() as buffer:
