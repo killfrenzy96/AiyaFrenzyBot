@@ -235,10 +235,11 @@ def files_check():
     print(f'- Messages count: {len(global_var.messages)}')
 
     # if directory in DIR doesn't exist, create it
-    dir_exists = os.path.exists(global_var.dir)
-    if dir_exists is False:
-        print(f'The folder for DIR doesn\'t exist! Creating folder at {global_var.dir}.')
-        os.mkdir(global_var.dir)
+    if global_var.dir != '--no-output':
+        dir_exists = os.path.exists(global_var.dir)
+        if dir_exists is False:
+            print(f'The folder for DIR doesn\'t exist! Creating folder at {global_var.dir}.')
+            os.mkdir(global_var.dir)
 
     # use main webui instance data for global config
     web_ui = global_var.web_ui[0]
