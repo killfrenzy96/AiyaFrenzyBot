@@ -139,6 +139,13 @@ class WebUI:
                                 self.upscaler_names = item['props']['choices']
                     except:
                         pass
+
+                # workaround for upscalers getting duplicated sometimes
+                upscalers: list[str] = []
+                for upscaler in self.upscaler_names:
+                    if upscaler not in upscalers:
+                        upscalers.append(upscaler)
+                self.upscaler_names = upscalers
             except:
                 print('Warning: Could not read config. Upscalers will be missing.')
 
