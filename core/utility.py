@@ -8,7 +8,7 @@ class WebUI:
     def __init__(self, url: str, username: str = None, password: str = None, api_user: str = None, api_pass: str = None, flags: str = None):
         self.online = False
         self.stopped = False
-        self.auth_rejected = False
+        self.auth_rejected = 0
         self.online_last = None
         self.url = url
 
@@ -44,19 +44,20 @@ class WebUI:
         try:
             response = requests.get(self.url + '/sdapi/v1/cmd-flags', timeout=30)
             # lazy method to see if --api-auth commandline argument is set
+            self.api_auth = False
             if response.status_code == 401:
                 self.api_auth = True
                 # lazy method to see if --api-auth credentials are set
                 if (not self.api_pass) or (not self.api_user):
                     print(f'> Web UI API at {self.url} rejected me! If using --api-auth, '
                           'please check your .env file for APIUSER and APIPASS values.')
-                    self.auth_rejected = True
+                    self.auth_rejected += 1
                     self.online = False
                     return False
             # lazy method to see if --api commandline argument is not set
             elif response.status_code == 404:
                 print(f'> Web UI API at {self.url} is unreachable! Please check Web UI COMMANDLINE_ARGS for --api.')
-                self.auth_rejected = True
+                self.auth_rejected += 1
                 self.online = False
                 return False
         except:
@@ -151,7 +152,7 @@ class WebUI:
 
         if self.stopped: return False
         self.online_last = time.time()
-        self.auth_rejected = False
+        self.auth_rejected = 0
         self.online = True
         return True
 
@@ -177,7 +178,7 @@ class WebUI:
             elif time.time() > self.online_last + 30:
                 s.get(self.url + '/sdapi/v1/cmd-flags', timeout=5)
             self.online_last = time.time()
-            self.auth_rejected = False
+            self.auth_rejected = 0
             self.online = True
             return s
 
@@ -194,11 +195,11 @@ class WebUI:
             print(f'> Connecting to WebUI at {self.url}')
             while self.check_status() == False:
                 if self.stopped: return None
-                if self.auth_rejected:
-                    print(f'> - Request rejected! I will not try to reconnect to Web UI at {self.url}')
+                if self.auth_rejected >= 3:
+                    print(f'> - Request rejected too many times! I will not try to reconnect to Web UI at {self.url}')
                     break
                 time.sleep(30)
-                if self.auth_rejected:
+                if self.auth_rejected >= 3:
                     break
             print(f'> Connected to {self.url}')
 
