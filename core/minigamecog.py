@@ -507,18 +507,20 @@ class Minigame:
                         image_base64 = 'data:image/png;base64,' + image_base64
                         self.images_base64.append(image_base64)
 
-                        # grab png info
-                        png_payload = {
-                            'image': image_base64
-                        }
-                        png_response = s.post(url=f'{web_ui.url}/sdapi/v1/png-info', json=png_payload, timeout=60)
+                        # save png with metadata
+                        if settings.global_var.dir != '--no-output':
+                            try:
+                                epoch_time = int(time.time())
+                                file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
 
-                        metadata = PngImagePlugin.PngInfo()
-                        epoch_time = int(time.time())
-                        metadata.add_text('parameters', png_response.json().get('info'))
-                        file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.png'
-                        image.save(file_path, pnginfo=metadata)
-                        print(f'Saved image: {file_path}')
+                                metadata = PngImagePlugin.PngInfo()
+                                metadata.add_text('parameters', response_data['info'])
+                                image.save(file_path, pnginfo=metadata)
+                                print(f'Saved image: {file_path}')
+                            except Exception as e:
+                                print(f'Unable to save image: {file_path}\n{traceback.print_exc()}')
+                        else:
+                            print(f'Received image: {int(time.time())}-{queue_object.seed}-{file_name[0:120]}-{i}.png')
 
                     # post to discord
                     with contextlib.ExitStack() as stack:

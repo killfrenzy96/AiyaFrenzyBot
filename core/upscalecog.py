@@ -261,15 +261,21 @@ class UpscaleCog(commands.Cog):
                 try:
                     response_data = response.json()
 
-                    #create safe/sanitized filename
-                    epoch_time = int(time.time())
-                    file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
-
                     # save local copy of image
-                    image_data = response_data['image']
-                    with open(file_path, 'wb') as fh:
-                        fh.write(base64.b64decode(image_data))
-                    print(f'Saved image: {file_path}')
+                    if settings.global_var.dir != '--no-output':
+                        try:
+                            #create safe/sanitized filename
+                            epoch_time = int(time.time())
+                            file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
+
+                            image_data = response_data['image']
+                            with open(file_path, 'wb') as fh:
+                                fh.write(base64.b64decode(image_data))
+                            print(f'Saved image: {file_path}')
+                        except Exception as e:
+                            print(f'Unable to save image: {file_path}\n{traceback.print_exc()}')
+                    else:
+                        print(f'Received image: {int(time.time())}-{queue_object.seed}-{file_name[0:120]}-{i}.png')
 
                     # post to discord
                     with io.BytesIO() as buffer:
