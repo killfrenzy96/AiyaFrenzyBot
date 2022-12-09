@@ -175,23 +175,15 @@ class Minigame:
                     images = response.json()['images']
 
                     # use random result
-                    result_found = False
-                    searches: int = 5
-                    while searches > 0:
-                        image = images[random.randrange(0, len(images))]
+                    # find valid results containing the prompt
+                    valid_results: list[str] = []
+                    for image in images:
                         if self.prompt in image['prompt']:
-                            self.prompt_adventure = f'({self.prompt}), ' + self.sanatize(image['prompt'])
-                            result_found = True
-                            break
-                        searches -= 1
+                            valid_results.append(image['prompt'])
 
-                    # find any result if random search fails
-                    if result_found == False:
-                        for image in images:
-                            if self.prompt in image['prompt']:
-                                self.prompt_adventure = f'({self.prompt}), ' + self.sanatize(image['prompt'])
-                                result_found = True
-                                break
+                    # pick a random result out of the valid results
+                    if valid_results:
+                        self.prompt_adventure = f'({self.prompt}), ' + self.sanatize(valid_results[random.randrange(0, len(valid_results))])
                 except Exception as e:
                     print(f'Dream rejected: Random prompt query failed.\n{e}\n{traceback.print_exc()}')
                     content = f'<@{user.id}> Random prompt query failed.'
