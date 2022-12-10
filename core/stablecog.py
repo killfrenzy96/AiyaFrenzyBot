@@ -99,7 +99,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @option(
         'steps',
         int,
-        description='The amount of steps to sample the model.',
+        description='The amount of steps to sample the model. Default: 20',
         min_value=1,
         required=False,
     )
@@ -141,7 +141,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @option(
         'strength',
         float,
-        description='The amount in which init_image will be altered (0.0 to 1.0).',
+        description='The amount in which init_image will be altered (0.0 to 1.0). Default: 0.75',
         min_value=0,
         max_value=1,
     )
@@ -194,7 +194,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @option(
         'clip_skip',
         int,
-        description='Number of last layers of CLIP model to skip',
+        description='Number of last layers of CLIP model to skip.',
         required=False,
         choices=[x for x in range(1, 13, 1)]
     )
@@ -208,13 +208,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, *,
                             prompt: str, negative: str = None,
                             checkpoint: Optional[str] = None,
-                            steps: Optional[int] = -1,
+                            steps: Optional[int] = None,
                             width: Optional[int] = None,
                             height: Optional[int] = None,
-                            guidance_scale: Optional[float] = 7.0,
+                            guidance_scale: Optional[float] = None,
                             sampler: Optional[str] = None,
-                            seed: Optional[int] = -1,
-                            strength: Optional[float] = 0.75,
+                            seed: Optional[int] = None,
+                            strength: Optional[float] = None,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str] = None,
                             batch: Optional[int] = None,
@@ -222,7 +222,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             facefix: Optional[str] = None,
                             tiling: Optional[bool] = False,
                             highres_fix: Optional[bool] = False,
-                            clip_skip: Optional[int] = 0,
+                            clip_skip: Optional[int] = None,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
         guild = utility.get_guild(ctx)
@@ -282,18 +282,22 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 checkpoint = settings.read(guild)['data_model']
             if negative == None:
                 negative = settings.read(guild)['negative_prompt']
-            if steps == -1:
+            if steps == None:
                 steps = settings.read(guild)['default_steps']
+            if guidance_scale == None:
+                guidance_scale = settings.read(guild)['default_guidance_scale']
+            if strength == None:
+                strength = settings.read(guild)['default_strength']
             if batch is None:
                 batch = settings.read(guild)['default_count']
             if sampler == None:
                 sampler = settings.read(guild)['sampler']
-            if clip_skip == 0:
+            if clip_skip == None:
                 clip_skip = settings.read(guild)['clip_skip']
 
             # get data model and token from checkpoint
-            data_model: str = ''
-            token: str = ''
+            data_model: str = None
+            token: str = None
             for (display_name, full_name) in settings.global_var.model_names.items():
                 if display_name == checkpoint or full_name == checkpoint:
                     checkpoint = display_name
@@ -304,7 +308,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     if height == None:
                         height = settings.global_var.model_resolutions[display_name]
 
-            if seed == -1: seed = random.randint(0, 0xFFFFFFFF)
+            if data_model == '':
+                print(f'Dream rejected: No checkpoint found.\n{e}\n{traceback.print_exc()}')
+                content = f'<@{user.id}> Invalid checkpoint. I\'m not sure how this happened.'
+                ephemeral = True
+                raise Exception()
+
+            if seed == None: seed = random.randint(0, 0xFFFFFFFF)
 
             # get arguments that can be passed into the draw object
             def get_draw_object_args():
@@ -756,7 +766,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
         queue_object.ctx = ctx
         if randomize_seed:
-            queue_object.seed = -1
+            queue_object.seed = None
 
         loop = asyncio.get_event_loop()
         loop.create_task(self.dream_object(queue_object))
@@ -815,7 +825,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             steps = int(get_param('steps'))
             steps = max(1, steps)
         except:
-            steps = -1
+            steps = None
 
         try:
             sampler = get_param('sampler')
@@ -826,7 +836,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         try:
             seed = int(get_param('seed'))
         except:
-            seed = -1
+            seed = None
 
         try:
             strength = float(get_param('strength'))
@@ -873,9 +883,9 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
         try:
             clip_skip = int(get_param('clip_skip'))
-            clip_skip = max(0, min(12, clip_skip))
+            clip_skip = max(1, min(12, clip_skip))
         except:
-            clip_skip = 0
+            clip_skip = None
 
         script = get_param('script')
         if script not in self.scripts: script = None

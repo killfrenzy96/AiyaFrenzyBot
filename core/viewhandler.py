@@ -96,7 +96,7 @@ class DrawModal(Modal):
             try:
                 draw_object.seed = int(self.children[2].value)
             except:
-                draw_object.seed = -1
+                draw_object.seed = None
 
             try:
                 if self.children[3].value.lower().startswith('c'):
@@ -258,7 +258,7 @@ class DrawView(View):
 
             # setup draw object to send to the stablecog
             draw_object = copy.copy(input_object)
-            draw_object.seed = -1
+            draw_object.seed = None
             draw_object.ctx = interaction
             draw_object.view = None
             draw_object.payload = None
@@ -305,7 +305,7 @@ class DrawView(View):
 
             # setup draw object to send to the stablecog
             draw_object = copy.copy(input_object)
-            draw_object.seed = -1
+            draw_object.seed = None
             draw_object.ctx = interaction
             draw_object.view = None
             draw_object.payload = None

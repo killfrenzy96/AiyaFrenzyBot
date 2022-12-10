@@ -13,6 +13,8 @@ path = 'resources/'.format(dir_path)
 
 template = {
     'default_steps': 20,
+    'default_guidance_scale': 7.0,
+    'default_strength': 0.75,
     'sampler': 'DPM++ 2M Karras',
     'negative_prompt': '',
     'max_steps': 100,
