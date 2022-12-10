@@ -122,6 +122,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         float,
         description='Classifier-Free Guidance scale. Default: 7.0',
         min_value=1,
+        max_value=30,
         required=False,
     )
     @option(
