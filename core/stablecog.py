@@ -549,7 +549,9 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     })
 
                 # add any options that would go into the override_settings
-                override_settings = {}
+                override_settings = {
+                    'sd_model_checkpoint': queue_object.data_model
+                }
 
                 # update payload if clip skip is used
                 if queue_object.clip_skip != 1:
@@ -563,11 +565,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     override_settings['face_restoration_model'] = queue_object.facefix
 
                 # update payload with override_settings
-                if len(override_settings) > 0:
-                    override_payload = {
-                        'override_settings': override_settings
-                    }
-                    payload.update(override_payload)
+                override_payload = {
+                    'override_settings': override_settings
+                }
+                payload.update(override_payload)
 
                 # attach payload to queue object
                 queue_object.payload = payload

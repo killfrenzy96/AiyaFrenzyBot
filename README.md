@@ -13,7 +13,7 @@ There is now support for multiple WebUI instances. You can try using this by add
 ## Setup requirements
 
 - Set up [AUTOMATIC1111's Stable Diffusion AI Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
-  - AIYA is currently tested on commit `44c46f0ed395967cd3830dd481a2db759fda5b3b` of the Web UI.
+  - AIYA is currently tested on commit `685f9631b56ff8bd43bce24ff5ce0f9a0e9af490` of the Web UI.
 - Run the Web UI as local host with api (`COMMANDLINE_ARGS= --listen --api`).
 - Clone this repo.
 - Create a text file in your cloned repo called ".env", formatted like so:

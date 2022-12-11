@@ -355,7 +355,10 @@ class Minigame:
             'seed_resize_from_w': 0,
             'denoising_strength': draw_object.strength,
             'tiling': draw_object.tiling,
-            'n_iter': draw_object.batch
+            'n_iter': draw_object.batch,
+            'override_settings': {
+                'sd_model_checkpoint': draw_object.data_model
+            }
         }
 
         if self.adventure and init_url and self.images_base64:
