@@ -5,12 +5,15 @@ import discord
 
 # WebUI access point
 class WebUI:
-    def __init__(self, url: str, username: str = None, password: str = None, api_user: str = None, api_pass: str = None, flags: str = None):
+    valid_flags = [
+        '--no-dream', '--no-upscale', '--no-identify', '--wait-for'
+    ]
+
+    def __init__(self, url: str, username: str = None, password: str = None, api_user: str = None, api_pass: str = None):
         self.online = False
         self.stopped = False
         self.auth_rejected = 0
         self.online_last = None
-        self.url = url
 
         self.username = username
         self.password = password
@@ -25,32 +28,45 @@ class WebUI:
 
         # assign flags to key value pairs
         self.flags = {}
-        if flags:
-            flags_list = flags.split(' ')
+        if url:
+            parts_list = url.split(' ')
             index = 0
-            while index < len(flags_list):
-                flag = flags_list[index].strip()
+
+            # before starting, get the URL first
+            self.url = ''
+            while index < len(parts_list):
+                part = parts_list[index].strip()
+                if part.startswith('--'):
+                    break
+                else:
+                    if self.url: self.url += ' '
+                    self.url += part
+                    index += 1
+
+            # now we can look at the flags
+            while index < len(parts_list):
+                part = parts_list[index].strip()
 
                 # check if the key has a value
-                if flag.startswith('--') and index + 1 < len(flags_list):
-                    index += 1
-                    flag2 = flags_list[index].strip()
-                    if flag2.startswith('--'):
-                        # two flags found, make them both separate keys
-                        self.flags[flag] = True
-                        self.flags[flag2] = True
+                index += 1
+                if part.startswith('--') and index < len(parts_list):
+                    part2 = parts_list[index].strip()
+
+                    if part2.startswith('--'):
+                        # two flags found, make it into its own key
+                        self.flags[part] = True
                     else:
                         # flag value pair found, assign the value to the key
                         try:
-                            self.flags[flag] = int(flag2)
-                        except: pass
+                            self.flags[part] = part2
+                        except:
+                            pass
+                        index += 1
                 else:
                     # last item, assign the flag as a key
-                    self.flags[flag] = True
-                    index += 1
-
+                    self.flags[part] = True
         else:
-            self.flags = []
+            self.url = url
 
         self.reconnect_thread: threading.Thread = threading.Thread()
 
@@ -74,20 +90,20 @@ class WebUI:
                 self.api_auth = True
                 # lazy method to see if --api-auth credentials are set
                 if (not self.api_pass) or (not self.api_user):
-                    print(f'> Web UI API at {self.url} rejected me! If using --api-auth, '
+                    print(f'> WebUI API at {self.url} rejected me! If using --api-auth, '
                           'please check your .env file for APIUSER and APIPASS values.')
                     self.auth_rejected += 1
                     self.online = False
                     return False
             # lazy method to see if --api commandline argument is not set
             elif response.status_code == 404:
-                print(f'> Web UI API at {self.url} is unreachable! Please check Web UI COMMANDLINE_ARGS for --api.')
+                print(f'> WebUI API at {self.url} is unreachable! Please check WebUI COMMANDLINE_ARGS for --api.')
                 self.auth_rejected += 1
                 self.online = False
                 return False
         except:
             if self.online == True:
-                print(f'> Connection failed to Web UI at {self.url}')
+                print(f'> Connection failed to WebUI at {self.url}')
             self.online = False
             return False
 
@@ -113,7 +129,7 @@ class WebUI:
             else:
                 s.post(self.url + '/login', timeout=30)
         except Exception as e:
-            print(f'> Gradio Authentication failed for Web UI at {self.url}')
+            print(f'> Gradio Authentication failed for WebUI at {self.url}')
             self.online = False
             return False
 
@@ -174,12 +190,18 @@ class WebUI:
             except:
                 print('Warning: Could not read config. Upscalers will be missing.')
 
-            print(f'> Loaded data for Web UI at {self.url}')
+            print(f'> Loaded data for WebUI at {self.url}')
             print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)}')
-            if len(self.flags): print(f'> - Flags:{self.flags}')
+            if len(self.flags):
+                print(f'> - Flags:{self.flags}')
+                # check for any unknown flags
+                for (flag, value) in self.flags.items():
+                    if flag not in WebUI.valid_flags:
+                        print(f'> - Warning - Unknown flag:{flag}')
+
 
         except Exception as e:
-            print(f'> Retrieve data failed for Web UI at {self.url}')
+            print(f'> Retrieve data failed for WebUI at {self.url}')
             self.online = False
             return False
 
@@ -217,7 +239,7 @@ class WebUI:
 
         except Exception as e:
             if self.online == True:
-                print(f'> Connection failed to Web UI at {self.url}')
+                print(f'> Connection failed to WebUI at {self.url}')
             self.online = False
             self.connect() # attempt to reconnect
             return None
@@ -229,7 +251,7 @@ class WebUI:
             while self.check_status() == False:
                 if self.stopped: return None
                 if self.auth_rejected >= 3:
-                    print(f'> - Request rejected too many times! I will not try to reconnect to Web UI at {self.url}')
+                    print(f'> - Request rejected too many times! I will not try to reconnect to WebUI at {self.url}')
                     break
                 time.sleep(30)
                 if self.auth_rejected >= 3:
@@ -255,7 +277,7 @@ class WebUI:
             self.online = False
             self.connect()
 
-    # stop all further connections on this web ui
+    # stop all further connections on this WebUI
     def stop(self):
         self.online = False
         self.stopped = True
