@@ -260,15 +260,15 @@ class UpscaleCog(commands.Cog):
             def post_dream():
                 try:
                     response_data = response.json()
+                    image_data = response_data['image']
+
+                    #create safe/sanitized filename
+                    epoch_time = int(time.time())
+                    file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
 
                     # save local copy of image
                     if settings.global_var.dir != '--no-output':
                         try:
-                            #create safe/sanitized filename
-                            epoch_time = int(time.time())
-                            file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
-
-                            image_data = response_data['image']
                             with open(file_path, 'wb') as fh:
                                 fh.write(base64.b64decode(image_data))
                             print(f'Saved image: {file_path}')

@@ -21,11 +21,36 @@ class WebUI:
         self.api_auth = False
 
         # flags, currently used to disable identify on certain webui endpoints
-        # valid flags: --no-dream --no-upscale --no-identify
+        # valid flags: --no-dream --no-upscale --no-identify --wait-for URLID
+
+        # assign flags to key value pairs
+        self.flags = {}
         if flags:
-            self.flags = flags
+            flags_list = flags.split(' ')
+            index = 0
+            while index < len(flags_list):
+                flag = flags_list[index].strip()
+
+                # check if the key has a value
+                if flag.startswith('--') and index + 1 < len(flags_list):
+                    index += 1
+                    flag2 = flags_list[index].strip()
+                    if flag2.startswith('--'):
+                        # two flags found, make them both separate keys
+                        self.flags[flag] = True
+                        self.flags[flag2] = True
+                    else:
+                        # flag value pair found, assign the value to the key
+                        try:
+                            self.flags[flag] = int(flag2)
+                        except: pass
+                else:
+                    # last item, assign the flag as a key
+                    self.flags[flag] = True
+                    index += 1
+
         else:
-            self.flags = ''
+            self.flags = []
 
         self.reconnect_thread: threading.Thread = threading.Thread()
 
@@ -151,6 +176,7 @@ class WebUI:
 
             print(f'> Loaded data for Web UI at {self.url}')
             print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)}')
+            if len(self.flags): print(f'> - Flags:{self.flags}')
 
         except Exception as e:
             print(f'> Retrieve data failed for Web UI at {self.url}')

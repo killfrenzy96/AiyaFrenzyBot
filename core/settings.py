@@ -38,6 +38,7 @@ class GlobalVar:
     model_names = {}
     model_tokens = {}
     model_resolutions = {}
+    model_compute_multiplier = {}
     style_names = {}
     facefix_models: list[str] = []
     upscaler_names: list[str] = []
@@ -176,8 +177,8 @@ def files_check():
         data = list(map(int, f.readlines()))
     global_var.images_generated = data[0]
 
-    header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution']
-    unset_model = ['Default', '', '', '']
+    header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution', 'compute_multiplier']
+    unset_model = ['Default', '', '', '', '']
     make_model_file = True
     replace_model_file = False
 
@@ -219,11 +220,17 @@ def files_check():
         for row in model_data[1:]:
             global_var.model_names[row[0]] = row[1]
             global_var.model_tokens[row[0]] = row[2]
+
             try:
                 resolution = int(int(row[3]) / 64) * 64
                 global_var.model_resolutions[row[0]] = resolution
             except:
                 global_var.model_resolutions[row[0]] = 512
+
+            try:
+                global_var.model_compute_multiplier[row[0]] = float(row[4])
+            except:
+                global_var.model_compute_multiplier[row[0]] = 1.0
 
     print(f'- Checkpoint models count: {len(global_var.model_names)}')
 
