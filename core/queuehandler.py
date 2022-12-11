@@ -139,8 +139,9 @@ class DreamQueueInstance:
         # check if we need to wait for any webui instances to finish
         if '--wait-for' in self.web_ui.flags:
             wait_for = self.web_ui.flags['--wait-for']
-            if wait_for > 0 and wait_for <= len(dream_queue.dream_instances) - 1:
-                if dream_queue.dream_instances[wait_for].get_queue_length() > 0:
+            if wait_for >= 0 and wait_for <= len(dream_queue.dream_instances) - 1:
+                dream_instance = dream_queue.dream_instances[wait_for]
+                if dream_instance.dream_thread.is_alive() or dream_instance.get_queue_length() > 0:
                     return False
 
         return True
