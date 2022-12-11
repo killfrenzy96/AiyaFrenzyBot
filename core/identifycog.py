@@ -191,7 +191,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
                 def interrogate(thread_index, thread_payload):
                     try:
-                        responses[thread_index] = s.post(url=f'{web_ui.url}/sdapi/v1/interrogate', json=thread_payload, timeout=60)
+                        responses[thread_index] = s.post(url=f'{web_ui.url}/sdapi/v1/interrogate', json=thread_payload, timeout=120)
                     except Exception as e:
                         responses[thread_index] = e
 
@@ -239,7 +239,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                 threading.Thread(target=post_dream, daemon=True).start()
             else:
                 # regular payload - get identify for the model specified
-                response = s.post(url=f'{web_ui.url}/sdapi/v1/interrogate', json=queue_object.payload, timeout=60)
+                response = s.post(url=f'{web_ui.url}/sdapi/v1/interrogate', json=queue_object.payload, timeout=120)
                 queue_object.payload = None
 
                 def post_dream():

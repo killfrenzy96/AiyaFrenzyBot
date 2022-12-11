@@ -86,7 +86,7 @@ class WebUI:
                 }
                 s.post(self.url + '/login', data=login_payload, timeout=30)
             else:
-                s.post(self.url + '/login', timeout=60)
+                s.post(self.url + '/login', timeout=30)
         except Exception as e:
             print(f'> Gradio Authentication failed for Web UI at {self.url}')
             self.online = False
@@ -182,7 +182,7 @@ class WebUI:
                     s.post(self.url + '/login', timeout=5)
 
             # if it's been a while since the last check for being online, do one now
-            elif time.time() > self.online_last + 30:
+            elif time.time() > self.online_last + 5:
                 s.get(self.url + '/sdapi/v1/cmd-flags', timeout=5)
             self.online_last = time.time()
             self.auth_rejected = 0

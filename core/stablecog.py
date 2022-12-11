@@ -660,7 +660,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 model_payload = {
                     'sd_model_checkpoint': queue_object.data_model
                 }
-                s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=60)
+                s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=120)
 
             # safe for global queue to continue
             def continue_queue():
@@ -672,7 +672,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 url = f'{web_ui.url}/sdapi/v1/img2img'
             else:
                 url = f'{web_ui.url}/sdapi/v1/txt2img'
-            response = s.post(url=url, json=queue_object.payload, timeout=60)
+            response = s.post(url=url, json=queue_object.payload, timeout=120)
             queue_object.payload = None
 
             def post_dream():

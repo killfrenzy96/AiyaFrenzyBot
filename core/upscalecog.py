@@ -254,7 +254,7 @@ class UpscaleCog(commands.Cog):
                 queue_continue.set()
             threading.Thread(target=continue_queue, daemon=True).start()
 
-            response = s.post(url=f'{web_ui.url}/sdapi/v1/extra-single-image', json=queue_object.payload, timeout=60)
+            response = s.post(url=f'{web_ui.url}/sdapi/v1/extra-single-image', json=queue_object.payload, timeout=120)
             queue_object.payload = None
 
             def post_dream():

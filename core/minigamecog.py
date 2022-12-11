@@ -420,7 +420,7 @@ class Minigame:
                 model_payload = {
                     'sd_model_checkpoint': queue_object.data_model
                 }
-                s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=60)
+                s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=120)
 
             # safe for global queue to continue
             def continue_queue():
@@ -448,7 +448,7 @@ class Minigame:
 
                 def img2img(thread_index, thread_payload):
                     try:
-                        responses[thread_index] = s.post(url=f'{web_ui.url}/sdapi/v1/img2img', json=thread_payload, timeout=60)
+                        responses[thread_index] = s.post(url=f'{web_ui.url}/sdapi/v1/img2img', json=thread_payload, timeout=120)
                     except Exception as e:
                         responses[thread_index] = e
 
@@ -477,7 +477,7 @@ class Minigame:
                 # end of workaround
             else:
                 # do normal batched payload
-                response = s.post(url=f'{web_ui.url}/sdapi/v1/txt2img', json=queue_object.payload, timeout=60)
+                response = s.post(url=f'{web_ui.url}/sdapi/v1/txt2img', json=queue_object.payload, timeout=120)
                 response_data = response.json()
 
             if self.running == False:
