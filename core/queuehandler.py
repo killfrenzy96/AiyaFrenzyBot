@@ -221,11 +221,26 @@ class DreamQueue:
                         upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, ephemeral=True, delete_after=30))
 
                     else:
+                        # start dream on any available optimal webui instance
+                        if type(queue_object) is utility.DrawObject:
+                            for dream_instance in valid_instances:
+                                if dream_instance.is_ready(1) and queue_object.data_model == dream_instance.last_data_model:
+                                    target_dream_instance = dream_instance
+                                    break
+
+                        # all optimal instances busy, buffer dream on current optimal instances
+                        if type(queue_object) is utility.DrawObject and target_dream_instance == None:
+                            for dream_instance in valid_instances:
+                                if dream_instance.is_ready(2) and queue_object.data_model == dream_instance.last_data_model:
+                                    target_dream_instance = dream_instance
+                                    break
+
                         # start dream on any available webui instance
-                        for dream_instance in valid_instances:
-                            if dream_instance.is_ready(1):
-                                target_dream_instance = dream_instance
-                                break
+                        if target_dream_instance == None:
+                            for dream_instance in valid_instances:
+                                if dream_instance.is_ready(1):
+                                    target_dream_instance = dream_instance
+                                    break
 
                         # all instances busy, buffer dream on current instances
                         if target_dream_instance == None:
@@ -275,6 +290,16 @@ class DreamQueue:
         for dream_instance in self.dream_instances:
             if dream_instance.is_valid(queue_object):
                 valid_instances.append(dream_instance)
+        return valid_instances
+
+    def get_fast_instances(self, queue_object: utility.DreamObject):
+        valid_instances: list[DreamQueueInstance] = []
+        for dream_instance in self.dream_instances:
+            if dream_instance.is_valid(queue_object):
+                if type(queue_object) is utility.DrawObject and dream_instance.is_ready(2):
+                    valid_instances.append(dream_instance)
+                elif dream_instance.is_ready(1):
+                    valid_instances.append(dream_instance)
         return valid_instances
 
     def get_queue_length(self, priority: int = None):
