@@ -2,6 +2,7 @@ import csv
 import discord
 import json
 import os
+import traceback
 import threading
 
 from core import utility
@@ -107,19 +108,64 @@ def get_config(file_path: str):
         config = {}
         with open(file_path) as f:
             for line in f:
+                line = line.strip()
+                if not line:
+                    continue
                 if line.startswith('#'):
                     continue
                 key, val = line.split('=', 1)
                 config[key.strip()] = val.strip()
-        print(f'Loaded config at {file_path}')
+        print(f'> Config loaded at {file_path}')
         return config
-    except:
+    except Exception as e:
+        print(f'> Failed to load config at {file_path}\n{e}\n{traceback.print_exc()}')
         return None
 
 def startup_check():
-    # load config file if it exists
+    # load config file as an alternative to using .env vars
     config_path = get_env_var('CONFIG', 'resources/config.cfg')
-    if config_path: global_var.config_cache = get_config(config_path)
+    if config_path:
+        if os.path.isfile(config_path):
+            # read the config file
+            global_var.config_cache = get_config(config_path)
+        else:
+            # create config file if it doesn't exist
+            print(f'Config missing, creating config at {config_path}')
+            with open(config_path, 'w') as f:
+                f.write(
+                    '# This config overrides your .env settings, and can be reloaded using the \'reload\' command from the console.\n'
+                    '# Remove the # sign at the start of the setting if you want to use it.\n'
+                    '\n'
+                    '# The token for your discord bot.\n'
+                    '# TOKEN = YOUR_DISCORD_APP_TOKEN_HERE\n'
+                    '\n'
+                    '# Directory of output images. Default is /outputs.\n'
+                    '# If you do not want to save images, you can set this as --no-output\n'
+                    '# DIR = --no-output\n'
+                    '\n'
+                    '# Optional URL arguments\n'
+                    '# --gradio-auth username:password - If gradio authentication is required. Provide a username and password.\n'
+                    '#    Example: URL = https://abcdef.gradio.app --gradio-auth username:password\n'
+                    '# --api-auth username:password - If regular authentication is required. Provide a username and password.\n'
+                    '#    Example: URL = https://127.0.0.1:7860 --api-auth username:password\n'
+                    '# --no-dream - Prevents Aiya from starting dreams on this URL\n'
+                    '# --no-upscale - Prevents Aiya from using the upscaler on this URL\n'
+                    '# --no-identify - Prevents Aiya from using interrogation on this URL\n'
+                    '# --wait-for URL - Waits for URL to finish processing before starting new dreams on this URL\n'
+                    '\n'
+                    '# The URL of your main WebUI instance.\n'
+                    '# URL = http://127.0.0.1:7860\n'
+                    '\n'
+                    '# Additional URL\'s for WebUI instances. These are used to speed up queued or batched processing.\n'
+                    '# You can add more URL\'s if you need to. They must be in order of priority starting from URL1.\n'
+                    '# A few examples have been provided.\n'
+                    '# URL1 = 127.0.0.1:7861\n'
+                    '# URL2 = 127.0.0.1:7862\n'
+                    '# URL3 = 192.168.1.123:7860 --wait-for http://192.168.1.123:7861\n'
+                    '# URL4 = 192.168.1.123:7861 --no-upscale --no-identify --wait-for http://192.168.1.123:7860\n'
+                    '# URL5 = https://abcdef.gradio.app --gradio-auth username:password\n'
+                    '# URL6 = http://example.com:7860 --api-auth username:password\n'
+                )
 
     # connect to WebUI URL access points
     web_ui_list = []
@@ -130,7 +176,7 @@ def startup_check():
             suffix = ''
         else:
             url = get_env_var(f'URL{index}')
-            if not url and index > 2: break
+            if not url and index < 9: break
             suffix = str(index)
 
         if url:

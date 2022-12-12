@@ -23,7 +23,7 @@ class DreamQueueInstance:
         self.no_dream = False
         self.no_identify = False
         self.no_upscale = False
-        self.wait_for = None
+        self.wait_for: int | str | DreamQueueInstance = None
 
         if '--no-dream' in web_ui.flags: self.no_dream = web_ui.flags['--no-dream']
         if '--no-upscale' in web_ui.flags: self.no_identify = web_ui.flags['--no-upscale']
@@ -31,7 +31,7 @@ class DreamQueueInstance:
 
         if '--wait-for' in web_ui.flags:
             try: self.wait_for = int(web_ui.flags['--wait-for'])
-            except: pass
+            except: self.wait_for = web_ui.flags['--wait-for']
 
     def process_dream(self, queue_object: utility.DreamObject):
         # append dream to queue
@@ -150,10 +150,25 @@ class DreamQueueInstance:
         #     return False
 
         # check if we need to wait for any webui instances to finish
-        if self.wait_for != None and self.wait_for >= 0 and self.wait_for <= len(dream_queue.dream_instances) - 1:
-            dream_instance = dream_queue.dream_instances[self.wait_for]
+        if type(self.wait_for) is DreamQueueInstance:
+            dream_instance = self.wait_for
             if dream_instance.dream_thread.is_alive() or dream_instance.get_queue_length() > 0:
                 return False
+
+        # convert URL_ID to dream queue instance using index
+        elif type(self.wait_for) is int and self.wait_for >= 0 and self.wait_for <= len(dream_queue.dream_instances) - 1:
+            self.wait_for = dream_queue.dream_instances[self.wait_for] # convert wait_for to a direct reference of a dream queue instance
+            if self.wait_for.dream_thread.is_alive() or self.wait_for.get_queue_length() > 0:
+                return False
+
+        # convert URL_ID to dream queue instance using URL string
+        elif type(self.wait_for) is str:
+            for dream_instance in dream_queue.dream_instances:
+                if dream_instance.web_ui.url == self.wait_for:
+                    self.wait_for = dream_instance # convert wait_for to a direct reference of a dream queue instance
+                    if self.wait_for.dream_thread.is_alive() or self.wait_for.get_queue_length() > 0:
+                        return False
+                    break
 
         return True
 
