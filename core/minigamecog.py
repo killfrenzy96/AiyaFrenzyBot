@@ -116,19 +116,19 @@ class Minigame:
     async def next_image_variation(self, ctx: discord.ApplicationContext | discord.Interaction, prompt: str = None):
         loop = asyncio.get_running_loop()
         user = utility.get_user(ctx)
+        guild = utility.get_guild(ctx)
         content = None
         ephemeral = False
         print(f'Minigame Request -- {user.name}#{user.discriminator} -- {self.guild}')
 
         try:
             # calculate total cost of queued items and reject if there is too expensive
-            dream_cost = self.batch
             queue_cost = round(queuehandler.dream_queue.get_user_queue_cost(user.id), self.batch)
-            print(f'Estimated total compute cost -- Dream: {dream_cost} Queue: {queue_cost} Total: {dream_cost + queue_cost}')
+            print(f'Estimated total queued cost -- Queue: {queue_cost}')
 
-            if dream_cost + queue_cost > settings.read(self.guild)['max_compute']:
-                print(f'Minigame rejected: Too much in queue already')
-                content = f'<@{user.id}> Please wait! You have too much queued up.'
+            if queue_cost > 0.0:
+                print(f'Minigame rejected: Already in queue')
+                content = f'<@{user.id}> Please wait! You already have things in queue.'
                 ephemeral = True
                 raise Exception()
 
@@ -255,11 +255,18 @@ class Minigame:
         model_name: str = self.model_name
         data_model: str = self.data_model
         token: str = ''
+        width = None
+        height = None
         for index, (display_name, full_name) in enumerate(settings.global_var.model_names.items()):
             if display_name == model_name or full_name == model_name:
                 model_name = display_name
                 data_model = full_name
                 token = settings.global_var.model_tokens[display_name]
+                if width == None:
+                    width = settings.global_var.model_resolutions[display_name]
+                if height == None:
+                    height = settings.global_var.model_resolutions[display_name]
+                break
 
         if self.adventure == False or self.images_base64:
             guidance_scale = round(4.0 + random.random() * 8.0, 2)
@@ -314,8 +321,8 @@ class Minigame:
             model_name=model_name,
             data_model=data_model,
             steps=steps,
-            width=512,
-            height=512,
+            width=width,
+            height=height,
             guidance_scale=guidance_scale,
             sampler=sampler,
             seed=random.randint(0, 0xFFFFFFFF),
@@ -331,6 +338,12 @@ class Minigame:
             message=message,
             write_to_cache=False
         )
+
+        # lower steps if too expensive
+        dream_compute_cost = queuehandler.dream_queue.get_dream_cost(draw_object)
+        setting_max_compute = settings.read(self.guild)['max_compute']
+        if dream_compute_cost > setting_max_compute:
+            steps = min(int(float(steps) * (setting_max_compute / dream_compute_cost)), settings.read(self.guild)['max_steps'])
 
         print(f'prompt: {prompt} negative:{negative} checkpoint:{model_name} sampler:{sampler} steps:{steps} guidance_scale:{guidance_scale} seed:{draw_object.seed} strength:{draw_object.strength} batch:{self.batch}')
 

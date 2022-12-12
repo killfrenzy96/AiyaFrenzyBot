@@ -323,6 +323,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         width = settings.global_var.model_resolutions[display_name]
                     if height == None:
                         height = settings.global_var.model_resolutions[display_name]
+                    break
 
             if data_model == '':
                 print(f'Dream rejected: No checkpoint found.\n{e}\n{traceback.print_exc()}')
