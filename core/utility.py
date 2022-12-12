@@ -6,7 +6,12 @@ import discord
 # WebUI access point
 class WebUI:
     valid_flags = [
-        '--no-dream', '--no-upscale', '--no-identify', '--wait-for'
+        '--no-dream',
+        '--no-upscale',
+        '--no-identify',
+        '--wait-for',
+        '--gradio-auth',
+        '--api-auth'
     ]
 
     def __init__(self, url: str, username: str = None, password: str = None, api_user: str = None, api_pass: str = None):
@@ -78,6 +83,24 @@ class WebUI:
         self.upscaler_names: list[str] = []
         self.identify_models: list[str] = []
         self.messages: list[str] = []
+
+        if '--gradio-auth' in self.flags:
+            try:
+                username_password: list[str] = self.flags['--gradio-auth'].split(':', 1)
+                self.username = username_password[0]
+                self.password = username_password[1]
+                self.gradio_auth = True
+            except:
+                print('> - Warning: Invalid args for --gradio-auth username:password')
+
+        if '--api-auth' in self.flags:
+            try:
+                username_password: list[str] = self.flags['--api-auth'].split(':', 1)
+                self.api_user = username_password[0]
+                self.api_pass = username_password[1]
+                self.api_auth = True
+            except:
+                print('> - Warning: Invalid args for --gradio-auth username:password')
 
     # check connection to WebUI and authentication
     def check_status(self):

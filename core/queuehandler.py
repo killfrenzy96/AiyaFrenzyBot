@@ -20,6 +20,19 @@ class DreamQueueInstance:
 
         self.last_data_model: str = None
 
+        self.no_dream = False
+        self.no_identify = False
+        self.no_upscale = False
+        self.wait_for = None
+
+        if '--no-dream' in web_ui.flags: self.no_dream = web_ui.flags['--no-dream']
+        if '--no-upscale' in web_ui.flags: self.no_identify = web_ui.flags['--no-upscale']
+        if '--no-identify' in web_ui.flags: self.no_upscale = web_ui.flags['--no-identify']
+
+        if '--no-dream' in web_ui.flags:
+            try: self.wait_for = int(web_ui.flags['--no-dream'])
+            except: pass
+
     def process_dream(self, queue_object: utility.DreamObject):
         # append dream to queue
         self.queue.append(queue_object)
