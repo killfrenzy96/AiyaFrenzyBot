@@ -235,7 +235,7 @@ def files_check():
             for i, row in enumerate(reader):
                 # if header is missing columns, reformat the file
                 if i == 0:
-                    if len(row)<4:
+                    if len(row)<5:
                         with open('resources/models.csv', 'r') as fp:
                             reader = csv.DictReader(fp, fieldnames=header, delimiter = '|')
                             with open('resources/models2.csv', 'w', newline='') as fh:
@@ -264,7 +264,11 @@ def files_check():
         model_data = list(csv.reader(csv_file, delimiter='|'))
         for row in model_data[1:]:
             global_var.model_names[row[0]] = row[1]
-            global_var.model_tokens[row[0]] = row[2]
+
+            try:
+                global_var.model_tokens[row[0]] = row[2]
+            except:
+                global_var.model_tokens[row[0]] = ''
 
             try:
                 resolution = int(int(row[3]) / 64) * 64
@@ -301,6 +305,10 @@ def files_check():
     global_var.style_names = web_ui.style_names
     global_var.facefix_models = web_ui.facefix_models
     global_var.upscaler_names = web_ui.upscaler_names
+
+    if len(global_var.model_names) > 25: print('- Warning: More than 25 checkpoints, falling back to autocomplete instead of choices.')
+    if len(global_var.style_names) > 25: print('- Warning: More than 25 styles, falling back to autocomplete instead of choices.')
+    if len(global_var.upscaler_names) > 25: print('- Warning: More than 25 upscalers, falling back to autocomplete instead of choices.')
 
     # load dream cache
     get_dream_command(-1)

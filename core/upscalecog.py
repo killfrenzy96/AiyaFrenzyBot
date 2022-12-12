@@ -26,6 +26,20 @@ class UpscaleCog(commands.Cog):
         self.bot = bot
         self.file_name = ''
 
+    # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
+    def upscaler_autocomplete(self: discord.AutocompleteContext):
+        return [
+            upscaler for upscaler in settings.global_var.upscaler_names
+        ]
+
+    # use autocomplete if there are too many upscalers, otherwise use choices
+    if len(settings.global_var.upscaler_names) > 25:
+        upscaler_autocomplete_fn = discord.utils.basic_autocomplete(upscaler_autocomplete)
+        upscaler_choices = []
+    else:
+        upscaler_autocomplete_fn = None
+        upscaler_choices = settings.global_var.upscaler_names
+
     @commands.slash_command(name = 'upscale', description = 'Upscale an image')
     @option(
         'init_image',
@@ -52,14 +66,16 @@ class UpscaleCog(commands.Cog):
         str,
         description='The upscaler model to use.',
         required=False,
-        choices=settings.global_var.upscaler_names,
+        autocomplete=upscaler_autocomplete_fn,
+        choices=upscaler_choices,
     )
     @option(
         'upscaler_2',
         str,
         description='The 2nd upscaler model to use.',
         required=False,
-        choices=settings.global_var.upscaler_names,
+        autocomplete=upscaler_autocomplete_fn,
+        choices=upscaler_choices,
     )
     @option(
         'upscaler_2_strength',

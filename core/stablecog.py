@@ -31,15 +31,31 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         self.bot.add_view(viewhandler.DrawExtendedView(self, None))
 
     # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
-    # def model_autocomplete(self: discord.AutocompleteContext):
-    #     return [
-    #         model for model in settings.global_var.model_names
-    #     ]
+    def model_autocomplete(self: discord.AutocompleteContext):
+        return [
+            model for model in settings.global_var.model_names
+        ]
     # and for styles
-    # def style_autocomplete(self: discord.AutocompleteContext):
-    #     return [
-    #         style for style in settings.global_var.style_names
-    #     ]
+    def style_autocomplete(self: discord.AutocompleteContext):
+        return [
+            style for style in settings.global_var.style_names
+        ]
+
+    # use autocomplete if there are too many models, otherwise use choices
+    if len(settings.global_var.model_names) > 25:
+        checkpoint_autocomplete_fn = discord.utils.basic_autocomplete(model_autocomplete)
+        checkpoint_choices = []
+    else:
+        checkpoint_autocomplete_fn = None
+        checkpoint_choices = settings.global_var.model_names
+
+    # same for styles
+    if len(settings.global_var.style_names) > 25:
+        style_autocomplete_fn = discord.utils.basic_autocomplete(style_autocomplete)
+        style_choices = None
+    else:
+        style_autocomplete_fn = None
+        style_choices = settings.global_var.style_names
 
     # a list of parameters, used to sanatize text
     dream_params = [
@@ -93,8 +109,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         str,
         description='Select the data model for image generation',
         required=False,
-        # autocomplete=discord.utils.basic_autocomplete(model_autocomplete),
-        choices=settings.global_var.model_names,
+        autocomplete=checkpoint_autocomplete_fn,
+        choices=checkpoint_choices,
     )
     @option(
         'steps',
@@ -169,8 +185,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         str,
         description='Apply a predefined style to the generation.',
         required=False,
-        # autocomplete=discord.utils.basic_autocomplete(style_autocomplete),
-        choices=settings.global_var.style_names,
+        autocomplete=style_autocomplete_fn,
+        choices=style_choices,
     )
     @option(
         'facefix',

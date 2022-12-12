@@ -574,6 +574,20 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
     def __init__(self, bot: discord.Bot):
         self.bot: discord.Bot = bot
 
+    # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
+    def model_autocomplete(self: discord.AutocompleteContext):
+        return [
+            model for model in settings.global_var.model_names
+        ]
+
+    # use autocomplete if there are too many models, otherwise use choices
+    if len(settings.global_var.model_names) > 25:
+        checkpoint_autocomplete_fn = discord.utils.basic_autocomplete(model_autocomplete)
+        checkpoint_choices = []
+    else:
+        checkpoint_autocomplete_fn = None
+        checkpoint_choices = settings.global_var.model_names
+
     @commands.slash_command(name = 'minigame', description = 'Starts a minigame where you guess the prompt from a picture.')
     @option(
         'prompt',
@@ -586,8 +600,8 @@ class MinigameCog(commands.Cog, description='Guess the prompt from the picture m
         str,
         description='Select the data model for image generation',
         required=False,
-        # autocomplete=discord.utils.basic_autocomplete(model_autocomplete),
-        choices=settings.global_var.model_names,
+        autocomplete=checkpoint_autocomplete_fn,
+        choices=checkpoint_choices,
     )
     @option(
         'adventure',

@@ -53,6 +53,11 @@ class ConsoleInput:
                         # print('> Resetup dream queue')
                         queuehandler.dream_queue.setup()
 
+                        # print('> Reloading extensions')
+                        self.bot.reload_extension('core.stablecog')
+                        self.bot.reload_extension('core.upscalecog')
+                        self.bot.reload_extension('core.minigamecog')
+
                         print('Reload complete.')
 
                     case 'guild':
