@@ -29,8 +29,8 @@ class DreamQueueInstance:
         if '--no-upscale' in web_ui.flags: self.no_identify = web_ui.flags['--no-upscale']
         if '--no-identify' in web_ui.flags: self.no_upscale = web_ui.flags['--no-identify']
 
-        if '--no-dream' in web_ui.flags:
-            try: self.wait_for = int(web_ui.flags['--no-dream'])
+        if '--wait-for' in web_ui.flags:
+            try: self.wait_for = int(web_ui.flags['--wait-for'])
             except: pass
 
     def process_dream(self, queue_object: utility.DreamObject):
@@ -121,13 +121,13 @@ class DreamQueueInstance:
 
         # check if models exist in this Web UI instance
         if type(queue_object) is utility.DrawObject:
-            if '--no-dream' in self.web_ui.flags:
+            if self.no_dream:
                 return False
             if queue_object.data_model not in self.web_ui.data_models:
                 return False
 
         elif type(queue_object) is utility.UpscaleObject:
-            if '--no-upscale' in self.web_ui.flags:
+            if self.no_upscale:
                 return False
             if queue_object.upscaler_1 and queue_object.upscaler_1 not in self.web_ui.upscaler_names:
                 return False
@@ -135,7 +135,7 @@ class DreamQueueInstance:
                 return False
 
         elif type(queue_object) is utility.IdentifyObject:
-            if '--no-identify' in self.web_ui.flags:
+            if self.no_upscale:
                 return False
 
         return True
@@ -150,15 +150,10 @@ class DreamQueueInstance:
         #     return False
 
         # check if we need to wait for any webui instances to finish
-        if '--wait-for' in self.web_ui.flags:
-            try:
-                wait_for = float(self.web_ui.flags['--wait-for'])
-                if wait_for >= 0 and wait_for <= len(dream_queue.dream_instances) - 1:
-                    dream_instance = dream_queue.dream_instances[wait_for]
-                    if dream_instance.dream_thread.is_alive() or dream_instance.get_queue_length() > 0:
-                        return False
-            except:
-                pass
+        if self.wait_for != None and self.wait_for >= 0 and self.wait_for <= len(dream_queue.dream_instances) - 1:
+            dream_instance = dream_queue.dream_instances[self.wait_for]
+            if dream_instance.dream_thread.is_alive() or dream_instance.get_queue_length() > 0:
+                return False
 
         return True
 
