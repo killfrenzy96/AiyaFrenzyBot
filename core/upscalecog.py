@@ -142,11 +142,12 @@ class UpscaleCog(commands.Cog):
                 if not init_url and init_image:
                     init_url = init_image.url
 
-                if init_url.startswith('https://cdn.discordapp.com/') == False:
+                if init_url.startswith('https://cdn.discordapp.com/') == False and init_url.startswith('https://media.discordapp.net/') == False:
                     print(f'Upscale rejected: Image is not from the Discord CDN.')
                     content = 'Only URL images from the Discord CDN are allowed!'
                     ephemeral = True
                     image_validated = False
+                    raise Exception()
 
                 try:
                     # reject URL downloads larger than 10MB
@@ -157,15 +158,19 @@ class UpscaleCog(commands.Cog):
                         content = 'URL image is too large! Please make the download size smaller.'
                         ephemeral = True
                         image_validated = False
-                    else:
-                        # download and encode the image
-                        image_data = await loop.run_in_executor(None, requests.get, init_url)
-                        image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')
-                        image_validated = True
+                        raise Exception()
+
+                    # download and encode the image
+                    image_data = await loop.run_in_executor(None, requests.get, init_url)
+                    image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')
+                    image_validated = True
+
                 except:
-                    content = 'URL image not found! Please check the image URL.'
-                    ephemeral = True
-                    image_validated = False
+                    if content == None:
+                        content = 'URL image not found! Please check the image URL.'
+                        ephemeral = True
+                        image_validated = False
+                    raise Exception()
 
             #fail if no image is provided
             if image_validated == False:
