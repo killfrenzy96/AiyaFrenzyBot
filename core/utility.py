@@ -213,6 +213,10 @@ class WebUI:
             except:
                 print('Warning: Could not read config. Upscalers will be missing.')
 
+            # remove upscalers that seem to have some issues
+            if 'LSDR' in self.upscaler_names: self.upscaler_names.remove('LSDR')
+            # print(f'- Upscalers count: {len(self.upscaler_names)}')
+
             print(f'> Loaded data for WebUI at {self.url}')
             print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)}')
             if len(self.flags):
