@@ -2,6 +2,7 @@ import asyncio
 import discord
 import os
 import sys
+from core import utility
 from core import settings
 from core.logging import get_logger
 from dotenv import load_dotenv
@@ -88,15 +89,7 @@ async def on_raw_reaction_add(ctx: discord.RawReactionActionEvent):
         if message.author.id == self.user.id and user.id != self.user.id:
             # check if the message from Shanghai was actually a generation
             if '``/dream prompt:' in message.content:
-                def find_between(s: str, first: str, last: str):
-                    try:
-                        start = s.index(first) + len(first)
-                        end = s.index(last, start)
-                        return s[start:end]
-                    except ValueError:
-                        return ''
-
-                command = find_between(message.content, '``/dream ', '``')
+                command = utility.find_between(message.content, '``/dream ', '``')
 
                 message.author = user
                 await stable_cog.dream_command(message, command)

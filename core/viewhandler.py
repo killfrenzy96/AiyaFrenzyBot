@@ -3,7 +3,7 @@ import copy
 import traceback
 import time
 import asyncio
-from discord.ui import InputText, Modal, View
+from discord.ui import Select, InputText, Modal, View
 
 from core import settings
 from core import utility
@@ -18,41 +18,36 @@ class DrawModal(Modal):
         self.input_object = input_object
         self.message = message
 
-        self.add_item(
-            InputText(
-                label='Prompt',
-                value=self.input_object.prompt,
-                style=discord.InputTextStyle.long
-            )
-        )
+        self.add_item(InputText(
+            label='Prompt',
+            value=self.input_object.prompt,
+            style=discord.InputTextStyle.long
+        ))
 
-        self.add_item(
-            InputText(
+        self.add_item(InputText(
                 label='Negative prompt (optional)',
                 style=discord.InputTextStyle.long,
                 value=self.input_object.negative,
                 required=False
-            )
-        )
+        ))
 
-        self.add_item(
-            InputText(
+        self.add_item(InputText(
                 label='Seed. Remove to randomize.',
                 style=discord.InputTextStyle.short,
                 value=self.input_object.seed,
                 required=False
-            )
-        )
+        ))
 
         extra_settings_value = f'batch: {self.input_object.batch}'
-        extra_settings_value += f'\nsteps: {self.input_object.steps}'
-        extra_settings_value += f'\nguidance_scale: {self.input_object.guidance_scale}'
 
         if self.input_object.init_url:
             init_url = self.input_object.init_url
             extra_settings_value += f'\nstrength: {self.input_object.strength}'
         else:
             init_url = ''
+
+        extra_settings_value += f'\nsteps: {self.input_object.steps}'
+        extra_settings_value += f'\nguidance_scale: {self.input_object.guidance_scale}'
 
         extra_settings_value += f'\n\ncheckpoint: {self.input_object.model_name}'
         extra_settings_value += f'\nwidth: {self.input_object.width}'
@@ -131,7 +126,7 @@ class DrawModal(Modal):
                 if 'tiling' in commands:            draw_object.tiling          = command_draw_object.tiling
                 if 'highres_fix' in commands:       draw_object.highres_fix     = command_draw_object.highres_fix
                 if 'clip_skip' in commands:         draw_object.clip_skip       = command_draw_object.clip_skip
-                if 'batch' in commands:             draw_object.batch     = command_draw_object.batch
+                if 'batch' in commands:             draw_object.batch           = command_draw_object.batch
                 if 'script' in commands:            draw_object.script          = command_draw_object.script
             except:
                 pass
@@ -181,10 +176,12 @@ class DrawView(View):
         super().__init__(timeout=None)
         self.stable_cog = stable_cog
         self.input_object: utility.DrawObject = input_object
+        self.extended = False
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
         custom_id='button_re-prompt',
+        row=0,
         emoji='🖋')
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -197,21 +194,8 @@ class DrawView(View):
             if self.input_object:
                 input_object = self.input_object
             else:
-                # create input object from message command
-                if '``/dream ' in message.content:
-                    command = self.find_between(message.content, '``/dream ', '``')
-                    input_object = stable_cog.get_draw_object_from_command(command)
-                elif '``/minigame ' in message.content:
-                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
-                    return
-                else:
-                    # retrieve command from cache
-                    command = settings.get_dream_command(message.id)
-                    if command:
-                        input_object = stable_cog.get_draw_object_from_command(command)
-                    else:
-                        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
-                        return
+                input_object = await get_input_object(stable_cog, interaction, '🖋')
+                if input_object == None: return
 
             loop.create_task(interaction.response.send_modal(DrawModal(stable_cog, input_object, message)))
 
@@ -221,6 +205,7 @@ class DrawView(View):
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
         custom_id='button_image-variation',
+        row=0,
         emoji='🖼️')
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -239,22 +224,8 @@ class DrawView(View):
             if self.input_object:
                 input_object = self.input_object
             else:
-                # create input object from message command
-                if '``/dream ' in message.content:
-                    # retrieve command from message
-                    command = self.find_between(message.content, '``/dream ', '``')
-                    input_object = stable_cog.get_draw_object_from_command(command)
-                elif '``/minigame ' in message.content:
-                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
-                    return
-                else:
-                    # retrieve command from cache
-                    command = settings.get_dream_command(message.id)
-                    if command:
-                        input_object = stable_cog.get_draw_object_from_command(command)
-                    else:
-                        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
-                        return
+                input_object = await get_input_object(stable_cog, interaction, '🖼️')
+                if input_object == None: return
 
             # setup draw object to send to the stablecog
             draw_object = copy.copy(input_object)
@@ -274,6 +245,7 @@ class DrawView(View):
     # the 🔁 button will take the same parameters for the image, change the seed, and add a task to the queue
     @discord.ui.button(
         custom_id='button_re-roll',
+        row=0,
         emoji='🔁')
     async def button_reroll(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -285,23 +257,8 @@ class DrawView(View):
             if self.input_object:
                 input_object = self.input_object
             else:
-                # create input object from message command
-                message = await get_message(interaction)
-                if '``/dream ' in message.content:
-                    # retrieve command from message
-                    command = self.find_between(message.content, '``/dream ', '``')
-                    input_object = stable_cog.get_draw_object_from_command(command)
-                elif '``/minigame ' in message.content:
-                    loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
-                    return
-                else:
-                    # retrieve command from cache
-                    command = settings.get_dream_command(message.id)
-                    if command:
-                        input_object = stable_cog.get_draw_object_from_command(command)
-                    else:
-                        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🔁 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
-                        return
+                input_object = await get_input_object(stable_cog, interaction, '🔁')
+                if input_object == None: return
 
             # setup draw object to send to the stablecog
             draw_object = copy.copy(input_object)
@@ -316,10 +273,123 @@ class DrawView(View):
         except Exception as e:
             print_exception(e, interaction, loop)
 
+    # the button to delete generated images
+    @discord.ui.button(
+        custom_id='button_extra',
+        row=0,
+        emoji='🔧')
+    async def button_extra(self, button: discord.Button, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction, '🔧')
+                if input_object == None: return
+
+            if self.extended:
+                view = DrawView(self.stable_cog, input_object)
+            else:
+                view = DrawExtendedView(self.stable_cog, input_object)
+            loop.create_task(interaction.response.edit_message(view=view))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+
+class DrawExtendedView(DrawView):
+    def __init__(self, stable_cog, input_object: utility.DrawObject):
+        super().__init__(stable_cog, input_object)
+        self.extended = True
+
+        # setup select for checkpoint
+        checkpoint_placeholder = 'Change Checkpoint'
+        if input_object: checkpoint_placeholder += f' - Current: {input_object.model_name}'
+
+        checkpoint_options: list[discord.SelectOption] = []
+        for (display_name, full_name) in settings.global_var.model_names.items():
+            checkpoint_options.append(discord.SelectOption(
+                label=display_name,
+                description=full_name
+            ))
+
+        self.select_checkpoint = Select(
+            placeholder=checkpoint_placeholder,
+            custom_id='button_select_checkpoint',
+            row=1,
+            min_values=1,
+            max_values=1,
+            options=checkpoint_options,
+        )
+        self.select_checkpoint.callback = self.select_checkpoint_callback
+        self.add_item(self.select_checkpoint)
+
+        # setup select for resolution
+        resolution_placeholder = 'Change Resolution'
+        if input_object: resolution_placeholder += f' - Current: {input_object.width} x {input_object.height}'
+
+        self.select_resolution = Select(
+            placeholder=resolution_placeholder,
+            custom_id='button_select_resolution',
+            row=2,
+            min_values=1,
+            max_values=1,
+            options=[
+                discord.SelectOption(label='512 x 512', description='Default resolution'),
+                discord.SelectOption(label='768 x 512', description='Landscape'),
+                discord.SelectOption(label='512 x 768', description='Portrait'),
+                discord.SelectOption(label='768 x 768', description='High resolution'),
+                discord.SelectOption(label='1024 x 576', description='16:9 Landscape'),
+                discord.SelectOption(label='576 x 1024', description='16:9 Portrait'),
+            ],
+        )
+        self.select_resolution.callback = self.select_resolution_callback
+        self.add_item(self.select_resolution)
+
+        # setup select for style
+        style_placeholder = 'Change Style'
+        if input_object: style_placeholder += f' - Current: {input_object.style}'
+
+        style_options: list[discord.SelectOption] = []
+        for key, value in settings.global_var.style_names.items():
+            values: list[str] = value.split('\n')
+            style_prompt = values[0]
+            style_negative = values[1]
+
+            description = style_prompt
+            if style_negative:
+                if description:
+                    description += f' negative: {style_negative}'
+                else:
+                    description = f'negative: {style_negative}'
+
+            if len(description) >= 100:
+                description = description[0:100]
+
+            style_options.append(discord.SelectOption(
+                label=key,
+                description=description
+            ))
+
+        self.select_style = Select(
+            placeholder=style_placeholder,
+            custom_id='button_select_style',
+            row=3,
+            min_values=1,
+            max_values=1,
+            options=style_options,
+        )
+        self.select_style.callback = self.select_style_callback
+        self.add_item(self.select_style)
 
     # the button to delete generated images
     @discord.ui.button(
         custom_id='button_x',
+        row=0,
         emoji='❌')
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -340,22 +410,125 @@ class DrawView(View):
         except Exception as e:
             print_exception(e, interaction, loop)
 
-    def find_between(self, s: str, first: str, last: str):
+    async def select_checkpoint_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
         try:
-            start = s.index(first) + len(first)
-            end = s.index(last, start)
-            return s[start:end]
-        except ValueError:
-            return ''
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
 
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
 
-class DrawExtendedView(DrawView):
+            # verify checkpoint
+            checkpoint = self.select_checkpoint.values[0]
+            if checkpoint not in settings.global_var.model_names:
+                view = DrawExtendedView(self.stable_cog, input_object)
+                loop.create_task(interaction.response.edit_message(view=view))
+                loop.create_task(interaction.followup.edit_message('Unknown checkpoint! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
+                return
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.model_name = checkpoint
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def select_resolution_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # verify resolution
+            resolution = self.select_resolution.values[0].split('x')
+            width = None
+            height = None
+
+            try:
+                width = int(resolution[0].strip())
+                height = int(resolution[1].strip())
+            except:
+                pass
+
+            if width not in [x for x in range(192, 1025, 64)]: width = None
+            if height not in [x for x in range(192, 1025, 64)]: height = None
+
+            if width == None: width = input_object.width
+            if height == None: height = input_object.height
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.width = width
+            draw_object.height = height
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def select_style_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # verify style
+            style = self.select_style.values[0]
+            if style not in settings.global_var.style_names:
+                view = DrawExtendedView(self.stable_cog, input_object)
+                loop.create_task(interaction.response.edit_message(view=view))
+                loop.create_task(interaction.followup.edit_message('Unknown style! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
+                return
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.style = style
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+# the view used after the bot restarts
+class OfflineView(DrawExtendedView):
     def __init__(self, stable_cog, input_object: utility.DrawObject):
         super().__init__(stable_cog, input_object)
+        self.extended = False
 
     # the 🏳️ ends the game and reveals the answer
     @discord.ui.button(
         custom_id='button_giveup',
+        row=4,
         emoji='🏳️')
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -365,8 +538,8 @@ class DrawExtendedView(DrawView):
     # guess prompt button
     @discord.ui.button(
         custom_id='button_guess-prompt',
-        emoji='⌨️',
-        row=2)
+        row=4,
+        emoji='⌨️')
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
@@ -380,6 +553,7 @@ class DeleteView(View):
 
     @discord.ui.button(
         custom_id='button_x',
+        row=0,
         emoji='❌')
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -414,6 +588,30 @@ def update_user_delete(user_id: int):
         f'{user_id}': time.time()
     }
     user_last_delete.update(user_last_delete_update)
+
+async def get_input_object(stable_cog, interaction: discord.Interaction, emoji: str = None):
+    loop = asyncio.get_running_loop()
+
+    # create input object from message command
+    message = await get_message(interaction)
+    if '``/dream ' in message.content:
+        # retrieve command from message
+        command = utility.find_between(message.content, '``/dream ', '``')
+        return stable_cog.get_draw_object_from_command(command)
+    elif '``/minigame ' in message.content:
+        loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
+        return None
+    else:
+        # retrieve command from cache
+        command = settings.get_dream_command(message.id)
+        if command:
+            return stable_cog.get_draw_object_from_command(command)
+        else:
+            if emoji:
+                loop.create_task(interaction.response.send_message(f'I may have been restarted. This interaction no longer works.\nPlease try using {emoji} on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+            else:
+                loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.', ephemeral=True, delete_after=30))
+            return None
 
 def check_interaction_permission(interaction: discord.Interaction, loop: asyncio.AbstractEventLoop):
     try:

@@ -50,10 +50,11 @@ class TipsView(View):
                                    'each step. Word order still applies.',
                              inline=False)
         embed_tips.add_field(name='Buttons',
-                             value='🖋 edits the prompt.\n'
-                                   '🖼️ creates variations of your image.\n'
-                                   '🔁 repeats the same prompt with a new seed.\n'
-                                   '❌ deletes your image.',
+                             value='🖋 edit prompt, then generate a new image with same parameters.\n'
+                                   '🖼️ create variation by sending the image to img2img.\n'
+                                   '🔁 randomize seed, then generate a new image with same parameters.\n'
+                                   '🔧 shows extra options to allow quick changes to specific parameters.\n'
+                                   '❌ deletes the generated image.',
                              inline=False)
 
         loop.create_task(interaction.response.edit_message(embed=embed_tips))

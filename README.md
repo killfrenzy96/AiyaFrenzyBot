@@ -58,6 +58,7 @@ To generate an image from text, use the /dream command and include your prompt a
   - 🖋 - edit prompt, then generate a new image with same parameters.
   - 🖼️ - create variation by sending the image to img2img.
   - 🔁 - randomize seed, then generate a new image with same parameters.
+  - 🔧 - shows extra options to allow quick changes to specific parameters.
   - ❌ - deletes the generated image.
 
 ## Notes

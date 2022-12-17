@@ -28,7 +28,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
     @commands.Cog.listener()
     async def on_ready(self):
-        self.bot.add_view(viewhandler.DrawExtendedView(self, None))
+        self.bot.add_view(viewhandler.OfflineView(self, None))
 
     # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
     def model_autocomplete(self: discord.AutocompleteContext):
@@ -796,14 +796,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
     # get draw object from a command string
     def get_draw_object_from_command(self, command: str):
-        def find_between(s: str, first: str, last: str):
-            try:
-                start = s.index(first) + len(first)
-                end = s.index(last, start)
-                return s[start:end]
-            except ValueError:
-                return ''
-
         # format command for easier processing
         command = '\n\n ' + command + '\n\n'
         for param in self.dream_params:
@@ -811,7 +803,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         command = command.replace('``', '\n\n')
 
         def get_param(param):
-            result = find_between(command, f'\n{param}\n', '\n\n')
+            result = utility.find_between(command, f'\n{param}\n', '\n\n')
             return result.strip()
 
         # get all parameters and validate inputs
@@ -824,17 +816,17 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
         try:
             width = int(get_param('width'))
-            if width not in [x for x in range(192, 1281, 64)]:
+            if width not in [x for x in range(192, 1025, 64)]:
                 width = int(width / 64) * 64
-                if width not in [x for x in range(192, 1281, 64)]: width = 512
+                if width not in [x for x in range(192, 1025, 64)]: width = 512
         except:
             width = 512
 
         try:
             height = int(get_param('height'))
-            if height not in [x for x in range(192, 1281, 64)]:
+            if height not in [x for x in range(192, 1025, 64)]:
                 height = int(height / 64) * 64
-                if height not in [x for x in range(192, 1281, 64)]: height = 512
+                if height not in [x for x in range(192, 1025, 64)]: height = 512
         except:
             height = 512
 

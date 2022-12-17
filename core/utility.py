@@ -454,3 +454,11 @@ def get_user(ctx: discord.ApplicationContext | discord.Interaction | discord.Mes
             return ctx.author
     except:
         return None
+
+def find_between(s: str, first: str, last: str):
+    try:
+        start = s.index(first) + len(first)
+        end = s.index(last, start)
+        return s[start:end]
+    except ValueError:
+        return ''
