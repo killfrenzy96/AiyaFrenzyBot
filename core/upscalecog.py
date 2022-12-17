@@ -101,7 +101,7 @@ class UpscaleCog(commands.Cog):
         description='Do the upscale before restoring faces. Default: False',
         required=False,
     )
-    async def dream_handler(self, ctx: discord.ApplicationContext, *,
+    async def dream_handler(self, ctx: discord.ApplicationContext | discord.Interaction, *,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
                             resize: float = 4.0,
@@ -254,6 +254,8 @@ class UpscaleCog(commands.Cog):
 
             if type(ctx) is discord.ApplicationContext:
                 loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
+            elif type(ctx) is discord.Interaction:
+                loop.create_task(ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after))
             else:
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 

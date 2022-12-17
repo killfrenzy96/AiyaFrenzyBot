@@ -9,6 +9,7 @@ from core import settings
 from core import utility
 from core import stablecog
 
+discord_bot: discord.Bot = None
 
 # the modal that is used for the 🖋 button
 class DrawModal(Modal):
@@ -217,7 +218,7 @@ class DrawView(View):
             # obtain URL for the original image
             init_url = message.attachments[0].url
             if not init_url:
-                loop.create_task(interaction.response.send_message('The image seems to be missing. This button no longer works.', ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
                 return
 
             # get input object
@@ -339,6 +340,7 @@ class DrawExtendedView(DrawView):
             min_values=1,
             max_values=1,
             options=[
+                discord.SelectOption(label='Upscale 4x', description='Send image to upscaler at 4x resolution'),
                 discord.SelectOption(label='512 x 512', description='Default resolution'),
                 discord.SelectOption(label='768 x 512', description='Landscape'),
                 discord.SelectOption(label='512 x 768', description='Portrait'),
@@ -448,40 +450,53 @@ class DrawExtendedView(DrawView):
         try:
             if check_interaction_permission(interaction, loop) == False: return
             stable_cog: stablecog.StableCog = self.stable_cog
+            message = await get_message(interaction)
 
             # get input object
             if self.input_object:
                 input_object = self.input_object
             else:
-                input_object = await get_input_object(stable_cog, interaction)
+                input_object = await get_input_object(stable_cog, interaction, message=message)
                 if input_object == None: return
 
-            # verify resolution
-            resolution = self.select_resolution.values[0].split('x')
-            width = None
-            height = None
+            if self.select_resolution.values[0].startswith('Upscale'):
+                # upscale image
+                upscale_cog = discord_bot.get_cog('UpscaleCog')
+                if upscale_cog == None: raise Exception()
 
-            try:
-                width = int(resolution[0].strip())
-                height = int(resolution[1].strip())
-            except:
-                pass
+                init_url = message.attachments[0].url
+                if not init_url:
+                    loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
+                    return
 
-            if width not in [x for x in range(192, 1025, 64)]: width = None
-            if height not in [x for x in range(192, 1025, 64)]: height = None
+                loop.create_task(upscale_cog.dream_handler(interaction, init_url=init_url))
+            else:
+                # verify resolution
+                resolution = self.select_resolution.values[0].split('x')
+                width = None
+                height = None
 
-            if width == None: width = input_object.width
-            if height == None: height = input_object.height
+                try:
+                    width = int(resolution[0].strip())
+                    height = int(resolution[1].strip())
+                except:
+                    pass
 
-            # start dream
-            draw_object = copy.copy(input_object)
-            draw_object.width = width
-            draw_object.height = height
-            draw_object.ctx = interaction
-            draw_object.view = None
-            draw_object.payload = None
+                if width not in [x for x in range(192, 1025, 64)]: width = None
+                if height not in [x for x in range(192, 1025, 64)]: height = None
 
-            loop.create_task(stable_cog.dream_object(draw_object))
+                if width == None: width = input_object.width
+                if height == None: height = input_object.height
+
+                # start dream
+                draw_object = copy.copy(input_object)
+                draw_object.width = width
+                draw_object.height = height
+                draw_object.ctx = interaction
+                draw_object.view = None
+                draw_object.payload = None
+
+                loop.create_task(stable_cog.dream_object(draw_object))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -532,7 +547,7 @@ class OfflineView(DrawExtendedView):
         emoji='🏳️')
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
-        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
+        loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
         return
 
     # guess prompt button
@@ -542,7 +557,7 @@ class OfflineView(DrawExtendedView):
         emoji='⌨️')
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
-        loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
+        loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
         return
 
 # creating the view that holds a button to delete output
@@ -589,11 +604,11 @@ def update_user_delete(user_id: int):
     }
     user_last_delete.update(user_last_delete_update)
 
-async def get_input_object(stable_cog, interaction: discord.Interaction, emoji: str = None):
+async def get_input_object(stable_cog, interaction: discord.Interaction, emoji: str = None, message: discord.Message = None):
     loop = asyncio.get_running_loop()
 
     # create input object from message command
-    message = await get_message(interaction)
+    if message == None: message = await get_message(interaction)
     if '``/dream ' in message.content:
         # retrieve command from message
         command = utility.find_between(message.content, '``/dream ', '``')

@@ -29,6 +29,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @commands.Cog.listener()
     async def on_ready(self):
         self.bot.add_view(viewhandler.OfflineView(self, None))
+        viewhandler.discord_bot = self.bot
 
     # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
     def model_autocomplete(self: discord.AutocompleteContext):
