@@ -733,6 +733,7 @@ class DrawExtendedView(DrawView):
                     draw_object.height = 1024
                     draw_object.init_url = init_url
                     draw_object.strength = 0.2
+                    draw_object.batch = 1
                     draw_object.ctx = interaction
                     draw_object.view = None
                     draw_object.payload = None
