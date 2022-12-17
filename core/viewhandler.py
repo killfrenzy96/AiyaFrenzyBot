@@ -575,6 +575,16 @@ class DrawExtendedView(DrawView):
             self.page_items.append(self.select_strength)
             self.add_item(self.select_strength)
 
+            self.button_remove_init_image = Button(
+                label='Remove Init Image',
+                custom_id='button_extra_remove_init_image',
+                row=3,
+                emoji='✂️'
+            )
+            self.button_remove_init_image.callback = self.button_remove_init_image_callback
+            self.page_items.append(self.button_remove_init_image)
+            self.add_item(self.button_remove_init_image)
+
         # setup buttons for other options
         label = 'Toggle HighRes Fix'
         if self.input_object.highres_fix:
@@ -1062,6 +1072,31 @@ class DrawExtendedView(DrawView):
             # start dream
             draw_object = copy.copy(input_object)
             draw_object.highres_fix = highres_fix
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def button_remove_init_image_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.init_url = None
             draw_object.ctx = interaction
             draw_object.view = None
             draw_object.payload = None
