@@ -393,11 +393,12 @@ class DrawExtendedView(DrawView):
             options=[
                 discord.SelectOption(label='Upscale 4x', description='Send image to upscaler at 4x resolution'),
                 discord.SelectOption(label='512 x 512', description='Default resolution'),
+                discord.SelectOption(label='768 x 768', description='High resolution'),
                 discord.SelectOption(label='768 x 512', description='Landscape'),
                 discord.SelectOption(label='512 x 768', description='Portrait'),
-                discord.SelectOption(label='768 x 768', description='High resolution'),
                 discord.SelectOption(label='1024 x 576', description='16:9 Landscape'),
                 discord.SelectOption(label='576 x 1024', description='16:9 Portrait'),
+                discord.SelectOption(label='1024 x 1024', description='Maximum Resolution'),
             ],
         )
         self.select_resolution.callback = self.select_resolution_callback
@@ -549,7 +550,7 @@ class DrawExtendedView(DrawView):
         # setup select for strength
         if self.input_object.init_url:
             placeholder = 'Change Denoising Strength'
-            if self.input_object: placeholder += f'Change Denoising Strength - Current: {self.input_object.strength}'
+            if self.input_object: placeholder += f' - Current: {self.input_object.strength}'
 
             options: list[discord.SelectOption] = []
             if self.input_object:
@@ -569,9 +570,9 @@ class DrawExtendedView(DrawView):
                 max_values=1,
                 options=options,
             )
-            self.select_guidance_scale.callback = self.select_strength_callback
-            self.page_items.append(self.select_guidance_scale)
-            self.add_item(self.select_guidance_scale)
+            self.select_strength.callback = self.select_strength_callback
+            self.page_items.append(self.select_strength)
+            self.add_item(self.select_strength)
 
         # setup buttons for other options
         label = 'Toggle HighRes Fix'
