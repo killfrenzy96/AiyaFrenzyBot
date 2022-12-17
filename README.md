@@ -27,7 +27,7 @@ TOKEN = put your bot token here
 
 To generate an image from text, use the /dream command and include your prompt as the query.
 
-<img src=https://user-images.githubusercontent.com/32452698/208234253-1059bc64-ca61-4778-8166-8c59718fc07d.png>
+<img src=https://user-images.githubusercontent.com/32452698/208234293-3be41fdb-c60d-4521-9b7d-6f8dcb49bc20.png>
 
 ### Currently supported options
 
