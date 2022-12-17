@@ -391,6 +391,7 @@ class DrawExtendedView(DrawView):
             min_values=1,
             max_values=1,
             options=[
+                discord.SelectOption(label='Upscale img2img 1024 x 1024', description='Send image to img2img to upscale to 1024 x 1024'),
                 discord.SelectOption(label='Upscale 4x', description='Send image to upscaler at 4x resolution'),
                 discord.SelectOption(label='512 x 512', description='Default resolution'),
                 discord.SelectOption(label='768 x 768', description='High resolution'),
@@ -707,19 +708,34 @@ class DrawExtendedView(DrawView):
                 input_object = await get_input_object(stable_cog, interaction, message=message)
                 if input_object == None: return
 
-            if self.select_resolution.values[0].startswith('Upscale'):
+            task = self.select_resolution.values[0].split(' ')
+            if task[0] == 'Upscale':
                 # upscale image
-                upscale_cog = discord_bot.get_cog('UpscaleCog')
-                if upscale_cog == None: raise Exception()
-
                 init_url = message.attachments[0].url
                 if not init_url:
                     loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
                     return
 
-                loop.create_task(upscale_cog.dream_handler(interaction, init_url=init_url))
+                if task[1] == 'img2img':
+                    # upscale image using latent diffusion
+                    draw_object = copy.copy(input_object)
+                    draw_object.width = 1024
+                    draw_object.height = 1024
+                    draw_object.init_url = init_url
+                    draw_object.strength = 0.2
+                    draw_object.ctx = interaction
+                    draw_object.view = None
+                    draw_object.payload = None
+
+                    loop.create_task(stable_cog.dream_object(draw_object))
+                else:
+                    # upscale image with upscale cog
+                    upscale_cog = discord_bot.get_cog('UpscaleCog')
+                    if upscale_cog == None: raise Exception()
+
+                    loop.create_task(upscale_cog.dream_handler(interaction, init_url=init_url))
             else:
-                # verify resolution
+                # change resolution
                 resolution = self.select_resolution.values[0].split('x')
                 width = None
                 height = None
