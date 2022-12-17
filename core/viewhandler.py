@@ -312,28 +312,44 @@ class DrawExtendedView(DrawView):
         match page:
             case 1: self.setup_page_1()
             case 2: self.setup_page_2()
+            case 3: self.setup_page_3()
 
-        page_button_1 = Button(
+        button = Button(
             label='Checkpoint / Resolution / Sampler',
             custom_id='button_extra_page_1',
             row=4,
             emoji='🧩'
         )
-        if page == 1: page_button_1.disabled = True
+        if page == 1: button.disabled = True
         async def button_page_1(interaction: discord.Interaction): await self.button_page_callback(interaction, 1)
-        page_button_1.callback = button_page_1
-        self.add_item(page_button_1)
+        button.callback = button_page_1
+        self.add_item(button)
 
-        page_button_2 = Button(
+        button = Button(
             label='Steps / Guidance Scale / Style',
             custom_id='button_extra_page_2',
             row=4,
             emoji='🧩'
         )
-        if page == 2: page_button_2.disabled = True
+        if page == 2: button.disabled = True
         async def button_page_2(interaction: discord.Interaction): await self.button_page_callback(interaction, 2)
-        page_button_2.callback = button_page_2
-        self.add_item(page_button_2)
+        button.callback = button_page_2
+        self.add_item(button)
+
+        if input_object and input_object.init_url:
+            label = 'Batch / Strength / More'
+        else:
+            label = 'Batch / More'
+        button = Button(
+            label=label,
+            custom_id='button_extra_page_3',
+            row=4,
+            emoji='🧩'
+        )
+        if page == 3: button.disabled = True
+        async def button_page_3(interaction: discord.Interaction): await self.button_page_callback(interaction, 3)
+        button.callback = button_page_3
+        self.add_item(button)
 
     def clear_page(self):
         for item in self.page_items:
@@ -342,23 +358,23 @@ class DrawExtendedView(DrawView):
 
     def setup_page_1(self):
         # setup select for checkpoint
-        checkpoint_placeholder = 'Change Checkpoint'
-        if self.input_object: checkpoint_placeholder += f' - Current: {self.input_object.model_name}'
+        placeholder = 'Change Checkpoint'
+        if self.input_object: placeholder += f' - Current: {self.input_object.model_name}'
 
-        checkpoint_options: list[discord.SelectOption] = []
+        options: list[discord.SelectOption] = []
         for (display_name, full_name) in settings.global_var.model_names.items():
-            checkpoint_options.append(discord.SelectOption(
+            options.append(discord.SelectOption(
                 label=display_name,
                 description=full_name
             ))
 
         self.select_checkpoint = Select(
-            placeholder=checkpoint_placeholder,
+            placeholder=placeholder,
             custom_id='button_select_checkpoint',
             row=1,
             min_values=1,
             max_values=1,
-            options=checkpoint_options,
+            options=options,
         )
         self.select_checkpoint.callback = self.select_checkpoint_callback
         self.page_items.append(self.select_checkpoint)
@@ -389,22 +405,22 @@ class DrawExtendedView(DrawView):
         self.add_item(self.select_resolution)
 
         # setup select for style
-        sampler_placeholder = 'Change Sampler'
-        if self.input_object: sampler_placeholder += f' - Current: {self.input_object.sampler}'
+        placeholder = 'Change Sampler'
+        if self.input_object: placeholder += f' - Current: {self.input_object.sampler}'
 
-        sampler_options: list[discord.SelectOption] = []
+        options: list[discord.SelectOption] = []
         for sampler in settings.global_var.sampler_names:
-            sampler_options.append(discord.SelectOption(
+            options.append(discord.SelectOption(
                 label=sampler
             ))
 
         self.select_sampler = Select(
-            placeholder=sampler_placeholder,
+            placeholder=placeholder,
             custom_id='button_select_sampler',
             row=3,
             min_values=1,
             max_values=1,
-            options=sampler_options,
+            options=options,
         )
         self.select_sampler.callback = self.select_sampler_callback
         self.page_items.append(self.select_sampler)
@@ -412,66 +428,68 @@ class DrawExtendedView(DrawView):
 
     def setup_page_2(self):
         # setup select for steps
-        steps_placeholder = 'Change Steps'
-        if self.input_object: steps_placeholder += f' - Current: {self.input_object.steps}'
+        placeholder = 'Change Steps'
+        if self.input_object: placeholder += f' - Current: {self.input_object.steps}'
 
-        steps_options: list[discord.SelectOption] = []
+        options: list[discord.SelectOption] = []
         if self.input_object:
             guild = utility.get_guild(self.input_object.ctx)
             steps = self.input_object.steps
             max_steps = settings.read(guild)['max_steps']
-            if steps - 10 >= 1: steps_options.append(discord.SelectOption(label=f'Steps = {steps - 10}', description='Steps -10'))
-            if steps - 5 >= 1: steps_options.append(discord.SelectOption(label=f'Steps = {steps - 5}', description='Steps -5'))
-            if steps - 1 >= 1: steps_options.append(discord.SelectOption(label=f'Steps = {steps - 1}', description='Steps -1'))
-            if steps + 1 <= max_steps: steps_options.append(discord.SelectOption(label=f'Steps = {steps + 1}', description='Steps +1'))
-            if steps + 5 <= max_steps: steps_options.append(discord.SelectOption(label=f'Steps = {steps + 5}', description='Steps +5'))
-            if steps + 10 <= max_steps: steps_options.append(discord.SelectOption(label=f'Steps = {steps + 10}', description='Steps +10'))
+            if steps - 20 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 20}', description='Steps -20'))
+            if steps - 10 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 10}', description='Steps -10'))
+            if steps - 5 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 5}', description='Steps -5'))
+            if steps - 1 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 1}', description='Steps -1'))
+            if steps + 1 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 1}', description='Steps +1'))
+            if steps + 5 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 5}', description='Steps +5'))
+            if steps + 10 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 10}', description='Steps +10'))
+            if steps + 20 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 20}', description='Steps +20'))
 
         self.select_steps = Select(
-            placeholder=steps_placeholder,
+            placeholder=placeholder,
             custom_id='button_select_steps',
             row=1,
             min_values=1,
             max_values=1,
-            options=steps_options,
+            options=options,
         )
         self.select_steps.callback = self.select_steps_callback
         self.page_items.append(self.select_steps)
         self.add_item(self.select_steps)
 
         # setup select for guidance scale
-        guidance_scale_placeholder = 'Change Guidance Scale'
-        if self.input_object: guidance_scale_placeholder += f' - Current: {self.input_object.guidance_scale}'
+        placeholder = 'Change Guidance Scale'
+        if self.input_object: placeholder += f' - Current: {self.input_object.guidance_scale}'
 
-        guidance_scale_options: list[discord.SelectOption] = []
+        options: list[discord.SelectOption] = []
         if self.input_object:
             guidance_scale = self.input_object.guidance_scale
-            if guidance_scale - 5.0 >= 1.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 5.0}', description='Guidance Scale -5'))
-            if guidance_scale - 2.0 >= 1.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 2.0}', description='Guidance Scale -2'))
-            if guidance_scale - 1.0 >= 1.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 1.0}', description='Guidance Scale -1'))
-            if guidance_scale - 0.1 >= 1.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 0.1}', description='Guidance Scale -0.1'))
-            if guidance_scale + 0.1 <= 30.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 0.1}', description='Guidance Scale +0.1'))
-            if guidance_scale + 1.0 <= 30.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 1.0}', description='Guidance Scale +1'))
-            if guidance_scale + 2.0 <= 30.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 2.0}', description='Guidance Scale +2'))
-            if guidance_scale + 5.0 <= 30.0: guidance_scale_options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 5.0}', description='Guidance Scale +5'))
+            if guidance_scale - 5.0 >= 1.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 5.0}', description='Guidance Scale -5'))
+            if guidance_scale - 2.0 >= 1.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 2.0}', description='Guidance Scale -2'))
+            if guidance_scale - 1.0 >= 1.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 1.0}', description='Guidance Scale -1'))
+            if guidance_scale - 0.1 >= 1.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale - 0.1}', description='Guidance Scale -0.1'))
+            if guidance_scale + 0.1 <= 30.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 0.1}', description='Guidance Scale +0.1'))
+            if guidance_scale + 1.0 <= 30.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 1.0}', description='Guidance Scale +1'))
+            if guidance_scale + 2.0 <= 30.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 2.0}', description='Guidance Scale +2'))
+            if guidance_scale + 5.0 <= 30.0: options.append(discord.SelectOption(label=f'Guidance Scale = {guidance_scale + 5.0}', description='Guidance Scale +5'))
 
         self.select_guidance_scale = Select(
-            placeholder=guidance_scale_placeholder,
+            placeholder=placeholder,
             custom_id='button_select_guidance_scale',
             row=2,
             min_values=1,
             max_values=1,
-            options=guidance_scale_options,
+            options=options,
         )
         self.select_guidance_scale.callback = self.select_guidance_scale_callback
         self.page_items.append(self.select_guidance_scale)
         self.add_item(self.select_guidance_scale)
 
         # setup select for style
-        style_placeholder = 'Change Style'
-        if self.input_object: style_placeholder += f' - Current: {self.input_object.style}'
+        placeholder = 'Change Style'
+        if self.input_object: placeholder += f' - Current: {self.input_object.style}'
 
-        style_options: list[discord.SelectOption] = []
+        options: list[discord.SelectOption] = []
         for key, value in settings.global_var.style_names.items():
             values: list[str] = value.split('\n')
             style_prompt = values[0]
@@ -487,22 +505,138 @@ class DrawExtendedView(DrawView):
             if len(description) >= 100:
                 description = description[0:100]
 
-            style_options.append(discord.SelectOption(
+            options.append(discord.SelectOption(
                 label=key,
                 description=description
             ))
 
         self.select_style = Select(
-            placeholder=style_placeholder,
+            placeholder=placeholder,
             custom_id='button_select_style',
             row=3,
             min_values=1,
             max_values=1,
-            options=style_options,
+            options=options,
         )
         self.select_style.callback = self.select_style_callback
         self.page_items.append(self.select_style)
         self.add_item(self.select_style)
+
+    def setup_page_3(self):
+        # setup select for batch
+        placeholder = 'Change Batch'
+        if self.input_object: placeholder += f' - Current: {self.input_object.batch}'
+
+        options: list[discord.SelectOption] = []
+        if self.input_object:
+            guild = utility.get_guild(self.input_object.ctx)
+            max_batch = settings.read(guild)['max_count']
+            for count in range(1, max_batch + 1):
+                options.append(discord.SelectOption(label=f'Batch = {count}'))
+
+        self.select_batch = Select(
+            placeholder=placeholder,
+            custom_id='button_select_batch',
+            row=1,
+            min_values=1,
+            max_values=1,
+            options=options,
+        )
+        self.select_batch.callback = self.select_batch_callback
+        self.page_items.append(self.select_batch)
+        self.add_item(self.select_batch)
+
+        # setup select for strength
+        if self.input_object.init_url:
+            placeholder = 'Change Denoising Strength'
+            if self.input_object: placeholder += f'Change Denoising Strength - Current: {self.input_object.strength}'
+
+            options: list[discord.SelectOption] = []
+            if self.input_object:
+                options.append(discord.SelectOption(label=f'Strength = {1.0}', description='Large Changes'))
+                options.append(discord.SelectOption(label=f'Strength = {0.75}', description='Moderate Changes'))
+                options.append(discord.SelectOption(label=f'Strength = {0.6}', description='Small Changes'))
+                options.append(discord.SelectOption(label=f'Strength = {0.5}', description='Minimal Changes'))
+                options.append(discord.SelectOption(label=f'Strength = {0.4}', description='Finetuning'))
+                options.append(discord.SelectOption(label=f'Strength = {0.3}', description='Finetuning'))
+                options.append(discord.SelectOption(label=f'Strength = {0.2}', description='Finetuning'))
+
+            self.select_strength = Select(
+                placeholder=placeholder,
+                custom_id='button_select_strength',
+                row=2,
+                min_values=1,
+                max_values=1,
+                options=options,
+            )
+            self.select_guidance_scale.callback = self.select_strength_callback
+            self.page_items.append(self.select_guidance_scale)
+            self.add_item(self.select_guidance_scale)
+
+        # setup buttons for other options
+        label = 'Toggle HighRes Fix'
+        if self.input_object.highres_fix:
+            label = 'Disable HighRes Fix'
+        else:
+            label = 'Enable HighRes Fix'
+
+        self.button_highres_fix = Button(
+            label=label,
+            custom_id='button_extra_highres_fix',
+            row=3,
+            emoji='🔨'
+        )
+        self.button_highres_fix.callback = self.button_highres_fix_callback
+        self.page_items.append(self.button_highres_fix)
+        self.add_item(self.button_highres_fix)
+
+        label = 'Toggle Tiling'
+        if self.input_object.tiling:
+            label = 'Disable Tiling'
+        else:
+            label = 'Enable Tiling'
+
+        self.button_tiling = Button(
+            label=label,
+            custom_id='button_extra_tiling',
+            row=3,
+            emoji='🪟'
+        )
+        self.button_tiling.callback = self.button_tiling_callback
+        self.page_items.append(self.button_tiling)
+        self.add_item(self.button_tiling)
+
+        label = 'Toggle FaceFix (CodeFormer)'
+        if self.input_object.facefix == 'CodeFormer':
+            label = 'Disable FaceFix (CodeFormer)'
+        else:
+            label = 'Enable FaceFix (CodeFormer)'
+
+        self.button_facefix_codeformer = Button(
+            label=label,
+            custom_id='button_extra_facefix_codeformer',
+            row=3,
+            emoji='🤔'
+        )
+        self.button_facefix_codeformer.callback = self.button_facefix_codeformer_callback
+        self.page_items.append(self.button_facefix_codeformer)
+        self.add_item(self.button_facefix_codeformer)
+
+        label = 'Toggle FaceFix (GFPGAN)'
+        if self.input_object.facefix == 'GFPGAN':
+            label = 'Disable FaceFix (GFPGAN)'
+        else:
+            label = 'Enable FaceFix (GFPGAN)'
+
+        self.button_facefix_gfpgan = Button(
+            label=label,
+            custom_id='button_extra_facefix_gfpgan',
+            row=3,
+            emoji='🤨'
+        )
+        self.button_facefix_gfpgan.callback = self.button_facefix_gfpgan_callback
+        self.page_items.append(self.button_facefix_gfpgan)
+        self.add_item(self.button_facefix_gfpgan)
 
     # switches page
     async def button_page_callback(self, interaction: discord.Interaction, page: int = 1):
@@ -727,6 +861,190 @@ class DrawExtendedView(DrawView):
             # start dream
             draw_object = copy.copy(input_object)
             draw_object.style = style
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def select_batch_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # get steps
+            batch = int(self.select_batch.values[0].split('=')[1].strip())
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.batch = batch
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def select_strength_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # get guidance scale
+            strength = round(float(self.select_strength.values[0].split('=')[1].strip()), 2)
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.strength = strength
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def button_facefix_codeformer_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # get facefix
+            if input_object.facefix == 'CodeFormer':
+                facefix = None
+            else:
+                facefix = 'CodeFormer'
+                if facefix not in settings.global_var.facefix_models:
+                    raise Exception() # this shouldn't happen though
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.facefix = facefix
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def button_facefix_gfpgan_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # get facefix
+            if input_object.facefix == 'GFPGAN':
+                facefix = None
+            else:
+                facefix = 'GFPGAN'
+                if facefix not in settings.global_var.facefix_models:
+                    raise Exception() # this shouldn't happen though
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.facefix = facefix
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def button_tiling_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # get tiling
+            if input_object.tiling:
+                tiling = False
+            else:
+                tiling = True
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.tiling = tiling
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
+            loop.create_task(stable_cog.dream_object(draw_object))
+
+        except Exception as e:
+            print_exception(e, interaction, loop)
+
+    async def button_highres_fix_callback(self, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+        try:
+            if check_interaction_permission(interaction, loop) == False: return
+            stable_cog: stablecog.StableCog = self.stable_cog
+
+            # get input object
+            if self.input_object:
+                input_object = self.input_object
+            else:
+                input_object = await get_input_object(stable_cog, interaction)
+                if input_object == None: return
+
+            # get tiling
+            if input_object.highres_fix:
+                highres_fix = False
+            else:
+                highres_fix = True
+
+            # start dream
+            draw_object = copy.copy(input_object)
+            draw_object.highres_fix = highres_fix
             draw_object.ctx = interaction
             draw_object.view = None
             draw_object.payload = None
