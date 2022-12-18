@@ -19,6 +19,7 @@ class OfflineViewCog(commands.Cog, description='Create images from natural langu
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.is_command(): return # do not interact with commands
         await asyncio.sleep(0.01) # make sure this function is executed after the view command
         if interaction.response.is_done() or interaction.custom_id == None: return # existing view, end this interaction
         input_object = await viewhandler.get_input_object(self.stable_cog, interaction)
