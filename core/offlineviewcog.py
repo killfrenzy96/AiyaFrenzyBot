@@ -1,19 +1,6 @@
-import base64
-import contextlib
 import discord
-import io
-import random
-import requests
-import time
-import traceback
 import asyncio
-import threading
-from urllib.parse import quote
-from PIL import Image, PngImagePlugin
-from discord import option
-from discord.ui import View
 from discord.ext import commands
-from typing import Optional
 
 from core import viewhandler
 
