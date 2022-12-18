@@ -682,6 +682,7 @@ class DrawExtendedView(DrawView):
             draw_object.payload = None
 
             loop.create_task(stable_cog.dream_object(draw_object))
+            loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -722,9 +723,11 @@ class DrawExtendedView(DrawView):
                     draw_object.payload = None
 
                     loop.create_task(stable_cog.dream_object(draw_object))
+                    loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
                 else:
                     # upscale image with upscale cog
                     loop.create_task(upscale_cog.dream_handler(interaction, init_url=init_url))
+                    loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
             else:
                 # change resolution
                 resolution = interaction.data['values'][0].split('x')
@@ -752,6 +755,7 @@ class DrawExtendedView(DrawView):
                 draw_object.payload = None
 
                 loop.create_task(stable_cog.dream_object(draw_object))
+                loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -785,6 +789,7 @@ class DrawExtendedView(DrawView):
             draw_object.payload = None
 
             loop.create_task(stable_cog.dream_object(draw_object))
+            loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -813,6 +818,7 @@ class DrawExtendedView(DrawView):
             draw_object.payload = None
 
             loop.create_task(stable_cog.dream_object(draw_object))
+            loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -841,6 +847,7 @@ class DrawExtendedView(DrawView):
             draw_object.payload = None
 
             loop.create_task(stable_cog.dream_object(draw_object))
+            loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -874,6 +881,7 @@ class DrawExtendedView(DrawView):
             draw_object.payload = None
 
             loop.create_task(stable_cog.dream_object(draw_object))
+            loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -902,6 +910,7 @@ class DrawExtendedView(DrawView):
             draw_object.payload = None
 
             loop.create_task(stable_cog.dream_object(draw_object))
+            loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
@@ -930,6 +939,7 @@ class DrawExtendedView(DrawView):
             draw_object.payload = None
 
             loop.create_task(stable_cog.dream_object(draw_object))
+            loop.create_task(interaction.followup.edit_message(interaction.message.id, view=self))
 
         except Exception as e:
             print_exception(e, interaction, loop)
