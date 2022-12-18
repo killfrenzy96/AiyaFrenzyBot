@@ -39,6 +39,7 @@ class OfflineViewCog(commands.Cog, description='Create images from natural langu
             case 'button_select_style': await viewhandler.DrawExtendedView(input_object, 2).select_style_callback(interaction)
             case 'button_select_batch': await viewhandler.DrawExtendedView(input_object, 3).select_batch_callback(interaction)
             case 'button_select_strength': await viewhandler.DrawExtendedView(input_object, 3).select_strength_callback(interaction)
+            case 'button_extra_remove_init_image': await viewhandler.DrawExtendedView(input_object, 3).button_remove_init_image_callback(interaction)
             case 'button_extra_highres_fix': await viewhandler.DrawExtendedView(input_object, 3).button_highres_fix_callback(interaction)
             case 'button_extra_tiling': await viewhandler.DrawExtendedView(input_object, 3).button_tiling_callback(interaction)
             case 'button_extra_facefix_codeformer': await viewhandler.DrawExtendedView(input_object, 3).button_facefix_codeformer_callback(interaction)
