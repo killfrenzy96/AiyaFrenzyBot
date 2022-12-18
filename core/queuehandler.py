@@ -399,7 +399,7 @@ class DreamQueue:
             dream_compute_cost *= float(batch)
 
         elif type(queue_object) is utility.UpscaleObject:
-            dream_compute_cost = queue_object.resize
+            dream_compute_cost = 4.0
 
         elif type(queue_object) is utility.IdentifyObject:
             dream_compute_cost = 1.0

@@ -146,31 +146,57 @@ class UpscaleCog(commands.Cog):
                     print(f'Upscale rejected: Image is not from the Discord CDN.')
                     content = 'Only URL images from the Discord CDN are allowed!'
                     ephemeral = True
-                    image_validated = False
                     raise Exception()
 
                 try:
                     # reject URL downloads larger than 10MB
                     url_head = await loop.run_in_executor(None, requests.head, init_url)
                     url_size = int(url_head.headers.get('content-length', -1))
-                    if url_size > 10 * 1024 * 1024:
-                        print(f'Upscale rejected: Image too large.')
-                        content = 'URL image is too large! Please make the download size smaller.'
-                        ephemeral = True
-                        image_validated = False
-                        raise Exception()
-
-                    # download and encode the image
-                    image_data = await loop.run_in_executor(None, requests.get, init_url)
-                    image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')
-                    image_validated = True
-
                 except:
-                    if content == None:
-                        content = 'URL image not found! Please check the image URL.'
-                        ephemeral = True
-                        image_validated = False
+                    content = 'Image not found! Please check the image URL.'
+                    ephemeral = True
                     raise Exception()
+
+                # check image download size
+                if url_size > 10 * 1024 * 1024:
+                    print(f'Upscale rejected: Image download too large.')
+                    content = 'Image download is too large! Please make the download size smaller.'
+                    ephemeral = True
+                    raise Exception()
+
+                # download and encode the image
+                try:
+                    image_response = await loop.run_in_executor(None, requests.get, init_url)
+                    image_data = image_response.content
+                    image_string = base64.b64encode(image_data).decode('utf-8')
+                except:
+                    print(f'Upscale rejected: Image download failed.')
+                    content = 'Image download failed! Please check the image URL.'
+                    ephemeral = True
+                    raise Exception()
+
+                # check if image can open
+                try:
+                    image_bytes = io.BytesIO(image_data)
+                    image_pil = Image.open(image_bytes)
+                    image_pil_width, image_pil_height = image_pil.size
+                except Exception as e:
+                    print(f'Upscale rejected: Image is corrupted.')
+                    print(f'\n{traceback.print_exc()}')
+                    content = 'Image is corrupted! Please check the image you uploaded.'
+                    ephemeral = True
+                    raise Exception()
+
+                # limit image width/height
+                if image_pil_width * image_pil_height > 512 * 512 * settings.read(guild)['max_compute']:
+                    print(f'Upscale rejected: Image size is too large.')
+                    content = 'Image size is too large! Please use a lower resolution image.'
+                    ephemeral = True
+                    raise Exception()
+
+                # setup image variable
+                image = 'data:image/png;base64,' + image_string
+                image_validated = True
 
             #fail if no image is provided
             if image_validated == False:
@@ -287,10 +313,10 @@ class UpscaleCog(commands.Cog):
 
                     #create safe/sanitized filename
                     epoch_time = int(time.time())
-                    file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
 
                     # save local copy of image
                     if settings.global_var.dir != '--no-output':
+                        file_path = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
                         try:
                             with open(file_path, 'wb') as fh:
                                 fh.write(base64.b64decode(image_data))
@@ -298,7 +324,8 @@ class UpscaleCog(commands.Cog):
                         except Exception as e:
                             print(f'Unable to save image: {file_path}\n{traceback.print_exc()}')
                     else:
-                        print(f'Received image: {int(time.time())}-x{queue_object.resize}-{self.file_name[0:120]}.png')
+                        file_path = f'{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
+                        print(f'Received image: {file_path}')
 
                     # post to discord
                     with io.BytesIO() as buffer:
@@ -311,8 +338,7 @@ class UpscaleCog(commands.Cog):
                             buffer.seek(0)
                             quality = int(max(5, min(95, ((8 * 1000 * 1000) / size) * 350.0)))
                             image.save(buffer, format='JPEG', optimize=True, quality=quality)
-                            file_path = file_path.lstrip('.png')
-                            file_path += '.jpeg'
+                            file_path = file_path.rstrip('.png') + '.jpeg'
                             print(f'New image size: {buffer.getbuffer().nbytes} bytes - Quality: {quality}')
                         buffer.seek(0)
 
