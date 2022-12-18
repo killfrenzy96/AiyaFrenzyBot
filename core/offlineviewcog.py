@@ -25,6 +25,9 @@ class OfflineViewCog(commands.Cog, description='Create images from natural langu
 
         # match up custom id
         match interaction.custom_id:
+            # delete button
+            case 'button_x': await viewhandler.user_delete(interaction)
+
             # extra buttons navigation
             case 'button_extra_page_1': await viewhandler.DrawExtendedView(input_object).button_page_callback(interaction, 1)
             case 'button_extra_page_2': await viewhandler.DrawExtendedView(input_object).button_page_callback(interaction, 2)

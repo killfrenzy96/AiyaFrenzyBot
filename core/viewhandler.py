@@ -1102,24 +1102,8 @@ class DrawExtendedView(DrawView):
         custom_id='button_x',
         row=0,
         emoji='❌')
-    async def delete(self, button: Button, interaction: discord.Interaction):
-        loop = asyncio.get_running_loop()
-        try:
-            if check_interaction_permission(interaction, loop) == False: return
-            message = await get_message(interaction)
-
-            if not message.content.startswith(f'<@{interaction.user.id}>'):
-                loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
-                return
-
-            if confirm_user_delete(interaction.user.id):
-                loop.create_task(interaction.response.send_modal(DeleteModal(message)))
-            else:
-                loop.create_task(interaction.message.delete())
-                update_user_delete(interaction.user.id)
-
-        except Exception as e:
-            print_exception(e, interaction, loop)
+    async def button_delete(self, button: Button, interaction: discord.Interaction):
+        await user_delete(interaction)
 
 # creating the view that holds a button to delete output
 class DeleteView(View):
@@ -1130,27 +1114,30 @@ class DeleteView(View):
         custom_id='button_x',
         row=0,
         emoji='❌')
-    async def delete(self, button: Button, interaction: discord.Interaction):
-        loop = asyncio.get_running_loop()
-        try:
-            if check_interaction_permission(interaction, loop) == False: return
-            message = await get_message(interaction)
-
-            if not message.content.startswith(f'<@{interaction.user.id}>'):
-                loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
-                return
-
-            if confirm_user_delete(interaction.user.id):
-                loop.create_task(interaction.response.send_modal(DeleteModal(message)))
-            else:
-                loop.create_task(interaction.message.delete())
-                update_user_delete(interaction.user.id)
-
-        except Exception as e:
-            print_exception(e, interaction, loop)
+    async def button_delete(self, button: Button, interaction: discord.Interaction):
+        await user_delete(interaction)
 
 # shared utility functions
 user_last_delete: dict = {}
+
+async def user_delete(interaction: discord.Interaction):
+    loop = asyncio.get_running_loop()
+    try:
+        if check_interaction_permission(interaction, loop) == False: return
+        message = await get_message(interaction)
+
+        if not message.content.startswith(f'<@{interaction.user.id}>'):
+            loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
+            return
+
+        if confirm_user_delete(interaction.user.id):
+            loop.create_task(interaction.response.send_modal(DeleteModal(message)))
+        else:
+            loop.create_task(interaction.message.delete())
+            update_user_delete(interaction.user.id)
+
+    except Exception as e:
+        print_exception(e, interaction, loop)
 
 def confirm_user_delete(user_id: int):
     try:
