@@ -244,7 +244,6 @@ class DrawView(View):
         except Exception as e:
             print_exception(e, interaction, loop)
 
-
     # the 🔁 button will take the same parameters for the image, change the seed, and add a task to the queue
     @discord.ui.button(
         custom_id='button_re-roll',

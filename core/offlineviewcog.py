@@ -9,7 +9,6 @@ class OfflineViewCog(commands.Cog, description='Create images from natural langu
     ctx_parse = discord.ApplicationContext
     def __init__(self, bot):
         self.bot: discord.Bot = bot
-        self.message_minigame = 'I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.'
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -26,13 +25,6 @@ class OfflineViewCog(commands.Cog, description='Create images from natural langu
 
         # match up custom id
         match interaction.custom_id:
-            # draw view buttons
-            # case 'button_x': await viewhandler.DeleteView().delete(input_object, interaction)
-            # case 'button_re-prompt': await viewhandler.DrawView(input_object).button_draw(None, interaction)
-            # case 'button_image-variation': await viewhandler.DrawView(input_object).button_draw_variation(None, interaction)
-            # case 'button_re-roll': await viewhandler.DrawView(input_object).button_reroll(None, interaction)
-            # case 'button_extra': await viewhandler.DrawView(input_object).button_extra(None, interaction)
-
             # extra buttons navigation
             case 'button_extra_page_1': await viewhandler.DrawExtendedView(input_object).button_page_callback(interaction, 1)
             case 'button_extra_page_2': await viewhandler.DrawExtendedView(input_object).button_page_callback(interaction, 2)
