@@ -26,11 +26,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         self.wait_message: list[str] = []
         self.bot: discord.Bot = bot
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        self.bot.add_view(viewhandler.OfflineView(self, None))
-        viewhandler.discord_bot = self.bot
-
     # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
     def model_autocomplete(self: discord.AutocompleteContext):
         return [
@@ -505,7 +500,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 queue_object = utility.DrawObject(*args)
 
                 # create view to handle buttons
-                queue_object.view = viewhandler.DrawView(self, queue_object)
+                queue_object.view = viewhandler.DrawView(queue_object)
 
                 # send message with queue object
                 if message == None:

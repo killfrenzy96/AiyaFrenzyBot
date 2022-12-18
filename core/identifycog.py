@@ -99,7 +99,7 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
 
             # creates the upscale object out of local variables
             def get_identify_object():
-                queue_object = utility.IdentifyObject(self, ctx, init_url, model, viewhandler.DeleteView(user.id))
+                queue_object = utility.IdentifyObject(self, ctx, init_url, model, viewhandler.DeleteView())
 
                 # send message with queue object
                 queue_object.message = queue_object.get_command()

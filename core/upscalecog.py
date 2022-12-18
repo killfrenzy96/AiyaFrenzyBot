@@ -191,7 +191,7 @@ class UpscaleCog(commands.Cog):
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                queue_object = utility.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, gfpgan, codeformer, upscale_first, viewhandler.DeleteView(user.id))
+                queue_object = utility.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, gfpgan, codeformer, upscale_first, viewhandler.DeleteView())
 
                 # send message with queue object
                 queue_object.message = queue_object.get_command()

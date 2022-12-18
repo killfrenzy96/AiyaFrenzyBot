@@ -26,6 +26,7 @@ self.load_extension('core.identifycog')
 self.load_extension('core.tipscog')
 self.load_extension('core.cancelcog')
 self.load_extension('core.minigamecog')
+self.load_extension('core.offlineviewcog')
 
 #stats slash command
 @self.slash_command(name='stats', description='How many images have I generated?')
