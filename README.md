@@ -16,6 +16,7 @@ There is now support for multiple WebUI instances. You can try using this by add
   - AIYA is currently tested on commit `685f9631b56ff8bd43bce24ff5ce0f9a0e9af490` of the Web UI.
 - Run the Web UI as local host with api (`COMMANDLINE_ARGS= --listen --api`).
 - Clone this repo.
+- See [Setting up a Discord Bot](https://github.com/killfrenzy96/AiyaFrenzyBot/wiki/Setting-up-a-Discord-Bot) to obtain a Discord bot token.
 - Create a text file in your cloned repo called ".env", formatted like so:
 ```dotenv
 # .env
@@ -32,7 +33,7 @@ To generate an image from text, use the /dream command and include your prompt a
 ### Currently supported options
 
 - negative prompts
-- swap model/checkpoint (_see [wiki](https://github.com/Kilvoctu/aiyabot/wiki/Model-swapping)_)
+- swap model/checkpoint (_see [wiki](https://github.com/killfrenzy96/AiyaFrenzyBot/wiki/Model-Swapping)_)
 - sampling steps
 - width/height (up to 1024)
 - CFG scale
@@ -64,8 +65,8 @@ To generate an image from text, use the /dream command and include your prompt a
 ## Notes
 
 - Ensure AIYA has `bot` and `application.commands` scopes when inviting to your Discord server, and intents are enabled.
-- [See wiki for optional .env variables you can set.](https://github.com/Kilvoctu/aiyabot/wiki/.env-Settings)
-- [See wiki for notes on swapping models.](https://github.com/Kilvoctu/aiyabot/wiki/Model-swapping)
+- [See wiki for optional config variables you can set.](https://github.com/killfrenzy96/AiyaFrenzyBot/wiki/Setup-and-Config)
+- [See wiki for notes on swapping models.](https://github.com/killfrenzy96/AiyaFrenzyBot/wiki/Model-Swapping)
 
 ## Credits
 
@@ -77,6 +78,6 @@ AIYA only exists thanks to these awesome people:
 - harubaru, the foundation for the AIYA Discord bot.
   - https://github.com/harubaru/waifu-diffusion
   - https://github.com/harubaru/discord-stable-diffusion
-- gingivere0, for PayloadFormatter class for the original API. Without that, I'd have given up from the start. Also has a great Discord bot as a no-slash-command alternative.
+- gingivere0, for PayloadFormatter class for the original API. Also has a great Discord bot as a no-slash-command alternative.
   - https://github.com/gingivere0/dalebot
 - You, for using AIYA and contributing with PRs, bug reports, feedback, and more!
