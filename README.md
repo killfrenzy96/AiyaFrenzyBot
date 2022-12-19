@@ -4,12 +4,6 @@ A Discord bot interface for Stable Diffusion. This is a fork of the AIYA Bot. yo
 
 <img src=https://user-images.githubusercontent.com/32452698/206232000-34325431-82f2-4280-9f08-f6509068e1da.png width=50% height=50%>
 
-# Modifications
-
-This is modified from AIYABOT for my Discord server. The goal of these modifications is to focus on using the bot as a tool to make refined images rather than one off generations. I have also removed many sources of delay which allows this bot to generate images significantly faster, especially if multiple people are using this bot.
-
-There is now support for multiple WebUI instances. You can try using this by adding URL, URL1, URL2, etc to your .env file. This also supports the use of USER1, PASS1, APIUSER1, APIPASS1, etc. AIYA Frenzy Bot will use all WebUI instances to speed up batched or queued image generation.
-
 ## Setup requirements
 
 - Set up [AUTOMATIC1111's Stable Diffusion AI Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
@@ -28,7 +22,17 @@ TOKEN = put your bot token here
 
 To generate an image from text, use the /dream command and include your prompt as the query.
 
-<img src=https://user-images.githubusercontent.com/32452698/208238145-035f7954-d394-45a0-9dfc-3a205a3d6ec1.png>
+<img src=https://user-images.githubusercontent.com/32452698/208452767-a901aed2-76d8-41f3-8bdb-46ae14e835ab.png>
+
+## Modifications from AIYABOT
+
+This is modified from AIYABOT for my Discord server. The goal of these modifications is to make the bot more useful for refining images.
+
+I have also removed many sources of delay and added support for multiple AUTOMATIC1111 Web UI instances, which allows this bot to generate images significantly faster, especially if multiple people are using this bot.
+
+Interactions have been enhanced to make the bot easier to use for users who do not like to type in commands.
+
+<img src=https://user-images.githubusercontent.com/32452698/208452780-6f068e4d-dcad-4b3a-9016-fd93edc86bf8.png>
 
 ### Currently supported options
 
