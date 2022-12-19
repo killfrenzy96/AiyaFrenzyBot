@@ -625,6 +625,7 @@ class DrawExtendedView(View):
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
+        label='Edit Prompt',
         custom_id='button_extra-re-prompt',
         row=0,
         emoji='🖋')
@@ -633,6 +634,7 @@ class DrawExtendedView(View):
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
+        label='Create Variations with Init Image',
         custom_id='button_extra-image-variation',
         row=0,
         emoji='🖼️')
@@ -641,6 +643,7 @@ class DrawExtendedView(View):
 
     # the 🔁 button will take the same parameters for the image, change the seed, and add a task to the queue
     @discord.ui.button(
+        label='Random Seed',
         custom_id='button_extra-re-roll',
         row=0,
         emoji='🔁')
@@ -649,6 +652,7 @@ class DrawExtendedView(View):
 
     # the button to delete generated images
     @discord.ui.button(
+        label='Extra',
         custom_id='button_extra-hide',
         row=0,
         emoji='🔧')
@@ -674,6 +678,7 @@ class DrawExtendedView(View):
 
     # the button to delete generated images
     @discord.ui.button(
+        label='Delete',
         custom_id='button_extra-x',
         row=0,
         emoji='❌')
