@@ -652,7 +652,7 @@ class DrawExtendedView(View):
 
     # the button to delete generated images
     @discord.ui.button(
-        label='Extra',
+        label='Tweaks',
         custom_id='button_extra-hide',
         row=0,
         emoji='🔧')

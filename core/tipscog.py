@@ -53,7 +53,7 @@ class TipsView(View):
                              value='🖋 edit prompt, then generate a new image with same parameters.\n'
                                    '🖼️ create variation by sending the image to img2img.\n'
                                    '🔁 randomize seed, then generate a new image with same parameters.\n'
-                                   '🔧 shows extra options to allow quick changes to specific parameters.\n'
+                                   '🔧 tweaks, expands extra options to change various parameters.\n'
                                    '❌ deletes the generated image.',
                              inline=False)
 
