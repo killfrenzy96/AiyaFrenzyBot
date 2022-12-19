@@ -625,7 +625,7 @@ class DrawExtendedView(View):
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
-        label='Edit Prompt',
+        label='Change Prompt',
         custom_id='button_extra-re-prompt',
         row=0,
         emoji='🖋')
