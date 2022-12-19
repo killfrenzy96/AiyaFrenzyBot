@@ -5,7 +5,7 @@ from discord.ext import commands
 from core import viewhandler
 
 # workaround cog to allow aiya to respond to all views (after a restart) without the need of a view containing every control
-class OfflineViewCog(commands.Cog, description='Create images from natural language.'):
+class FallbackViewCog(commands.Cog, description='Create images from natural language.'):
     ctx_parse = discord.ApplicationContext
     def __init__(self, bot):
         self.bot: discord.Bot = bot
@@ -61,4 +61,4 @@ class OfflineViewCog(commands.Cog, description='Create images from natural langu
         loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.', ephemeral=True, delete_after=30))
 
 def setup(bot: discord.Bot):
-    bot.add_cog(OfflineViewCog(bot))
+    bot.add_cog(FallbackViewCog(bot))
