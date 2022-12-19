@@ -904,7 +904,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             tiling = False
 
         try:
-            highres_fix = get_param('tiling')
+            highres_fix = get_param('highres_fix')
             if highres_fix.lower() == 'true':
                 highres_fix = True
             else:
