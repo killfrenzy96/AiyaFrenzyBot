@@ -118,10 +118,6 @@ class TipsCog(commands.Cog):
     def __init__(self, bot: discord.Bot):
         self.bot = bot
 
-    @commands.Cog.listener()
-    async def on_ready(self):
-        self.bot.add_view(TipsView())
-
     @commands.slash_command(name='tips', description='Some quick tips for generating images!')
     async def tips(self, ctx: discord.ApplicationContext):
         loop = asyncio.get_running_loop()

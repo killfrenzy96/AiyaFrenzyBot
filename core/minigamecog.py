@@ -675,7 +675,7 @@ class MinigameView(View):
 
     # the 🖋️ button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
-        custom_id='button_re-prompt',
+        custom_id='minigame_re-prompt',
         emoji='🖋️')
     async def button_draw(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
@@ -684,7 +684,7 @@ class MinigameView(View):
 
             # get input object
             if not self.input_object:
-                loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖋 on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                 return
 
             # only allow interaction for the host
@@ -704,16 +704,16 @@ class MinigameView(View):
 
     # the 🏳️ ends the game and reveals the answer
     @discord.ui.button(
-        custom_id='button_giveup',
+        custom_id='minigame_giveup',
         emoji='🏳️')
     async def button_draw_giveup(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
-            # obtain URL for the original image
+            # get minigame
             if not self.minigame:
-                loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                 return
 
             # only allow interaction for the host
@@ -734,41 +734,25 @@ class MinigameView(View):
 
     #the button to delete generated images
     @discord.ui.button(
-        custom_id='button_x',
+        custom_id='minigame_x',
         emoji='❌')
     async def delete(self, button: discord.Button, interaction: discord.Interaction):
-        loop = asyncio.get_running_loop()
-        try:
-            if viewhandler.check_interaction_permission(interaction, loop) == False: return
-            message = await viewhandler.get_message(interaction)
-
-            if not message.content.startswith(f'<@{interaction.user.id}>'):
-                loop.create_task(interaction.response.send_message('You can\'t delete other people\'s images!', ephemeral=True, delete_after=30))
-                return
-
-            if viewhandler.confirm_user_delete(interaction.user.id):
-                loop.create_task(interaction.response.send_modal(viewhandler.DeleteModal(message)))
-            else:
-                loop.create_task(interaction.message.delete())
-                viewhandler.update_user_delete(interaction.user.id)
-
-        except Exception as e:
-            viewhandler.print_exception(e, interaction, loop)
+        await viewhandler.user_delete(interaction)
 
     # the 🖼️ button will take the same parameters for the image, send the original image to init_image, change the seed, and add a task to the queue
     @discord.ui.button(
         label='More Images',
-        custom_id='button_image-variation',
+        custom_id='minigame_image-variation',
         emoji='🖼️',
-        row=2)
+        row=1)
     async def button_draw_variation(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
 
-            # obtain URL for the original image
+            # get minigame
             if not self.minigame:
-                loop.create_task(interaction.response.send_message('I may have been restarted. This button no longer works.\nPlease try using 🖼️ on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+                loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
                 return
 
             # only allow interaction for the host
@@ -790,13 +774,18 @@ class MinigameView(View):
     # guess prompt button
     @discord.ui.button(
         label='Guess Prompt',
-        custom_id='button_guess-prompt',
+        custom_id='minigame_guess-prompt',
         emoji='⌨️',
-        row=2)
+        row=1)
     async def guess_prompt(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
         try:
             if viewhandler.check_interaction_permission(interaction, loop) == False: return
+
+            # get minigame
+            if not self.minigame:
+                loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.\nPlease start a new minigame using the /minigame command.', ephemeral=True, delete_after=30))
+                return
 
             # only allow interaction for the host
             if self.minigame.running == False:
