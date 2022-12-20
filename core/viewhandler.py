@@ -12,6 +12,7 @@ from core import stablecog
 from core import upscalecog
 
 discord_bot: discord.Bot = None
+fallback_views = {}
 
 # the modal that is used for the 🖋 button
 class DrawModal(Modal):
@@ -698,9 +699,7 @@ class DrawExtendedView(View):
                 input_object = self.input_object
             else:
                 input_object = await get_input_object(stable_cog, interaction)
-                if input_object == None:
-                    loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.', ephemeral=True, delete_after=30))
-                    return
+                if input_object == None: return
 
             if custom_id.startswith('button_extra_page_'):
                 page = int(interaction.custom_id.lstrip('button_extra_page_'))
@@ -714,6 +713,10 @@ class DrawExtendedView(View):
 
             # make a copy for this dream
             draw_object = copy.copy(input_object)
+            draw_object.ctx = interaction
+            draw_object.view = None
+            draw_object.payload = None
+
             try:
                 value = str(interaction.data['values'][0]).strip()
             except:
@@ -848,10 +851,6 @@ class DrawExtendedView(View):
                             raise Exception() # this shouldn't happen unless the API has changed
 
             # start dream
-            draw_object.ctx = interaction
-            draw_object.view = None
-            draw_object.payload = None
-
             loop.create_task(stable_cog.dream_object(draw_object))
             refresh_view()
 

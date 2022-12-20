@@ -11,7 +11,6 @@ class FallbackViewCog(commands.Cog, description='Create images from natural lang
     ctx_parse = discord.ApplicationContext
     def __init__(self, bot):
         self.bot: discord.Bot = bot
-        self.fallback_views = {}
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -21,7 +20,6 @@ class FallbackViewCog(commands.Cog, description='Create images from natural lang
         self.bot.add_view(viewhandler.DeleteView())
         self.bot.add_view(minigamecog.MinigameView(None, None))
         self.bot.add_view(tipscog.TipsView())
-        self.stable_cog = self.bot.get_cog('StableCog')
 
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
@@ -32,13 +30,14 @@ class FallbackViewCog(commands.Cog, description='Create images from natural lang
             message = await viewhandler.get_message(interaction)
             try:
                 # reuse the existing view if possible
-                view: viewhandler.DrawExtendedView = self.fallback_views[message.id]
+                view: viewhandler.DrawExtendedView = viewhandler.fallback_views[message.id]
                 await view.button_extra_callback(interaction)
             except:
                 # create a new view
-                input_object = await viewhandler.get_input_object(self.stable_cog, interaction)
+                stable_cog = self.bot.get_cog('StableCog')
+                input_object = await viewhandler.get_input_object(stable_cog, interaction)
                 view = viewhandler.DrawExtendedView(input_object)
-                self.fallback_views[message.id] = view
+                viewhandler.fallback_views[message.id] = view
                 await view.button_extra_callback(interaction)
 
 def setup(bot: discord.Bot):

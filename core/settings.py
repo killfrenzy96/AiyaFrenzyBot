@@ -375,6 +375,10 @@ def get_dream_command(message_id: int):
 
 # append command to dream command cache
 def append_dream_command(message_id: int, command: str):
+    # cache into memory
+    global_var.dream_cache[message_id] = command
+
+    # cache into disk
     def run():
         if get_dream_command(message_id) == None:
             dream_cache_line = str(message_id) + '=' + command.replace('\n', ' ').strip() + '\n'
