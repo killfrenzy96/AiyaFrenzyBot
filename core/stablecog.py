@@ -19,6 +19,8 @@ from core import queuehandler
 from core import viewhandler
 from core import settings
 
+from core.riffusion import audio
+
 
 class StableCog(commands.Cog, description='Create images from natural language.'):
     ctx_parse = discord.ApplicationContext
@@ -728,7 +730,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     file_name = ''.join(c for c in queue_object.prompt if c.isalnum() or c in keep_chars).rstrip()
 
                     # save local copy of image and prepare PIL images
-                    pil_images = []
+                    pil_images: list[Image.Image] = []
                     for i, image_base64 in enumerate(response_data['images']):
                         image = Image.open(io.BytesIO(base64.b64decode(image_base64.split(',',1)[0])))
                         pil_images.append(image)
@@ -748,6 +750,33 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         else:
                             print(f'Received image: {int(time.time())}-{queue_object.seed}-{file_name[0:120]}-{i}.png')
 
+                    # prepare riffusion audio files
+                    riffusion_audio: list[io.BytesIO] = []
+                    if 'riffusion' in queue_object.data_model:
+                        try:
+                            for image in pil_images:
+                                wav, duration = audio.wav_bytes_from_spectrogram_image(image)
+                                mp3 = audio.mp3_bytes_from_wav_bytes(wav)
+                                riffusion_audio.append(mp3)
+
+                                # save audio
+                                if settings.global_var.dir != '--no-output':
+                                    try:
+                                        epoch_time = int(time.time())
+                                        file_path = f'{settings.global_var.dir}/{epoch_time}-{queue_object.seed}-{file_name[0:120]}-{i}.mp3'
+
+                                        mp3.seek(0)
+                                        with open(file_path, 'wb') as f:
+                                            f.write(mp3.read())
+                                        print(f'Saved audio: {file_path}')
+                                    except Exception as e:
+                                        print(f'Unable to save audio: {file_path}\n{traceback.print_exc()}')
+                                else:
+                                    print(f'Generated audio: {int(time.time())}-{queue_object.seed}-{file_name[0:120]}-{i}.png')
+                        except:
+                            print(f'Failed to create audio: {file_name}.mp3')
+                            traceback.print_exc()
+
                     # post to discord
                     with contextlib.ExitStack() as stack:
                         buffer_handles = [stack.enter_context(io.BytesIO()) for _ in pil_images]
@@ -757,6 +786,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             buffer.seek(0)
 
                         files = [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.png') for (i, buffer) in enumerate(buffer_handles)]
+                        files += [discord.File(fp=buffer, filename=f'{queue_object.seed}-{i}.mp3') for (i, buffer) in enumerate(riffusion_audio)]
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
                            content=f'<@{user.id}> ``{queue_object.message}``', files=files, view=queue_object.view
                         ))
