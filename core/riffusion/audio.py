@@ -173,6 +173,11 @@ def spectrogram_from_waveform(
 
         Sxx_mag = mel_scaler(torch.from_numpy(Sxx_mag)).numpy()
 
+    del spectrogram_func
+    del waveform_tensor
+    del mel_scaler
+    torch.cuda.empty_cache()
+
     return Sxx_mag
 
 
@@ -221,6 +226,11 @@ def waveform_from_spectrogram(
     ).to(device)
 
     waveform = griffin_lim(Sxx_torch).cpu().numpy()
+
+    del Sxx_torch
+    del mel_inv_scaler
+    del griffin_lim
+    torch.cuda.empty_cache()
 
     return waveform
 
