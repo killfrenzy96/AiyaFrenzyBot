@@ -78,6 +78,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     ]
 
     scripts = [
+        'spectrogram from image',
         'preset steps',
         'preset guidance_scale',
         'preset clip_skip',
@@ -414,7 +415,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                                     if clip_skip_max > 12:
                                         batch = clip_skip_max - 12
                     except:
-                        append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
+                        if script not in self.scripts:
+                            append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
                         increment_seed = 1
                         increment_steps = 0
                         increment_guidance_scale = 0
@@ -752,10 +754,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
                     # prepare riffusion audio files
                     riffusion_audio: list[io.BytesIO] = []
-                    if 'riffusion' in queue_object.data_model:
+                    if 'riffusion' in queue_object.data_model or queue_object.script == 'spectrogram from image':
                         try:
                             for image in pil_images:
-                                wav, duration = audio.wav_bytes_from_spectrogram_image(image)
+                                wav, duration = audio.wav_bytes_from_spectrogram_image(image, queue_object.height)
                                 mp3 = audio.mp3_bytes_from_wav_bytes(wav)
                                 riffusion_audio.append(mp3)
 
