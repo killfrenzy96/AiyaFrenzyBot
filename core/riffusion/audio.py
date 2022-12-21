@@ -32,7 +32,7 @@ import torch
 import torchaudio
 
 
-def wav_bytes_from_spectrogram_image(image: Image.Image, height: int = 512) -> T.Tuple[io.BytesIO, float]:
+def wav_bytes_from_spectrogram_image(image: Image.Image, height: int = 512, resize: float = 1.0) -> T.Tuple[io.BytesIO, float]:
     """
     Reconstruct a WAV audio clip from a spectrogram image. Also returns the duration in seconds.
     """
@@ -55,7 +55,7 @@ def wav_bytes_from_spectrogram_image(image: Image.Image, height: int = 512) -> T
     # Derived parameters
     num_samples = int(image.width / float(bins_per_image) * clip_duration_ms) * sample_rate
     n_fft = int(padded_duration_ms / 1000.0 * sample_rate)
-    hop_length = int(step_size_ms / 1000.0 * sample_rate)
+    hop_length = int(step_size_ms / 1000.0 * sample_rate / resize)
     win_length = int(window_duration_ms / 1000.0 * sample_rate)
 
     samples = waveform_from_spectrogram(

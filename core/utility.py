@@ -377,7 +377,7 @@ class DrawObject(DreamObject):
 # the queue object for extras - upscale
 class UpscaleObject(DreamObject):
     def __init__(self, cog, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength,
-                 gfpgan, codeformer, upscale_first,
+                 gfpgan, codeformer, upscale_first, script,
                  view = None, message = None, write_to_cache = False, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.resize: float = resize
@@ -388,6 +388,7 @@ class UpscaleObject(DreamObject):
         self.gfpgan: float = gfpgan
         self.codeformer: float = codeformer
         self.upscale_first: bool = upscale_first
+        self.script: str = script
 
     def get_command(self):
         command = f'/upscale init_url:{self.init_url} resize:{self.resize} upscaler_1:{self.upscaler_1}'
@@ -399,6 +400,8 @@ class UpscaleObject(DreamObject):
             command += f' codeformer:{self.codeformer}'
         if self.upscale_first:
             command += f' upscale_first:{self.upscale_first}'
+        if self.script:
+            command += f' script:{self.script}'
         return command
 
 # the queue object for identify (interrogate)

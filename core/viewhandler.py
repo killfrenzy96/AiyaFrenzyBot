@@ -760,9 +760,15 @@ class DrawExtendedView(View):
                             draw_object.strength = 0.2
                             draw_object.batch = 1
                         else:
+                            script = None
+                            if len(message.attachments) > 0:
+                                audio_url = message.attachments[1].url
+                                if audio_url.endswith('.mp3'):
+                                    script = 'spectrogram from image'
+
                             # upscale image with upscale cog
                             upscale_cog: upscalecog.UpscaleCog = self.upscale_cog
-                            loop.create_task(upscale_cog.dream_handler(interaction, init_url=init_url))
+                            loop.create_task(upscale_cog.dream_handler(interaction, init_url=init_url, script=script))
                             refresh_view()
                             return
 

@@ -216,7 +216,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @option(
         'script',
         str,
-        description='Generates image batches using a script.',
+        description='Run a script in this dream.',
         required=False,
         choices=scripts
     )

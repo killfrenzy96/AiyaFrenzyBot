@@ -19,6 +19,8 @@ from core import queuehandler
 from core import viewhandler
 from core import settings
 
+from core.riffusion import audio
+
 
 class UpscaleCog(commands.Cog):
     def __init__(self, bot: discord.Bot):
@@ -39,6 +41,10 @@ class UpscaleCog(commands.Cog):
     else:
         upscaler_autocomplete_fn = None
         upscaler_choices = settings.global_var.upscaler_names
+
+    scripts = [
+        'spectrogram from image'
+    ]
 
     @commands.slash_command(name = 'upscale', description = 'Upscale an image')
     @option(
@@ -101,6 +107,13 @@ class UpscaleCog(commands.Cog):
         description='Do the upscale before restoring faces. Default: False',
         required=False,
     )
+    @option(
+        'script',
+        str,
+        description='Run a script in this upscale.',
+        required=False,
+        choices=scripts
+    )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Interaction, *,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str],
@@ -110,7 +123,8 @@ class UpscaleCog(commands.Cog):
                             upscaler_2_strength: Optional[float] = 0.5,
                             gfpgan: Optional[float] = 0.0,
                             codeformer: Optional[float] = 0.0,
-                            upscale_first: Optional[bool] = False):
+                            upscale_first: Optional[bool] = False,
+                            script: Optional[str] = None):
         loop = asyncio.get_event_loop()
         content = None
         ephemeral = False
@@ -217,7 +231,7 @@ class UpscaleCog(commands.Cog):
 
             #creates the upscale object out of local variables
             def get_upscale_object():
-                queue_object = utility.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, gfpgan, codeformer, upscale_first, viewhandler.DeleteView())
+                queue_object = utility.UpscaleObject(self, ctx, resize, init_url, upscaler_1, upscaler_2, upscaler_2_strength, gfpgan, codeformer, upscale_first, script, viewhandler.DeleteView())
 
                 # send message with queue object
                 queue_object.message = queue_object.get_command()
@@ -327,6 +341,36 @@ class UpscaleCog(commands.Cog):
                         file_path = f'{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.png'
                         print(f'Received image: {file_path}')
 
+                    # open image
+                    image = Image.open(io.BytesIO(base64.b64decode(image_data)))
+
+                    # prepare riffusion audio files
+                    riffusion_audio: io.BytesIO = None
+                    if queue_object.script == 'spectrogram from image':
+                        try:
+                            width, height = image.size
+                            wav, duration = audio.wav_bytes_from_spectrogram_image(image, height, queue_object.resize)
+                            riffusion_audio = audio.mp3_bytes_from_wav_bytes(wav)
+
+                            # save audio
+                            if settings.global_var.dir != '--no-output':
+                                epoch_time = int(time.time())
+                                file_path_audio = f'{settings.global_var.dir}/{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.mp3'
+                                try:
+                                    riffusion_audio.seek(0)
+                                    with open(file_path, 'wb') as f:
+                                        f.write(riffusion_audio.read())
+                                    print(f'Saved audio: {file_path_audio}')
+                                except Exception as e:
+                                    print(f'Unable to save audio: {file_path_audio}\n{traceback.print_exc()}')
+                            else:
+                                file_path_audio = f'{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.mp3'
+                                print(f'Generated audio: {file_path_audio}')
+                        except:
+                            file_path_audio = f'{epoch_time}-x{queue_object.resize}-{self.file_name[0:120]}.mp3'
+                            print(f'Failed to create audio: {file_path_audio}')
+                            traceback.print_exc()
+
                     # post to discord
                     with io.BytesIO() as buffer:
                         image = Image.open(io.BytesIO(base64.b64decode(image_data)))
@@ -342,8 +386,10 @@ class UpscaleCog(commands.Cog):
                             print(f'New image size: {buffer.getbuffer().nbytes} bytes - Quality: {quality}')
                         buffer.seek(0)
 
+                        files = [discord.File(fp=buffer, filename=file_path)]
+                        if riffusion_audio: files += [discord.File(fp=riffusion_audio, filename=file_path_audio)]
                         queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object,
-                            content=f'<@{user.id}> ``{queue_object.message}``', files=[discord.File(fp=buffer, filename=file_path)], view=queue_object.view
+                            content=f'<@{user.id}> ``{queue_object.message}``', files=files, view=queue_object.view
                         ))
                         queue_object.view = None
 
