@@ -41,6 +41,7 @@ class GlobalVar:
     model_resolutions = {}
     model_compute_multiplier = {}
     style_names = {}
+    presets = {}
     facefix_models: list[str] = []
     upscaler_names: list[str] = []
     identify_models: list[str] = []
@@ -106,7 +107,7 @@ def get_env_var(var: str, default: str = None):
 def get_config(file_path: str):
     try:
         config = {}
-        with open(file_path) as f:
+        with open(file_path, 'r') as f:
             for line in f:
                 line = line.strip()
                 if not line:
@@ -114,7 +115,9 @@ def get_config(file_path: str):
                 if line.startswith('#'):
                     continue
                 key, val = line.split('=', 1)
-                config[key.strip()] = val.strip()
+                key = key.strip()
+                val = val.strip()
+                if key and val: config[key] = val
         print(f'> Config loaded at {file_path}')
         return config
     except Exception as e:
@@ -222,13 +225,14 @@ def files_check():
         data = list(map(int, f.readlines()))
     global_var.images_generated = data[0]
 
+    # get models
+    print('Loading checkpoint models...')
     header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution', 'compute_multiplier']
     unset_model = ['Default', '', '', '', '']
     make_model_file = True
     replace_model_file = False
 
     # if models.csv exists and has data
-    print('Loading checkpoint models...')
     if os.path.isfile('resources/models.csv'):
         with open('resources/models.csv', encoding='utf-8') as f:
             reader = csv.reader(f, delimiter='|')
@@ -282,6 +286,26 @@ def files_check():
                 global_var.model_compute_multiplier[row[0]] = 1.0
 
     print(f'- Checkpoint models count: {len(global_var.model_names)}')
+
+    print('Loading presets...')
+    global_var.presets = {}
+    try:
+        with open('resources/presets.cfg', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                if line.startswith('#'):
+                    continue
+                key, val = line.split('=', 1)
+                key = key.strip()
+                val = val.strip()
+                if key and val: global_var.presets[key] = val
+    except FileNotFoundError:
+        with open('resources/presets.cfg', 'w') as f:
+            f.write('# preset name = full /dream command string here. Make sure to remove the # at the start.')
+
+    print(f'- Presets count: {len(global_var.presets)}')
 
     # get random messages list
     print('Loading messages...')

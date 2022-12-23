@@ -87,7 +87,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         'increment clip_skip +1'
     ]
 
-    @commands.slash_command(name = 'dream', description = 'Create an image')
+    @commands.slash_command(name = 'dream', description = 'Create an image (advanced)')
     @option(
         'prompt',
         str,

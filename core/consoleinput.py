@@ -55,6 +55,7 @@ class ConsoleInput:
 
                         # print('> Reloading extensions')
                         self.bot.reload_extension('core.stablecog')
+                        self.bot.reload_extension('core.drawcog')
                         self.bot.reload_extension('core.upscalecog')
                         self.bot.reload_extension('core.minigamecog')
 

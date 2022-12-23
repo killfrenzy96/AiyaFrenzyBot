@@ -21,6 +21,7 @@ settings.startup_check()
 settings.files_check()
 
 self.load_extension('core.stablecog')
+self.load_extension('core.drawcog')
 self.load_extension('core.upscalecog')
 self.load_extension('core.identifycog')
 self.load_extension('core.tipscog')
