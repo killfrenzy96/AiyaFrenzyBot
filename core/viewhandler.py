@@ -927,7 +927,9 @@ async def get_input_object(stable_cog, interaction: discord.Interaction, emoji: 
         if command:
             return stable_cog.get_draw_object_from_command(command)
         else:
-            if emoji:
+            if emoji == ' ':
+                loop.create_task(interaction.response.send_message(f'I may have been restarted. This interaction no longer works.\nPlease try again on a message containing the full /dream command.', ephemeral=True, delete_after=30))
+            elif emoji:
                 loop.create_task(interaction.response.send_message(f'I may have been restarted. This interaction no longer works.\nPlease try using {emoji} on a message containing the full /dream command.', ephemeral=True, delete_after=30))
             else:
                 loop.create_task(interaction.response.send_message('I may have been restarted. This interaction no longer works.', ephemeral=True, delete_after=30))
