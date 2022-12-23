@@ -136,7 +136,7 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
                 script=draw_object.script
             )
 
-        except:
+        except Exception as e:
             if content == None:
                 content = f'<@{user.id}> Something went wrong.\n{e}'
                 print(content + f'\n{traceback.print_exc()}')
