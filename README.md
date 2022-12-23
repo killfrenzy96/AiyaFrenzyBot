@@ -54,6 +54,7 @@ Interactions have been enhanced to make the bot easier to use for users who do n
 
 #### Bonus features
 
+- /draw command - quickly generate quality prompts from a preset.
 - /minigame command - play a little prompt guessing game with stable diffusion.
 - /identify command - create a caption for your image.
 - /stats command - shows how many /dream commands have been used.
