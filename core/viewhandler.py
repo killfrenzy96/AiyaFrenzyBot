@@ -761,7 +761,7 @@ class DrawExtendedView(View):
                             draw_object.batch = 1
                         else:
                             script = None
-                            if len(message.attachments) > 0:
+                            if len(message.attachments) > 1:
                                 audio_url = message.attachments[1].url
                                 if audio_url.endswith('.mp3'):
                                     script = 'spectrogram from image'
