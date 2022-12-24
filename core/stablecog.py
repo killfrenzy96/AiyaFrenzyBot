@@ -539,7 +539,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         mask = await loop.run_in_executor(None, get_mask)
                     except:
                         print(f'Dream rejected: Alpha mask separation failed.')
-                        content = 'Could not separate alpha mask! Please check the image you uploaded.'
+                        content = ('Could not separate alpha mask! Please check the image you uploaded.\n'
+                                  'I use the alpha channel (transparency) as the inpainting mask.')
                         ephemeral = True
                         raise Exception()
 
