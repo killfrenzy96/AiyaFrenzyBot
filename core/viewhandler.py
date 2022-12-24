@@ -628,6 +628,19 @@ class DrawExtendedView(View):
                     emoji='🤨'
                 ))
 
+                # add outpainting buttons
+                outpaint_directions = [['⏹️', 'Center'], ['⬆️', 'Up'], ['⬇️', 'Down'], ['⬅️', 'Left'], ['➡️', 'Right']]
+                for (index, direction) in enumerate(outpaint_directions):
+                    emoji = direction[0]
+                    label = direction[1]
+                    self.add_extra_item(Button(
+                        label=f'Outpaint {label}',
+                        custom_id=f'button_extra_outpaint_{label.lower()}',
+                        row=3,
+                        emoji=emoji
+                    ))
+
+
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
         label='Change Prompt',
@@ -853,6 +866,23 @@ class DrawExtendedView(View):
                         facefix = 'GFPGAN'
                         if facefix not in settings.global_var.facefix_models:
                             raise Exception() # this shouldn't happen unless the API has changed
+
+                case other:
+                    # outpainting directions
+                    if custom_id.startswith('button_extra_outpaint_'):
+                        page = 4
+
+                        init_url = message.attachments[0].url
+
+                        if not init_url:
+                            loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
+                            refresh_view()
+                            return
+
+                        custom_id_outpaint = custom_id.lstrip('button_extra_outpaint_')
+                        draw_object.script = f'outpaint {custom_id_outpaint}'
+                        draw_object.init_url = init_url
+                        draw_object.strength = 1.0
 
             # start dream
             loop.create_task(stable_cog.dream_object(draw_object))
