@@ -78,6 +78,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     ]
 
     scripts = [
+        'inpaint alphamask',
         'spectrogram from image',
         'preset steps',
         'preset guidance_scale',
@@ -390,6 +391,14 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     increment_clip_skip = 1
                     batch = max(6, min(12, batch))
 
+                case 'inpaint alphamask':
+                    increment_seed = 1
+                    if not init_image and not init_url:
+                        print(f'Dream rejected: Init image not found.')
+                        content = 'Inpainting requires init_image or init_url! I use the alpha channel (transparency) as the inpainting mask.'
+                        ephemeral = True
+                        raise Exception()
+
                 case other:
                     try:
                         script_parts = script.split(' ')
@@ -457,13 +466,14 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
             # get input image
             image: str = None
+            mask: str = None
             image_validated = True
             if init_url or init_image:
                 if not init_url and init_image:
                     init_url = init_image.url
 
                 if init_url.startswith('https://cdn.discordapp.com/') == False and init_url.startswith('https://media.discordapp.net/') == False:
-                    print(f'Upscale rejected: Image is not from the Discord CDN.')
+                    print(f'Dream rejected: Image is not from the Discord CDN.')
                     content = 'Only URL images from the Discord CDN are allowed!'
                     ephemeral = True
                     raise Exception()
@@ -479,7 +489,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
                 # check image download size
                 if url_size > 10 * 1024 * 1024:
-                    print(f'Upscale rejected: Image download too large.')
+                    print(f'Dream rejected: Image download too large.')
                     content = 'Image download is too large! Please make the download size smaller.'
                     ephemeral = True
                     raise Exception()
@@ -490,7 +500,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     image_data = image_response.content
                     image_string = base64.b64encode(image_data).decode('utf-8')
                 except:
-                    print(f'Upscale rejected: Image download failed.')
+                    print(f'Dream rejected: Image download failed.')
                     content = 'Image download failed! Please check the image URL.'
                     ephemeral = True
                     raise Exception()
@@ -501,7 +511,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     image_pil = Image.open(image_bytes)
                     image_pil_width, image_pil_height = image_pil.size
                 except Exception as e:
-                    print(f'Upscale rejected: Image is corrupted.')
+                    print(f'Dream rejected: Image is corrupted.')
                     print(f'\n{traceback.print_exc()}')
                     content = 'Image is corrupted! Please check the image you uploaded.'
                     ephemeral = True
@@ -509,7 +519,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
                 # limit image width/height
                 if image_pil_width * image_pil_height > 4096 * 4096:
-                    print(f'Upscale rejected: Image size is too large.')
+                    print(f'Dream rejected: Image size is too large.')
                     content = 'Image size is too large! Please use a lower resolution image.'
                     ephemeral = True
                     raise Exception()
@@ -517,6 +527,25 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 # setup image variable
                 image = 'data:image/png;base64,' + image_string
                 image_validated = True
+
+                # setup inpainting mask
+                if script == 'inpaint alphamask':
+                    def get_mask():
+                        image_r, image_g, image_b, image_a = image_pil.split()
+                        mask_pil = Image.new('L', (image_pil_width, image_pil_height), 255)
+                        mask_pil.paste(image_a, (0, 0, image_pil_width, image_pil_height))
+                        buffer = io.BytesIO()
+                        mask_pil.save(buffer, format='PNG')
+                        mask_data = buffer.getvalue()
+                        mask_string = base64.b64encode(mask_data).decode('utf-8')
+                        return 'data:image/png;base64,' + mask_string
+                    try:
+                        mask = await loop.run_in_executor(None, get_mask)
+                    except:
+                        print(f'Dream rejected: Alpha mask separation failed.')
+                        content = 'Could not separate alpha mask! Please check the image you uploaded.'
+                        ephemeral = True
+                        raise Exception()
 
             if image_validated == False:
                 raise Exception()
@@ -588,6 +617,16 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         'init_images': [image],
                         'denoising_strength': queue_object.strength
                     })
+
+                    if mask:
+                        payload.update({
+                            'mask': mask,
+                            'mask_blur': 0,
+                            'inpainting_fill': 0,
+                            'inpaint_full_res': False,
+                            'inpaint_full_res_padding': 0,
+                            'inpainting_mask_invert': 1,
+                        })
 
                 # update payload if high-res fix is used
                 if queue_object.highres_fix:
