@@ -309,7 +309,7 @@ class DrawView(View):
 
 
 class DrawExtendedView(View):
-    def __init__(self, input_object: utility.DrawObject, page: int = 1):
+    def __init__(self, input_object: utility.DrawObject, page: int = 4):
         super().__init__(timeout=None)
         self.input_object: utility.DrawObject = input_object
         self.stable_cog = discord_bot.get_cog('StableCog')
@@ -349,6 +349,7 @@ class DrawExtendedView(View):
 
     def setup_page(self, page: int):
         if self.page == page: return
+        if self.input_object == None: return
 
         self.page = page
         self.clear_extra_items()
@@ -360,8 +361,7 @@ class DrawExtendedView(View):
         match self.page:
             case 1:
                 # setup select for checkpoint
-                placeholder = 'Change Checkpoint'
-                if self.input_object: placeholder += f' - Current: {self.input_object.model_name}'
+                placeholder = f'Change Checkpoint - Current: {self.input_object.model_name}'
 
                 options: list[discord.SelectOption] = []
                 for (display_name, full_name) in settings.global_var.model_names.items():
@@ -380,8 +380,7 @@ class DrawExtendedView(View):
                 ))
 
                 # setup select for resolution
-                placeholder = 'Change Resolution'
-                if self.input_object: placeholder += f' - Current: {self.input_object.width} x {self.input_object.height}'
+                placeholder = f'Change Resolution - Current: {self.input_object.width} x {self.input_object.height}'
 
                 self.add_extra_item(Select(
                     placeholder=placeholder,
@@ -403,8 +402,7 @@ class DrawExtendedView(View):
                 ))
 
                 # setup select for style
-                placeholder = 'Change Sampler'
-                if self.input_object: placeholder += f' - Current: {self.input_object.sampler}'
+                placeholder = f'Change Sampler - Current: {self.input_object.sampler}'
 
                 options: list[discord.SelectOption] = []
                 for sampler in settings.global_var.sampler_names:
@@ -423,8 +421,7 @@ class DrawExtendedView(View):
 
             case 2:
                 # setup select for steps
-                placeholder = 'Change Steps'
-                if self.input_object: placeholder += f' - Current: {self.input_object.steps}'
+                placeholder = f'Change Steps - Current: {self.input_object.steps}'
 
                 options: list[discord.SelectOption] = []
                 if self.input_object:
@@ -450,8 +447,7 @@ class DrawExtendedView(View):
                 ))
 
                 # setup select for guidance scale
-                placeholder = 'Change Guidance Scale'
-                if self.input_object: placeholder += f' - Current: {self.input_object.guidance_scale}'
+                placeholder = f'Change Guidance Scale - Current: {self.input_object.guidance_scale}'
 
                 options: list[discord.SelectOption] = []
                 if self.input_object:
@@ -475,8 +471,7 @@ class DrawExtendedView(View):
                 ))
 
                 # setup select for style
-                placeholder = 'Change Style'
-                if self.input_object: placeholder += f' - Current: {self.input_object.style}'
+                placeholder = f'Change Style - Current: {self.input_object.style}'
 
                 options: list[discord.SelectOption] = []
                 for key, value in settings.global_var.style_names.items():
@@ -510,8 +505,7 @@ class DrawExtendedView(View):
 
             case 3:
                 # setup select for batch
-                placeholder = 'Change Batch'
-                if self.input_object: placeholder += f' - Current: {self.input_object.batch}'
+                placeholder = f'Change Batch - Current: {self.input_object.batch}'
 
                 options: list[discord.SelectOption] = []
                 if self.input_object:
@@ -531,8 +525,7 @@ class DrawExtendedView(View):
 
                 # setup select for strength
                 if self.input_object.init_url:
-                    placeholder = 'Change Denoising Strength'
-                    if self.input_object: placeholder += f' - Current: {self.input_object.strength}'
+                    placeholder = f'Change Denoising Strength - Current: {self.input_object.strength}'
 
                     options: list[discord.SelectOption] = []
                     if self.input_object:
@@ -557,12 +550,11 @@ class DrawExtendedView(View):
                 placeholder = 'Change CLIP Skip'
                 clip_skip = self.input_object.clip_skip
                 if clip_skip == None: clip_skip = 1
-                if self.input_object: placeholder += f' - Current: {clip_skip}'
+                placeholder += f' - Current: {clip_skip}'
 
                 options: list[discord.SelectOption] = []
-                if self.input_object:
-                    for count in range(1, 13):
-                        options.append(discord.SelectOption(label=f'CLIP Skip = {count}'))
+                for count in range(1, 13):
+                    options.append(discord.SelectOption(label=f'CLIP Skip = {count}'))
 
                 self.add_extra_item(Select(
                     placeholder=placeholder,
