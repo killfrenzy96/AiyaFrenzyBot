@@ -22,7 +22,7 @@ TOKEN = put your bot token here
 
 To generate an image from text, use the /dream command and include your prompt as the query.
 
-<img src=https://user-images.githubusercontent.com/32452698/208452767-a901aed2-76d8-41f3-8bdb-46ae14e835ab.png>
+<img src=https://user-images.githubusercontent.com/32452698/209438654-dec741c7-6724-4b62-9468-7c9965819ca5.png>
 
 ## Modifications from AIYABOT
 
@@ -32,7 +32,7 @@ I have also removed many sources of delay and added support for multiple AUTOMAT
 
 Interactions have been enhanced to make the bot easier to use for users who do not like to type in commands.
 
-<img src=https://user-images.githubusercontent.com/32452698/208452780-6f068e4d-dcad-4b3a-9016-fd93edc86bf8.png>
+<img src=https://user-images.githubusercontent.com/32452698/209438655-5a22f266-1f49-46c5-b501-6f7c5228f73b.png>
 
 ### Currently supported options
 
