@@ -444,15 +444,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             raise Exception()
 
                     except:
-<<<<<<< HEAD
-                        if script not in self.scripts:
-                            append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
-=======
                         if content == None:
                             append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
                         else:
                             raise Exception()
->>>>>>> dev
                         increment_seed = 1
                         increment_steps = 0
                         increment_guidance_scale = 0
