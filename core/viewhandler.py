@@ -239,8 +239,11 @@ class DrawView(View):
             draw_object.payload = None
             draw_object.init_url = init_url
             if draw_object.script:
-                if draw_object.script.startswith('inpaint') or draw_object.script.startswith('outpaint'):
+                if draw_object.script.startswith('inpaint'):
                     draw_object.script = None
+                elif draw_object.script.startswith('outpaint'):
+                    draw_object.script = None
+                    draw_object.strength = None
 
             # run stablecog dream using draw object
             loop.create_task(stable_cog.dream_object(draw_object))
