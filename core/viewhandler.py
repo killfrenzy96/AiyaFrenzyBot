@@ -238,7 +238,9 @@ class DrawView(View):
             draw_object.view = None
             draw_object.payload = None
             draw_object.init_url = init_url
-            if draw_object.script == 'inpaint alphamask': draw_object.script = None
+            if draw_object.script:
+                if draw_object.script.startswith('inpaint') or draw_object.script.startswith('outpaint'):
+                    draw_object.script = None
 
             # run stablecog dream using draw object
             loop.create_task(stable_cog.dream_object(draw_object))
@@ -270,6 +272,7 @@ class DrawView(View):
             draw_object.ctx = interaction
             draw_object.view = None
             draw_object.payload = None
+            if not draw_object.init_url: draw_object.strength = None
 
             # run stablecog dream using draw object
             loop.create_task(stable_cog.dream_object(draw_object))
