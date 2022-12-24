@@ -529,10 +529,18 @@ class DrawExtendedView(View):
 
                     options: list[discord.SelectOption] = []
                     if self.input_object:
-                        options.append(discord.SelectOption(label=f'Strength = {1.0}', description='Large Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {1.0}', description='Extreme Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.95}', description='Large Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.9}', description='Large Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.85}', description='Large Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.8}', description='Moderate Changes'))
                         options.append(discord.SelectOption(label=f'Strength = {0.75}', description='Moderate Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.7}', description='Moderate Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.65}', description='Small Changes'))
                         options.append(discord.SelectOption(label=f'Strength = {0.6}', description='Small Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.55}', description='Small Changes'))
                         options.append(discord.SelectOption(label=f'Strength = {0.5}', description='Minimal Changes'))
+                        options.append(discord.SelectOption(label=f'Strength = {0.45}', description='Minimal Changes'))
                         options.append(discord.SelectOption(label=f'Strength = {0.4}', description='Finetuning'))
                         options.append(discord.SelectOption(label=f'Strength = {0.3}', description='Finetuning'))
                         options.append(discord.SelectOption(label=f'Strength = {0.2}', description='Finetuning'))
