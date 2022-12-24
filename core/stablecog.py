@@ -564,7 +564,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         mask_pil.save(buffer, format='PNG')
                         mask_data = buffer.getvalue()
                         mask_string = base64.b64encode(mask_data).decode('utf-8')
-                        mask_pil.save('outputs/testmask.png')
                         return 'data:image/png;base64,' + mask_string
 
                     if script_setting == 'inpaint' and script_param == 'alphamask':
@@ -590,37 +589,24 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             new_image_pil = Image.new('RGBA', (image_pil_width, image_pil_height), (127, 127, 127, 0))
                             match script_param:
                                 case 'center':
-                                    new_image_pil.paste(resized_image, (
-                                        border_width,
-                                        border_height,
-                                        image_pil_width - border_width,
-                                        image_pil_height - border_height))
+                                    posX = border_width
+                                    posY = border_height
                                 case 'up':
-                                    new_image_pil.paste(resized_image, (
-                                        border_width,
-                                        border_height * 2,
-                                        image_pil_width - border_width,
-                                        image_pil_height))
+                                    posX = border_width
+                                    posY = min(border_height * 2, image_pil_height - resized_image.height)
                                 case 'down':
-                                    new_image_pil.paste(resized_image, (
-                                        border_width,
-                                        0,
-                                        image_pil_width - border_width,
-                                        image_pil_height - border_height * 2))
+                                    posX = border_width
+                                    posY = 1
                                 case 'left':
-                                    new_image_pil.paste(resized_image, (
-                                        border_width * 2,
-                                        border_height,
-                                        image_pil_width - border_width,
-                                        image_pil_height))
+                                    posX = min(border_width * 2, image_pil_width - resized_image.width)
+                                    posY = border_height
                                 case 'right':
-                                    new_image_pil.paste(resized_image, (
-                                        0,
-                                        border_height,
-                                        image_pil_width - border_width * 2,
-                                        image_pil_height))
+                                    posX = 1
+                                    posY = border_height
                                 case other:
                                     raise Exception()
+
+                            new_image_pil.paste(resized_image, (posX, posY, posX + resized_image.width, posY + resized_image.height))
 
                             # generate output image
                             buffer = io.BytesIO()
@@ -634,8 +620,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             mask = await loop.run_in_executor(None, setup_inpaint_mask, True)
                         except Exception as e:
                             print(f'Dream rejected: Alpha mask separation failed.')
-                            print(traceback.print_exc(e))
-                            content = ('Could not setup outpaint image! Please check the image you uploaded')
+                            content = 'Could not setup outpaint image! Please check the image you uploaded'
                             ephemeral = True
                             raise Exception()
 

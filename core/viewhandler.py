@@ -719,7 +719,7 @@ class DrawExtendedView(View):
                 if input_object == None: return
 
             if custom_id.startswith('button_extra_page_'):
-                page = int(interaction.custom_id.lstrip('button_extra_page_'))
+                page = int(interaction.custom_id.replace('button_extra_page_', '', 1))
                 self.setup_page(page)
                 if self.input_object:
                     loop.create_task(interaction.response.edit_message(view=self))
@@ -763,7 +763,6 @@ class DrawExtendedView(View):
                     if task[0] == 'Upscale':
                         # upscale image
                         init_url = message.attachments[0].url
-
                         if not init_url:
                             loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
                             refresh_view()
@@ -873,13 +872,12 @@ class DrawExtendedView(View):
                         page = 4
 
                         init_url = message.attachments[0].url
-
                         if not init_url:
                             loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
                             refresh_view()
                             return
 
-                        custom_id_outpaint = custom_id.lstrip('button_extra_outpaint_')
+                        custom_id_outpaint = custom_id.replace('button_extra_outpaint_', '', 1)
                         draw_object.script = f'outpaint {custom_id_outpaint}'
                         draw_object.init_url = init_url
                         draw_object.strength = 1.0
