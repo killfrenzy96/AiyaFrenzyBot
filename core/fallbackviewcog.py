@@ -33,9 +33,12 @@ class FallbackViewCog(commands.Cog, description='Create images from natural lang
                 view: viewhandler.DrawExtendedView = viewhandler.fallback_views[message.id]
                 await view.button_extra_callback(interaction)
             except:
-                # create a new view
+                # get input object
                 stable_cog = self.bot.get_cog('StableCog')
                 input_object = await viewhandler.get_input_object(stable_cog, interaction, ' ')
+                if input_object == None: return
+
+                # create a new view
                 view = viewhandler.DrawExtendedView(input_object)
                 viewhandler.fallback_views[message.id] = view
                 await view.button_extra_callback(interaction)

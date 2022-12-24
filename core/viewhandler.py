@@ -698,7 +698,7 @@ class DrawExtendedView(View):
             if self.input_object:
                 input_object = self.input_object
             else:
-                input_object = await get_input_object(stable_cog, interaction)
+                input_object = await get_input_object(stable_cog, interaction, ' ')
                 if input_object == None: return
 
             if custom_id.startswith('button_extra_page_'):
