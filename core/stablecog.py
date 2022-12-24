@@ -9,7 +9,7 @@ import traceback
 import asyncio
 import threading
 from urllib.parse import quote
-from PIL import Image, PngImagePlugin
+from PIL import Image, ImageFilter, ImageEnhance, PngImagePlugin
 from discord import option
 from discord.ext import commands
 from typing import Optional
@@ -79,6 +79,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
     scripts = [
         'inpaint alphamask',
+        'outpaint center',
+        'outpaint up',
+        'outpaint down',
+        'outpaint left',
+        'outpaint right',
         'spectrogram from image',
         'preset steps',
         'preset guidance_scale',
@@ -303,7 +308,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             if guidance_scale == None:
                 guidance_scale = settings.read(guild)['default_guidance_scale']
             if strength == None:
-                strength = settings.read(guild)['default_strength']
+                if script and script.startswith('outpaint'):
+                    strength = 1.0
+                else:
+                    strength = settings.read(guild)['default_strength']
             if batch is None:
                 batch = settings.read(guild)['default_count']
             if sampler == None:
@@ -403,10 +411,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     try:
                         script_parts = script.split(' ')
                         script_setting = script_parts[0]
-                        script_param = script_parts[1]
-                        script_value = float(script_parts[2])
+                        if len(script_parts) > 1: script_param = script_parts[1]
+                        if len(script_parts) > 2: script_value = float(script_parts[2])
 
-                        if script_setting == 'increment':
+                        if script_setting == 'increment' and script_param and script_value:
                             match script_param:
                                 case 'steps':
                                     increment_steps = int(script_value)
@@ -423,6 +431,18 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                                     clip_skip_max = clip_skip + (batch * increment_clip_skip)
                                     if clip_skip_max > 12:
                                         batch = clip_skip_max - 12
+
+                        elif script_setting == 'outpaint':
+                            increment_seed = 1
+                            if not init_image and not init_url:
+                                print(f'Dream rejected: Init image not found.')
+                                content = 'Outpainting requires init_image or init_url!'
+                                ephemeral = True
+                                raise Exception()
+
+                        else:
+                            raise Exception()
+
                     except:
                         if script not in self.scripts:
                             append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
@@ -529,9 +549,19 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 image_validated = True
 
                 # setup inpainting mask
-                if script == 'inpaint alphamask':
-                    def get_mask():
+                if script:
+                    script_parts = script.split(' ')
+                    script_setting = script_parts[0]
+                    script_param = script_parts[1]
+
+                    def setup_inpaint_mask(outpaint: bool = False):
+                        # get mask from alpha channel
                         image_r, image_g, image_b, image_a = image_pil.split()
+                        if outpaint:
+                            image_a = image_a.filter(ImageFilter.BoxBlur(radius=64.0))
+                            pixels = image_a.getdata()
+                            modified_pixels = [((c - 127) * 2) for c in pixels]
+                            image_a.putdata(modified_pixels)
                         mask_pil = Image.new('L', (image_pil_width, image_pil_height), 255)
                         mask_pil.paste(image_a, (0, 0, image_pil_width, image_pil_height))
                         buffer = io.BytesIO()
@@ -539,13 +569,65 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         mask_data = buffer.getvalue()
                         mask_string = base64.b64encode(mask_data).decode('utf-8')
                         return 'data:image/png;base64,' + mask_string
-                    try:
-                        mask = await loop.run_in_executor(None, get_mask)
-                    except:
-                        print(f'Dream rejected: Alpha mask separation failed.')
-                        content = 'Could not separate alpha mask! Please check the image you uploaded.'
-                        ephemeral = True
-                        raise Exception()
+
+                    if script_setting == 'inpaint' and script_param == 'alphamask':
+                        try:
+                            mask = await loop.run_in_executor(None, setup_inpaint_mask)
+                        except:
+                            print(f'Dream rejected: Alpha mask separation failed.')
+                            content = ('Could not separate alpha mask! Please check the image you uploaded.\n'
+                                       'I use the alpha channel (transparency) as the inpainting mask.')
+                            ephemeral = True
+                            raise Exception()
+
+                    elif script_setting == 'outpaint':
+                        def setup_outpaint():
+                            # get border width and height for outpainting
+                            border_width = int(float(image_pil_width) * 0.125)
+                            border_height = int(float(image_pil_height) * 0.125)
+
+                            # resize init image to allow room for borders
+                            resized_image = image_pil.resize((image_pil_width - border_width * 2, image_pil_height - border_height * 2))
+
+                            # create a new image of the original size and paste the resized image into it
+                            new_image_pil = Image.new('RGBA', (image_pil_width, image_pil_height), (127, 127, 127, 0))
+                            match script_param:
+                                case 'center':
+                                    posX = border_width
+                                    posY = border_height
+                                case 'up':
+                                    posX = border_width
+                                    posY = min(border_height * 2, image_pil_height - resized_image.height)
+                                case 'down':
+                                    posX = border_width
+                                    posY = 1
+                                case 'left':
+                                    posX = min(border_width * 2, image_pil_width - resized_image.width)
+                                    posY = border_height
+                                case 'right':
+                                    posX = 1
+                                    posY = border_height
+                                case other:
+                                    raise Exception()
+
+                            new_image_pil.paste(resized_image, (posX, posY, posX + resized_image.width, posY + resized_image.height))
+
+                            # generate output image
+                            buffer = io.BytesIO()
+                            new_image_pil.save(buffer, format='PNG')
+                            new_image_data = buffer.getvalue()
+                            new_image_string = base64.b64encode(new_image_data).decode('utf-8')
+
+                            return new_image_pil, 'data:image/png;base64,' + new_image_string
+                        try:
+                            image_pil, image = await loop.run_in_executor(None, setup_outpaint)
+                            mask = await loop.run_in_executor(None, setup_inpaint_mask, True)
+                        except Exception as e:
+                            print(f'Dream rejected: Alpha mask separation failed.')
+                            content = 'Could not setup outpaint image! Please check the image you uploaded'
+                            ephemeral = True
+                            raise Exception()
+
 
             if image_validated == False:
                 raise Exception()
