@@ -407,10 +407,10 @@ def append_dream_command(message_id: int, command: str):
             # cache into memory
             global_var.dream_cache[message_id] = dream_cache_line
 
-            # archive file if it's too big (over 2MB)
+            # archive file if it's too big (over 5MB)
             try:
                 file_stats = os.stat('resources/dream-cache.txt')
-                if file_stats.st_size > 2 * 1024 * 1024:
+                if file_stats.st_size > 5 * 1024 * 1024:
                     # remove old archived file
                     try:
                         os.remove('resources/dream-cache-old.txt')
