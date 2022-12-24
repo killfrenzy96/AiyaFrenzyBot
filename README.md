@@ -66,6 +66,8 @@ Interactions have been enhanced to make the bot easier to use for users who do n
   - 🔁 - randomize seed, then generate a new image with same parameters.
   - 🔧 - tweaks, expands extra options to change various parameters.
   - ❌ - deletes the generated image.
+- outpainting - use tweaks to quickly setup outpainting for your image.
+- inpainting - use the alpha channel of an image as an inpainting mask.
 
 ## Notes
 
