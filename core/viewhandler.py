@@ -849,6 +849,10 @@ class DrawExtendedView(View):
                     page = 4
                     draw_object.init_url = None
 
+                    if draw_object.script:
+                        if draw_object.script.startswith('inpaint') or draw_object.script.startswith('outpaint'):
+                            draw_object.script = None
+
                 case 'button_extra_highres_fix':
                     page = 4
                     draw_object.highres_fix = (input_object.highres_fix != True)
