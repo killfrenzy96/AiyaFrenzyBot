@@ -29,7 +29,7 @@ from core import settings
 from core.DIS.isnet import ISNetDIS
 
 
-class CropCog(commands.Cog, description='Crops image background.'):
+class BgRemoveCog(commands.Cog, description='Crops image background.'):
     def __init__(self, bot):
         self.bot: discord.Bot = bot
 
@@ -298,4 +298,4 @@ class CropCog(commands.Cog, description='Crops image background.'):
 
 def setup(bot: discord.Bot):
     if len(settings.global_var.presets) > 0:
-        bot.add_cog(CropCog(bot))
+        bot.add_cog(BgRemoveCog(bot))

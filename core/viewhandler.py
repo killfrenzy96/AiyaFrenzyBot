@@ -10,6 +10,7 @@ from core import settings
 from core import utility
 from core import stablecog
 from core import upscalecog
+from core import bgremovecog
 
 discord_bot: discord.Bot = None
 fallback_views = {}
@@ -314,6 +315,7 @@ class DrawExtendedView(View):
         self.input_object: utility.DrawObject = input_object
         self.stable_cog = discord_bot.get_cog('StableCog')
         self.upscale_cog = discord_bot.get_cog('UpscaleCog')
+        self.bgremove_cog = discord_bot.get_cog('BgRemoveCog')
         self.extra_items: list[discord.ui.Item] = []
         self.page_buttons: list[discord.ui.Button] = []
 
@@ -643,6 +645,14 @@ class DrawExtendedView(View):
                         emoji=emoji
                     ))
 
+                # add background removal
+                self.add_extra_item(Button(
+                    label='Remove Background',
+                    custom_id='button_extra_background_remove',
+                    row=3,
+                    emoji='🪄'
+                ))
+
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
     @discord.ui.button(
@@ -882,6 +892,22 @@ class DrawExtendedView(View):
                         facefix = 'GFPGAN'
                         if facefix not in settings.global_var.facefix_models:
                             raise Exception() # this shouldn't happen unless the API has changed
+
+                case 'button_extra_background_remove':
+                    page = 4
+
+                    # background removal
+                    init_url = message.attachments[0].url
+                    if not init_url:
+                        loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
+                        refresh_view()
+                        return
+
+                    # upscale image with upscale cog
+                    bgremove_cog: bgremovecog.BgRemoveCog = self.bgremove_cog
+                    loop.create_task(bgremove_cog.dream_handler(interaction, init_url=init_url))
+                    refresh_view()
+                    return
 
                 case other:
                     # outpainting directions
