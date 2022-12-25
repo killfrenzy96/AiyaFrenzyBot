@@ -281,7 +281,7 @@ class REBNCONV(nn.Module):
 ## upsample tensor 'src' to have the same spatial size with tensor 'tar'
 def _upsample_like(src,tar):
 
-    src = F.upsample(src,size=tar.shape[2:],mode='bilinear')
+    src = F.interpolate(src,size=tar.shape[2:],mode='bilinear')
 
     return src
 
@@ -693,7 +693,7 @@ class ISNetGTEncoder(nn.Module):
 
         # d0 = self.outconv(torch.cat((d1,d2,d3,d4,d5,d6),1))
 
-        return [F.sigmoid(d1), F.sigmoid(d2), F.sigmoid(d3), F.sigmoid(d4), F.sigmoid(d5), F.sigmoid(d6)], [hx1,hx2,hx3,hx4,hx5,hx6]
+        return [torch.sigmoid(d1), torch.sigmoid(d2), torch.sigmoid(d3), torch.sigmoid(d4), torch.sigmoid(d5), torch.sigmoid(d6)], [hx1,hx2,hx3,hx4,hx5,hx6]
 
 class ISNetDIS(nn.Module):
 
@@ -814,4 +814,4 @@ class ISNetDIS(nn.Module):
 
         # d0 = self.outconv(torch.cat((d1,d2,d3,d4,d5,d6),1))
 
-        return [F.sigmoid(d1), F.sigmoid(d2), F.sigmoid(d3), F.sigmoid(d4), F.sigmoid(d5), F.sigmoid(d6)],[hx1d,hx2d,hx3d,hx4d,hx5d,hx6]
+        return [torch.sigmoid(d1), torch.sigmoid(d2), torch.sigmoid(d3), torch.sigmoid(d4), torch.sigmoid(d5), torch.sigmoid(d6)],[hx1d,hx2d,hx3d,hx4d,hx5d,hx6]

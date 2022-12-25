@@ -46,7 +46,7 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
         description='The URL image for cropping.',
         required=False,
     )
-    async def dream_handler(self, ctx: discord.ApplicationContext, *,
+    async def dream_handler(self, ctx: discord.ApplicationContext | discord.Interaction, *,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str] = None):
         loop = asyncio.get_event_loop()
@@ -183,6 +183,8 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
 
             if type(ctx) is discord.ApplicationContext:
                 loop.create_task(ctx.send_response(content=content, ephemeral=ephemeral, delete_after=delete_after))
+            elif type(ctx) is discord.Interaction:
+                loop.create_task(ctx.response.send_message(content=content, ephemeral=ephemeral, delete_after=delete_after))
             else:
                 loop.create_task(ctx.channel.send(content, delete_after=delete_after))
 
@@ -220,7 +222,7 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
 
             # Convert image to tensor
             im_tensor = torch.tensor(image, dtype=torch.float32).permute(2,0,1)
-            im_tensor = F.upsample(torch.unsqueeze(im_tensor,0), input_size, mode="bilinear").type(torch.uint8)
+            im_tensor = F.interpolate(torch.unsqueeze(im_tensor,0), input_size, mode="bilinear").type(torch.uint8)
             image = torch.divide(im_tensor,255.0)
             image = normalize(image,[0.5,0.5,0.5],[1.0,1.0,1.0])
 
@@ -297,5 +299,4 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
             queuehandler.upload_queue.process_upload(utility.UploadObject(queue_object=queue_object, content=content, delete_after=30))
 
 def setup(bot: discord.Bot):
-    if len(settings.global_var.presets) > 0:
-        bot.add_cog(BgRemoveCog(bot))
+    bot.add_cog(BgRemoveCog(bot))
