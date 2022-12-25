@@ -17,6 +17,7 @@ import numpy as np
 # from skimage import io
 import time
 
+import gc
 import torch
 import torch.nn.functional as F
 from torchvision.transforms.functional import normalize
@@ -146,28 +147,31 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
                 return queue_object
 
             crop_object = get_crop_object()
-            dream_cost = queuehandler.dream_queue.get_dream_cost(crop_object)
-            queue_cost = queuehandler.dream_queue.get_user_queue_cost(user.id)
+            content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]}'
+            loop.run_in_executor(None, self.dream, crop_object, None, None)
 
-            # check if the user has too much things in queue
-            if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
-                content = f'<@{user.id}> Please wait! You have too much queued up.'
-                ephemeral = True
-                raise Exception()
+            # dream_cost = queuehandler.dream_queue.get_dream_cost(crop_object)
+            # queue_cost = queuehandler.dream_queue.get_user_queue_cost(user.id)
 
-            priority = int(settings.read(guild)['priority'])
-            if dream_cost + queue_cost > settings.read(guild)['max_compute']:
-                priority += 2
-            elif queue_cost > 0.0:
-                priority += 1
+            # # check if the user has too much things in queue
+            # if dream_cost + queue_cost > settings.read(guild)['max_compute_queue']:
+            #     content = f'<@{user.id}> Please wait! You have too much queued up.'
+            #     ephemeral = True
+            #     raise Exception()
 
-            # start the cropping
-            queue_length = queuehandler.dream_queue.process_dream(crop_object, priority)
-            if queue_length == None:
-                content = f'<@{user.id}> Sorry, I cannot handle this request right now.'
-                ephemeral = True
-            else:
-                content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
+            # priority = int(settings.read(guild)['priority'])
+            # if dream_cost + queue_cost > settings.read(guild)['max_compute']:
+            #     priority += 2
+            # elif queue_cost > 0.0:
+            #     priority += 1
+
+            # # start the cropping
+            # queue_length = queuehandler.dream_queue.process_dream(crop_object, priority)
+            # if queue_length == None:
+            #     content = f'<@{user.id}> Sorry, I cannot handle this request right now.'
+            #     ephemeral = True
+            # else:
+            #     content = f'<@{user.id}> {settings.global_var.messages[random.randrange(0, len(settings.global_var.messages))]} Queue: ``{queue_length}``'
 
         except Exception as e:
             if content == None:
@@ -198,12 +202,9 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
             input_size = [queue_object.payload['width'], queue_object.payload['height']]
             image_pil: Image.Image = queue_object.payload['image']
 
+            torch.set_num_threads(4)
             net = ISNetDIS()
-            if torch.cuda.is_available():
-                net.load_state_dict(torch.load(model_path))
-                net=net.cuda()
-            else:
-                net.load_state_dict(torch.load(model_path,map_location="cpu"))
+            net.load_state_dict(torch.load(model_path,map_location="cpu"))
 
             # Load image from memory
             image = np.array(image_pil)
@@ -231,7 +232,7 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
             result=net(image)
 
             # Upsample output to original image size
-            result = torch.squeeze(F.upsample(result[0][0], im_shp, mode='bilinear'), 0)
+            result = torch.squeeze(F.interpolate(result[0][0], im_shp, mode='bilinear'), 0)
             ma = torch.max(result)
             mi = torch.min(result)
             result = (result-mi)/(ma-mi)
@@ -251,6 +252,7 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
             del ma
             del mi
             del result
+            gc.collect()
             torch.cuda.empty_cache()
 
             def post_dream():
