@@ -111,7 +111,7 @@ class CropCog(commands.Cog, description='Crops image background.'):
                     raise Exception()
 
                 # limit image width/height
-                if image_pil_width * image_pil_height > 512 * 512 * settings.read(guild)['max_compute']:
+                if image_pil_width * image_pil_height > 4096 * 4096:
                     print(f'Background remove rejected: Image size is too large.')
                     content = 'Image size is too large! Please use a lower resolution image.'
                     ephemeral = True
@@ -194,6 +194,7 @@ class CropCog(commands.Cog, description='Crops image background.'):
         try:
             model_path = settings.dir_path + '/../models/DIS/isnet-general-use.pth'
             input_size = [queue_object.payload['width'], queue_object.payload['height']]
+            image_pil: Image.Image = queue_object.payload['image']
 
             net = ISNetDIS()
             if torch.cuda.is_available():
@@ -203,7 +204,7 @@ class CropCog(commands.Cog, description='Crops image background.'):
                 net.load_state_dict(torch.load(model_path,map_location="cpu"))
 
             # Load image from memory
-            image = np.array(queue_object.payload['image'])
+            image = np.array(image_pil)
             image = image.astype(np.float32)
 
             if len(image.shape) < 3:
@@ -228,16 +229,19 @@ class CropCog(commands.Cog, description='Crops image background.'):
             result=net(image)
 
             # Upsample output to original image size
-            result=torch.squeeze(F.upsample(result[0][0], im_shp, mode='bilinear'), 0)
+            result = torch.squeeze(F.upsample(result[0][0], im_shp, mode='bilinear'), 0)
             ma = torch.max(result)
             mi = torch.min(result)
             result = (result-mi)/(ma-mi)
 
-            # Convert result tensor to PIL image
-            image = np.squeeze(image.cpu()) # Remove any unnecessary dimensions
-            image = Image.frombytes("L", (image.shape[1], image.shape[0]), image.numpy().tobytes())
+            # Squeeze the singleton dimensions from the output tensor
+            result = result.squeeze()
 
-            # result_image = Image.fromarray((result*255).permute(1,2,0).cpu().data.numpy().astype(np.uint8))
+            # Convert the output tensor to a NumPy array
+            result_array = (result*255).cpu().data.numpy().astype(np.uint8)
+
+            # Convert the NumPy array to a Pillow image
+            result_image = Image.fromarray(result_array)
 
             del net
             del im_tensor
@@ -249,6 +253,9 @@ class CropCog(commands.Cog, description='Crops image background.'):
 
             def post_dream():
                 try:
+                    image_r, image_g, image_b = image_pil.split()
+                    image = Image.merge('RGBA', (image_r, image_g, image_b, result_image))
+
                     #create safe/sanitized filename
                     epoch_time = int(time.time())
 
