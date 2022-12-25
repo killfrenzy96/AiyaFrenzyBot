@@ -405,6 +405,9 @@ class DreamQueue:
             dream_compute_cost = 1.0
             if queue_object.model == 'combined': dream_compute_cost *= len(settings.global_var.identify_models)
 
+        elif type(queue_object) is utility.BgRemoveObject:
+            dream_compute_cost = 4.0
+
         return dream_compute_cost
 
 # queue handler for uploads

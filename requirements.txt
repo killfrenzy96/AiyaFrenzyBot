@@ -6,3 +6,4 @@ pydub
 scipy
 torch
 torchaudio
+torchvision

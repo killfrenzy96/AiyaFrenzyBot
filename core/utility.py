@@ -404,6 +404,17 @@ class UpscaleObject(DreamObject):
             command += f' script:{self.script}'
         return command
 
+# the queue object for crop
+class BgRemoveObject(DreamObject):
+    def __init__(self, cog, ctx, init_url,
+                 view = None, message = None, write_to_cache = False, wait_for_dream: DreamObject = None, payload = None):
+        super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
+        self.init_url: str = init_url
+
+    def get_command(self):
+        command = f'/bgremove init_url:{self.init_url}'
+        return command
+
 # the queue object for identify (interrogate)
 class IdentifyObject(DreamObject):
     def __init__(self, cog, ctx, init_url, model,
