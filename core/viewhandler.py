@@ -888,6 +888,7 @@ class DrawExtendedView(View):
                         draw_object.script = f'outpaint {custom_id_outpaint}'
                         draw_object.init_url = init_url
                         draw_object.strength = 1.0
+                        draw_object.seed = None
 
             # start dream
             loop.create_task(stable_cog.dream_object(draw_object))
