@@ -581,7 +581,7 @@ class DrawExtendedView(View):
                     self.add_extra_item(Button(
                         label='Remove Init Image',
                         custom_id='button_extra_remove_init_image',
-                        row=2,
+                        row=1,
                         emoji='✂️'
                     ))
 
@@ -593,7 +593,7 @@ class DrawExtendedView(View):
                 self.add_extra_item(Button(
                     label=label,
                     custom_id='button_extra_highres_fix',
-                    row=2,
+                    row=1,
                     emoji='🔨'
                 ))
 
@@ -605,7 +605,7 @@ class DrawExtendedView(View):
                 self.add_extra_item(Button(
                     label=label,
                     custom_id='button_extra_tiling',
-                    row=2,
+                    row=1,
                     emoji='🪟'
                 ))
 
@@ -617,7 +617,7 @@ class DrawExtendedView(View):
                 self.add_extra_item(Button(
                     label=label,
                     custom_id='button_extra_facefix_codeformer',
-                    row=2,
+                    row=1,
                     emoji='🤔'
                 ))
 
@@ -629,7 +629,7 @@ class DrawExtendedView(View):
                 self.add_extra_item(Button(
                     label=label,
                     custom_id='button_extra_facefix_gfpgan',
-                    row=2,
+                    row=1,
                     emoji='🤨'
                 ))
 
@@ -641,7 +641,7 @@ class DrawExtendedView(View):
                     self.add_extra_item(Button(
                         label=f'Outpaint {label}',
                         custom_id=f'button_extra_outpaint_{label.lower()}',
-                        row=3,
+                        row=2,
                         emoji=emoji
                     ))
 
