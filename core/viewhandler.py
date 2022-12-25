@@ -847,6 +847,10 @@ class DrawExtendedView(View):
                         if draw_object.script.startswith('inpaint') or draw_object.script.startswith('outpaint'):
                             draw_object.script = None
 
+                    if 'inpaint' in draw_object.model_name or 'inpaint' in draw_object.data_model:
+                        draw_object.model_name = None
+                        draw_object.data_model = None
+
                 case 'button_extra_highres_fix':
                     page = 4
                     draw_object.highres_fix = (input_object.highres_fix != True)

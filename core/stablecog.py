@@ -336,6 +336,12 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 ephemeral = True
                 raise Exception()
 
+            if (not init_image and not init_url) and ('inpaint' in checkpoint or 'inpaint' in data_model):
+                print(f'Dream rejected: Inpaint model selected without init image.\n{e}\n{traceback.print_exc()}')
+                content = f'<@{user.id}> Invalid checkpoint. Inpainting model requires init_image or init_url.'
+                ephemeral = True
+                raise Exception()
+
             if seed == None: seed = random.randint(0, 0xFFFFFFFF)
 
             # get arguments that can be passed into the draw object
