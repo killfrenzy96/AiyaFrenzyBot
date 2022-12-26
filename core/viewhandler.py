@@ -330,7 +330,8 @@ class DrawExtendedView(View):
                 label=label,
                 custom_id=f'button_extra_page_{button_page}',
                 row=4,
-                emoji='🧩'
+                emoji='🧩',
+                style=discord.ButtonStyle.success
             )
             self.page_buttons.append(button)
             self.add_item(button)
