@@ -371,6 +371,7 @@ class DrawExtendedView(View):
                         label=display_name,
                         description=full_name
                     ))
+                    if len(options) >= 25: break
 
                 self.add_extra_item(Select(
                     placeholder=placeholder,
@@ -496,6 +497,8 @@ class DrawExtendedView(View):
                         description=description
                     ))
 
+                    if len(options) >= 25: break
+
                 self.add_extra_item(Select(
                     placeholder=placeholder,
                     custom_id='button_extra_style',
@@ -513,6 +516,7 @@ class DrawExtendedView(View):
                 if self.input_object:
                     guild = utility.get_guild(self.input_object.ctx)
                     max_batch = settings.read(guild)['max_count']
+                    if max_batch > 25: max_batch = 25
                     for count in range(1, max_batch + 1):
                         options.append(discord.SelectOption(label=f'Batch = {count}'))
 
