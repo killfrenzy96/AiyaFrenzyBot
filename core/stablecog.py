@@ -331,13 +331,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     break
 
             if data_model == '':
-                print(f'Dream rejected: No checkpoint found.\n{e}\n{traceback.print_exc()}')
+                print(f'Dream rejected: No checkpoint found.')
                 content = f'<@{user.id}> Invalid checkpoint. I\'m not sure how this happened.'
                 ephemeral = True
                 raise Exception()
 
             if (not init_image and not init_url) and ('inpaint' in checkpoint or 'inpaint' in data_model):
-                print(f'Dream rejected: Inpaint model selected without init image.\n{e}\n{traceback.print_exc()}')
+                print(f'Dream rejected: Inpaint model selected without init image.')
                 content = f'<@{user.id}> Invalid checkpoint. Inpainting model requires init_image or init_url.'
                 ephemeral = True
                 raise Exception()
