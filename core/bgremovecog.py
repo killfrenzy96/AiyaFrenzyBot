@@ -112,7 +112,7 @@ class BgRemoveCog(commands.Cog, description='Crops image background.'):
                     raise Exception()
 
                 # limit image width/height
-                if image_pil_width * image_pil_height > 4096 * 4096:
+                if image_pil_width * image_pil_height > 1440 * 1440:
                     print(f'Background remove rejected: Image size is too large.')
                     content = 'Image size is too large! Please use a lower resolution image.'
                     ephemeral = True
