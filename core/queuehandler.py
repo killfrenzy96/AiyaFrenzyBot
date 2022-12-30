@@ -47,6 +47,14 @@ class DreamQueueInstance:
         buffer_thread = threading.Thread()
 
         while self.queue:
+            if len(self.queue) == 0:
+                # potential fix for rare case where queue gets stuck
+                if active_thread.is_alive():
+                    active_thread.join()
+                if buffer_thread.is_alive():
+                    buffer_thread.join()
+                continue
+
             queue_object = self.queue.pop(0)
             try:
                 # start next dream (older non-buffered queue)
@@ -86,10 +94,6 @@ class DreamQueueInstance:
                 print(f'Dream failure:\n{queue_object}\n{e}\n{traceback.print_exc()}')
                 # reset inprogress list in case of failure
                 if self.queue_inprogress: self.queue_inprogress = []
-
-        # do not end thread while buffer thread is still going
-        if buffer_thread.is_alive():
-            buffer_thread.join()
 
     def clear_user_queue(self, user_id: int):
         total_cleared: int = 0
