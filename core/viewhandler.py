@@ -899,6 +899,13 @@ class DrawExtendedView(View):
                             refresh_view()
                             return
 
+                        if draw_object.model_name == 'Default':
+                            for (display_name, full_name) in settings.global_var.model_names.items():
+                                if 'inpaint' in display_name:
+                                    draw_object.model_name = display_name
+                                    draw_object.data_model = full_name
+                                    break
+
                         custom_id_outpaint = custom_id.replace('button_extra_outpaint_', '', 1)
                         draw_object.script = f'outpaint {custom_id_outpaint}'
                         draw_object.init_url = init_url
