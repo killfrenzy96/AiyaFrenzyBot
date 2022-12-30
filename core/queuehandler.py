@@ -46,7 +46,7 @@ class DreamQueueInstance:
         active_thread = threading.Thread()
         buffer_thread = threading.Thread()
 
-        while self.queue:
+        while self.queue or self.queue_inprogress:
             if len(self.queue) == 0:
                 # potential fix for rare case where queue gets stuck
                 if active_thread.is_alive():
