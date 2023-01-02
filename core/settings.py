@@ -227,7 +227,7 @@ def files_check():
     # get models
     print('Loading checkpoint models...')
     header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution']
-    unset_model = ['Default', '', '', '', '']
+    unset_model = ['Default', '', '', '']
     make_model_file = True
     replace_model_file = False
 
@@ -242,7 +242,7 @@ def files_check():
                         with open('resources/models.csv', 'r') as fp:
                             reader = csv.DictReader(fp, fieldnames=header, delimiter = '|')
                             with open('resources/models2.csv', 'w', newline='') as fh:
-                                writer = csv.DictWriter(fh, fieldnames=reader.fieldnames, delimiter = '|')
+                                writer = csv.DictWriter(fh, fieldnames=reader.fieldnames, extrasaction='ignore', delimiter = '|')
                                 writer.writeheader()
                                 header = next(reader)
                                 writer.writerows(reader)
