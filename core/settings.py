@@ -39,7 +39,6 @@ class GlobalVar:
     model_names = {}
     model_tokens = {}
     model_resolutions = {}
-    model_compute_multiplier = {}
     style_names = {}
     presets = {}
     facefix_models: list[str] = []
@@ -227,7 +226,7 @@ def files_check():
 
     # get models
     print('Loading checkpoint models...')
-    header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution', 'compute_multiplier']
+    header = ['display_name', 'model_full_name', 'activator_token', 'native_resolution']
     unset_model = ['Default', '', '', '', '']
     make_model_file = True
     replace_model_file = False
@@ -279,11 +278,6 @@ def files_check():
                 global_var.model_resolutions[row[0]] = resolution
             except:
                 global_var.model_resolutions[row[0]] = 512
-
-            try:
-                global_var.model_compute_multiplier[row[0]] = float(row[4])
-            except:
-                global_var.model_compute_multiplier[row[0]] = 1.0
 
     print(f'- Checkpoint models count: {len(global_var.model_names)}')
 

@@ -386,7 +386,6 @@ class DreamQueue:
             dream_compute_cost_add = 0.0
             dream_compute_cost = float(queue_object.steps) / 20.0
             if queue_object.sampler in settings.global_var.slow_samplers: dream_compute_cost *= 2.0
-            dream_compute_cost *= settings.global_var.model_compute_multiplier[queue_object.model_name]
             if queue_object.highres_fix: dream_compute_cost_add = dream_compute_cost
             dream_compute_cost *= pow(max(1.0, float(queue_object.width * queue_object.height) / float(512 * 512)), 1.25)
             if queue_object.init_url: dream_compute_cost *= max(0.2, queue_object.strength)
