@@ -95,6 +95,34 @@ class TipsView(View):
         loop.create_task(interaction.response.edit_message(embed=embed_model))
 
     @discord.ui.button(
+        custom_id='button_hypernet',
+        label='Hypernet list')
+    async def button_hypernet(self, button: discord.Button, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+
+        hypernet_list = ''
+        for hypernet in settings.global_var.hypernet_names:
+            hypernet_list = hypernet_list + f'\n{hypernet}'
+        embed_styles = discord.Embed(title='Hypernet list', description=hypernet_list)
+        embed_styles.colour = settings.global_var.embed_color
+
+        loop.create_task(interaction.response.edit_message(embed=embed_styles))
+
+    @discord.ui.button(
+        custom_id='button_embedding',
+        label='Embedding list')
+    async def button_embedding(self, button: discord.Button, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+
+        embedding_list = ''
+        for embedding in settings.global_var.embedding_names:
+            embedding_list = embedding_list + f'\n{embedding}'
+        embed_styles = discord.Embed(title='Embedding list', description=embedding_list)
+        embed_styles.colour = settings.global_var.embed_color
+
+        loop.create_task(interaction.response.edit_message(embed=embed_styles))
+
+    @discord.ui.button(
         custom_id='button_about',
         label='About me')
     async def button_about(self, button: discord.Button, interaction: discord.Interaction):

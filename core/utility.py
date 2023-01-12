@@ -83,6 +83,7 @@ class WebUI:
         self.upscaler_names: list[str] = []
         self.identify_models: list[str] = []
         self.hypernet_names: list[str] = []
+        self.embedding_names: list[str] = []
         self.messages: list[str] = []
 
         if '--gradio-auth' in self.flags:
@@ -229,8 +230,17 @@ class WebUI:
                 self.hypernet_names.append(hypernet_model['name'])
             # print(f'- Hyper network models count: {len(self.hypernet_names)}')
 
+            # get embedding models
+            # print('Retrieving embedding models...')
+            response_data = s.get(self.url + '/sdapi/v1/embeddings', timeout=30).json()
+            self.embedding_names = []
+            for (item, embedding_list) in response_data.items():
+                for (embedding_model, value) in embedding_list.items():
+                    self.embedding_names.append(embedding_model)
+            # print(f'- Embedding models count: {len(self.embedding_names)}')
+
             print(f'> Loaded data for WebUI at {self.url}')
-            print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)} HyperNets:{len(self.hypernet_names)}')
+            print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)} HyperNets:{len(self.hypernet_names)} Embeddings:{len(self.embedding_names)}')
             if len(self.flags):
                 print(f'> - Flags:{self.flags}')
                 # check for any unknown flags
