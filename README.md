@@ -7,7 +7,7 @@ A Discord bot interface for Stable Diffusion. This is a fork of the AIYA Bot. yo
 ## Setup requirements
 
 - Set up [AUTOMATIC1111's Stable Diffusion AI Web UI](https://github.com/AUTOMATIC1111/stable-diffusion-webui).
-  - AIYA is currently tested on commit `685f9631b56ff8bd43bce24ff5ce0f9a0e9af490` of the Web UI.
+  - AIYA is currently tested on commit `0b8911d883118daa54f7735c5b753b5575d9f943` of the Web UI.
 - Run the Web UI as local host with api (`COMMANDLINE_ARGS= --listen --api`).
 - Clone this repo.
 - See [Setting up a Discord Bot](https://github.com/killfrenzy96/AiyaFrenzyBot/wiki/Setting-up-a-Discord-Bot) to obtain a Discord bot token.
