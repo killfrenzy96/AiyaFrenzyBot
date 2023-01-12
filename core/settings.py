@@ -45,6 +45,7 @@ class GlobalVar:
     upscaler_names: list[str] = []
     identify_models: list[str] = []
     hypernet_names: list[str] = []
+    embedding_names: list[str] = []
     messages: list[str] = []
 
     images_generated: int
@@ -325,6 +326,7 @@ def files_check():
     global_var.facefix_models = web_ui.facefix_models
     global_var.upscaler_names = web_ui.upscaler_names
     global_var.hypernet_names = web_ui.hypernet_names
+    global_var.embedding_names = web_ui.embedding_names
 
     if len(global_var.model_names) > 25: print('- Warning: More than 25 checkpoints, falling back to autocomplete instead of choices.')
     if len(global_var.style_names) > 25: print('- Warning: More than 25 styles, falling back to autocomplete instead of choices.')
