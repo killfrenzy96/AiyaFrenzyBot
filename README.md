@@ -51,6 +51,7 @@ Interactions have been enhanced to make the bot easier to use for users who do n
 - tiling
 - high-res fix
 - CLIP skip
+- hyper network
 
 #### Bonus features
 

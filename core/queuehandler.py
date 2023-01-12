@@ -129,6 +129,12 @@ class DreamQueueInstance:
                 return False
             if queue_object.data_model not in self.web_ui.data_models:
                 return False
+            if queue_object.hypernet != None and queue_object.hypernet != 'None':
+                if queue_object.hypernet not in self.web_ui.hypernet_names:
+                    print('###### HYPERNET NOT FOUND')
+                    print(queue_object.hypernet)
+                    print(self.web_ui.hypernet_names)
+                    return False
 
         elif type(queue_object) is utility.UpscaleObject:
             if self.no_upscale:
