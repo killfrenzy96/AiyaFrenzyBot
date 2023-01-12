@@ -334,6 +334,7 @@ class Minigame:
             tiling=False,
             highres_fix=False,
             clip_skip=1,
+            hypernet=None,
             script=None,
             message=message,
             write_to_cache=False

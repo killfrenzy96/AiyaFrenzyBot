@@ -82,6 +82,7 @@ class WebUI:
         self.facefix_models: list[str] = []
         self.upscaler_names: list[str] = []
         self.identify_models: list[str] = []
+        self.hypernet_names: list[str] = []
         self.messages: list[str] = []
 
         if '--gradio-auth' in self.flags:
@@ -170,6 +171,7 @@ class WebUI:
             # get samplers
             # print('Retrieving samplers...')
             response_data = s.get(self.url + '/sdapi/v1/samplers', timeout=30).json()
+            self.sampler_names = []
             for sampler in response_data:
                 self.sampler_names.append(sampler['name'])
 
@@ -181,6 +183,7 @@ class WebUI:
             # get styles
             # print('Retrieving styles...')
             response_data = s.get(self.url + '/sdapi/v1/prompt-styles', timeout=30).json()
+            self.style_names = {}
             for style in response_data:
                 self.style_names[style['name']] = style['prompt'] + '\n' + style['negative_prompt']
             # print(f'- Styles count: {len(self.style_names)}')
@@ -188,6 +191,7 @@ class WebUI:
             # get face fix models
             # print('Retrieving face fix models...')
             response_data = s.get(self.url + '/sdapi/v1/face-restorers', timeout=30).json()
+            self.facefix_models = []
             for facefix_model in response_data:
                 self.facefix_models.append(facefix_model['name'])
             # print(f'- Face fix models count: {len(self.facefix_models)}')
@@ -217,8 +221,16 @@ class WebUI:
             if 'LSDR' in self.upscaler_names: self.upscaler_names.remove('LSDR')
             # print(f'- Upscalers count: {len(self.upscaler_names)}')
 
+            # get hypernet models
+            # print('Retrieving hyper network models...')
+            response_data = s.get(self.url + '/sdapi/v1/hypernetworks', timeout=30).json()
+            self.hypernet_names = []
+            for hypernet_model in response_data:
+                self.hypernet_names.append(hypernet_model['name'])
+            # print(f'- Hyper network models count: {len(self.hypernet_names)}')
+
             print(f'> Loaded data for WebUI at {self.url}')
-            print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)}')
+            print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)} HyperNets:{len(self.hypernet_names)}')
             if len(self.flags):
                 print(f'> - Flags:{self.flags}')
                 # check for any unknown flags
@@ -326,7 +338,7 @@ class DreamObject:
 # the queue object for txt2image and img2img
 class DrawObject(DreamObject):
     def __init__(self, cog, ctx, prompt, negative, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, script,
+                 strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, hypernet, script,
                  view = None, message = None, write_to_cache = True, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.prompt: str = prompt
@@ -347,6 +359,7 @@ class DrawObject(DreamObject):
         self.tiling: bool = tiling
         self.highres_fix: bool = highres_fix
         self.clip_skip: int = clip_skip
+        self.hypernet: str = hypernet
         self.script: str = script
 
     def get_command(self):
@@ -368,6 +381,8 @@ class DrawObject(DreamObject):
             command += f' highres_fix:{self.highres_fix}'
         if self.clip_skip != 1:
             command += f' clip_skip:{self.clip_skip}'
+        if self.hypernet != None and self.hypernet != 'None':
+            command += f' hypernet:{self.hypernet}'
         if self.batch > 1:
             command += f' batch:{self.batch}'
         if self.script:

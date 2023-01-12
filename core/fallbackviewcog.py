@@ -24,6 +24,7 @@ class FallbackViewCog(commands.Cog, description='Create images from natural lang
     @commands.Cog.listener()
     async def on_interaction(self, interaction: discord.Interaction):
         if interaction.is_command(): return # do not interact with commands
+        if interaction.custom_id == None: return # do not interact with autocomplete
 
         # manage draw extended view buttons
         if interaction.custom_id.startswith('button_extra_'):

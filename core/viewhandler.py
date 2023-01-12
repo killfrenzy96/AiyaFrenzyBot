@@ -52,11 +52,12 @@ class DrawModal(Modal):
 
         extra_settings_value += f'\nsteps: {self.input_object.steps}'
         extra_settings_value += f'\nguidance_scale: {self.input_object.guidance_scale}'
-
-        extra_settings_value += f'\n\ncheckpoint: {self.input_object.model_name}'
         extra_settings_value += f'\nwidth: {self.input_object.width}'
         extra_settings_value += f'\nheight: {self.input_object.height}'
+
+        extra_settings_value += f'\n\ncheckpoint: {self.input_object.model_name}'
         extra_settings_value += f'\nstyle: {self.input_object.style}'
+        extra_settings_value += f'\nhypernet: {self.input_object.hypernet}'
 
         extra_settings_value += f'\n\nfacefix: {self.input_object.facefix}'
         extra_settings_value += f'\ntiling: {self.input_object.tiling}'
@@ -130,6 +131,7 @@ class DrawModal(Modal):
                 if 'tiling' in commands:            draw_object.tiling          = command_draw_object.tiling
                 if 'highres_fix' in commands:       draw_object.highres_fix     = command_draw_object.highres_fix
                 if 'clip_skip' in commands:         draw_object.clip_skip       = command_draw_object.clip_skip
+                if 'hypernet' in commands:          draw_object.hypernet        = command_draw_object.hypernet
                 if 'batch' in commands:             draw_object.batch           = command_draw_object.batch
                 if 'script' in commands:            draw_object.script          = command_draw_object.script
             except:
@@ -319,8 +321,8 @@ class DrawExtendedView(View):
 
         labels = [
             'Checkpoint / Resolution / Sampler',
-            'Steps / Guidance Scale / Style',
-            'Batch / Strength / CLIP Skip' if input_object and input_object.init_url else 'Batch / CLIP Skip',
+            'Guidance Scale / Style / Hypernet',
+            'Batch / Steps / Strength' if input_object and input_object.init_url else 'Batch / Steps',
             'More'
         ]
 
@@ -403,7 +405,7 @@ class DrawExtendedView(View):
                     ],
                 ))
 
-                # setup select for style
+                # setup select for sampler
                 placeholder = f'Change Sampler - Current: {self.input_object.sampler}'
 
                 options: list[discord.SelectOption] = []
@@ -422,32 +424,6 @@ class DrawExtendedView(View):
                 ))
 
             case 2:
-                # setup select for steps
-                placeholder = f'Change Steps - Current: {self.input_object.steps}'
-
-                options: list[discord.SelectOption] = []
-                if self.input_object:
-                    guild = utility.get_guild(self.input_object.ctx)
-                    steps = self.input_object.steps
-                    max_steps = settings.read(guild)['max_steps']
-                    if steps - 20 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 20}', description='Steps -20'))
-                    if steps - 10 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 10}', description='Steps -10'))
-                    if steps - 5 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 5}', description='Steps -5'))
-                    if steps - 1 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 1}', description='Steps -1'))
-                    if steps + 1 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 1}', description='Steps +1'))
-                    if steps + 5 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 5}', description='Steps +5'))
-                    if steps + 10 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 10}', description='Steps +10'))
-                    if steps + 20 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 20}', description='Steps +20'))
-
-                self.add_extra_item(Select(
-                    placeholder=placeholder,
-                    custom_id='button_extra_steps',
-                    row=1,
-                    min_values=1,
-                    max_values=1,
-                    options=options,
-                ))
-
                 # setup select for guidance scale
                 placeholder = f'Change Guidance Scale - Current: {self.input_object.guidance_scale}'
 
@@ -466,7 +442,7 @@ class DrawExtendedView(View):
                 self.add_extra_item(Select(
                     placeholder=placeholder,
                     custom_id='button_extra_guidance_scale',
-                    row=2,
+                    row=1,
                     min_values=1,
                     max_values=1,
                     options=options,
@@ -501,6 +477,35 @@ class DrawExtendedView(View):
                 self.add_extra_item(Select(
                     placeholder=placeholder,
                     custom_id='button_extra_style',
+                    row=2,
+                    min_values=1,
+                    max_values=1,
+                    options=options,
+                ))
+
+                # setup select for hypernet
+                placeholder = f'Change Hypernet - Current: {self.input_object.hypernet}'
+
+                options: list[discord.SelectOption] = []
+                for hypernet in settings.global_var.hypernet_names:
+                    if len(options) >= 25: break
+                    if self.input_object.data_model in hypernet:
+                        options.append(discord.SelectOption(
+                            label=hypernet,
+                            description=description
+                        ))
+
+                for hypernet in settings.global_var.hypernet_names:
+                    if len(options) >= 25: break
+                    if self.input_object.data_model not in hypernet:
+                        options.append(discord.SelectOption(
+                            label=hypernet,
+                            description=description
+                        ))
+
+                self.add_extra_item(Select(
+                    placeholder=placeholder,
+                    custom_id='button_extra_hypernet',
                     row=3,
                     min_values=1,
                     max_values=1,
@@ -523,6 +528,32 @@ class DrawExtendedView(View):
                     placeholder=placeholder,
                     custom_id='button_extra_batch',
                     row=1,
+                    min_values=1,
+                    max_values=1,
+                    options=options,
+                ))
+
+                # setup select for steps
+                placeholder = f'Change Steps - Current: {self.input_object.steps}'
+
+                options: list[discord.SelectOption] = []
+                if self.input_object:
+                    guild = utility.get_guild(self.input_object.ctx)
+                    steps = self.input_object.steps
+                    max_steps = settings.read(guild)['max_steps']
+                    if steps - 20 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 20}', description='Steps -20'))
+                    if steps - 10 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 10}', description='Steps -10'))
+                    if steps - 5 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 5}', description='Steps -5'))
+                    if steps - 1 >= 1: options.append(discord.SelectOption(label=f'Steps = {steps - 1}', description='Steps -1'))
+                    if steps + 1 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 1}', description='Steps +1'))
+                    if steps + 5 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 5}', description='Steps +5'))
+                    if steps + 10 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 10}', description='Steps +10'))
+                    if steps + 20 <= max_steps: options.append(discord.SelectOption(label=f'Steps = {steps + 20}', description='Steps +20'))
+
+                self.add_extra_item(Select(
+                    placeholder=placeholder,
+                    custom_id='button_extra_steps',
+                    row=2,
                     min_values=1,
                     max_values=1,
                     options=options,
@@ -553,30 +584,11 @@ class DrawExtendedView(View):
                     self.add_extra_item(Select(
                         placeholder=placeholder,
                         custom_id='button_extra_strength',
-                        row=2,
+                        row=3,
                         min_values=1,
                         max_values=1,
                         options=options,
                     ))
-
-                # setup select for clip skip
-                placeholder = 'Change CLIP Skip'
-                clip_skip = self.input_object.clip_skip
-                if clip_skip == None: clip_skip = 1
-                placeholder += f' - Current: {clip_skip}'
-
-                options: list[discord.SelectOption] = []
-                for count in range(1, 13):
-                    options.append(discord.SelectOption(label=f'CLIP Skip = {count}'))
-
-                self.add_extra_item(Select(
-                    placeholder=placeholder,
-                    custom_id='button_extra_clip_skip',
-                    row=3,
-                    min_values=1,
-                    max_values=1,
-                    options=options,
-                ))
 
             case 4:
                 # setup buttons for other options
@@ -647,6 +659,19 @@ class DrawExtendedView(View):
                         row=2,
                         emoji=emoji
                     ))
+
+                # add clip skip button
+                if self.input_object.clip_skip == None or self.input_object.clip_skip == 1:
+                    label = 'Enable CLIP Skip'
+                else:
+                    label = 'Disable CLIP Skip'
+
+                self.add_extra_item(Button(
+                    label=label,
+                    custom_id='button_extra_clip_skip',
+                    row=3,
+                    emoji='🩼'
+                ))
 
 
     # the 🖋 button will allow a new prompt and keep same parameters for everything else
@@ -816,10 +841,6 @@ class DrawExtendedView(View):
                         return
                     draw_object.sampler = value
 
-                case 'button_extra_steps':
-                    page = 2
-                    draw_object.steps = int(value.split('=')[1].strip())
-
                 case 'button_extra_guidance_scale':
                     page = 2
                     draw_object.guidance_scale = round(float(value.split('=')[1].strip()), 2)
@@ -832,17 +853,33 @@ class DrawExtendedView(View):
                         return
                     draw_object.style = value
 
+                case 'button_extra_hypernet':
+                    page = 2
+                    if value not in settings.global_var.hypernet_names:
+                        loop.create_task(interaction.response.edit_message('Unknown hypernet! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
+                        refresh_view()
+                        return
+                    draw_object.hypernet = value
+
                 case 'button_extra_batch':
                     page = 3
                     draw_object.batch = int(value.split('=')[1].strip())
+
+                case 'button_extra_steps':
+                    page = 3
+                    draw_object.steps = int(value.split('=')[1].strip())
 
                 case 'button_extra_strength':
                     page = 3
                     draw_object.strength = round(float(value.split('=')[1].strip()), 2)
 
                 case 'button_extra_clip_skip':
-                    page = 3
-                    draw_object.clip_skip = int(value.split('=')[1].strip())
+                    page = 4
+                    # draw_object.clip_skip = int(value.split('=')[1].strip())
+                    if draw_object.clip_skip == None or draw_object.clip_skip == 1:
+                        draw_object.clip_skip = 2
+                    else:
+                        draw_object.clip_skip = 1
 
                 case 'button_extra_remove_init_image':
                     page = 4

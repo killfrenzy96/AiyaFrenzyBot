@@ -19,6 +19,53 @@ from core import queuehandler
 from core import viewhandler
 from core import settings
 
+# a list of parameters, used to sanatize text
+dream_params = [
+    'prompt',
+    'negative',
+    'checkpoint',
+    'steps',
+    'width',
+    'height',
+    'guidance_scale',
+    'sampler',
+    'seed',
+    'strength',
+    'init_url',
+    'batch',
+    'style',
+    'facefix',
+    'tiling',
+    'highres_fix',
+    'clip_skip',
+    'hypernet',
+    'script'
+]
+
+scripts = [
+    'inpaint alphamask',
+    'outpaint center',
+    'outpaint up',
+    'outpaint down',
+    'outpaint left',
+    'outpaint right',
+    'preset steps',
+    'preset guidance_scale',
+    'preset clip_skip',
+    'increment steps +1',
+    'increment steps +2',
+    'increment steps +3',
+    'increment steps +4',
+    'increment steps +5',
+    'increment steps +10',
+    'increment guidance_scale +0.1',
+    'increment guidance_scale +0.5',
+    'increment guidance_scale +1',
+    'increment guidance_scale +2',
+    'increment guidance_scale +3',
+    'increment guidance_scale +4',
+    'increment clip_skip +1'
+]
 
 class StableCog(commands.Cog, description='Create images from natural language.'):
     ctx_parse = discord.ApplicationContext
@@ -36,9 +83,24 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         return [
             style for style in settings.global_var.style_names
         ]
+    # and for hypernet
+    def hypernet_autocomplete(self: discord.AutocompleteContext):
+        return [
+            hypernet for hypernet in settings.global_var.hypernet_names
+        ]
+    # and for scripts
+    def scripts_autocomplete(self: discord.AutocompleteContext):
+        return [
+            script for script in scripts
+        ]
+
+    # use autocomplete if there is too much text
+    total_length: int = 0
+    max_length: int = 1200
 
     # use autocomplete if there are too many models, otherwise use choices
-    if len(settings.global_var.model_names) > 25:
+    for (name, value) in settings.global_var.model_names.items(): total_length += len(name)
+    if len(settings.global_var.model_names) > 25 or total_length > max_length:
         checkpoint_autocomplete_fn = discord.utils.basic_autocomplete(model_autocomplete)
         checkpoint_choices = []
     else:
@@ -46,52 +108,37 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         checkpoint_choices = settings.global_var.model_names
 
     # same for styles
-    if len(settings.global_var.style_names) > 25:
+    for (name, value) in settings.global_var.style_names.items(): total_length += len(name)
+    if len(settings.global_var.style_names) > 25 or total_length > max_length:
         style_autocomplete_fn = discord.utils.basic_autocomplete(style_autocomplete)
-        style_choices = None
+        style_choices = []
     else:
         style_autocomplete_fn = None
         style_choices = settings.global_var.style_names
 
-    # a list of parameters, used to sanatize text
-    dream_params = [
-        'prompt',
-        'negative',
-        'checkpoint',
-        'steps',
-        'width',
-        'height',
-        'guidance_scale',
-        'sampler',
-        'seed',
-        'strength',
-        'init_url',
-        'batch',
-        'style',
-        'facefix',
-        'tiling',
-        'highres_fix',
-        'clip_skip',
-        'script'
-    ]
+    # same for hypernet
+    for name in settings.global_var.hypernet_names: total_length += len(name)
+    if total_length > 1500: force_autocomplete = True
 
-    scripts = [
-        'inpaint alphamask',
-        'outpaint center',
-        'outpaint up',
-        'outpaint down',
-        'outpaint left',
-        'outpaint right',
-        'preset steps',
-        'preset guidance_scale',
-        'preset clip_skip',
-        'increment steps +5',
-        'increment steps +1',
-        'increment guidance_scale +2',
-        'increment guidance_scale +1',
-        'increment guidance_scale +0.1',
-        'increment clip_skip +1'
-    ]
+    if len(settings.global_var.hypernet_names) > 25 or total_length > max_length:
+        hypernet_autocomplete_fn = discord.utils.basic_autocomplete(hypernet_autocomplete)
+        hypernet_choices = []
+    else:
+        hypernet_autocomplete_fn = None
+        hypernet_choices = settings.global_var.hypernet_names
+
+    # same for scripts
+    for name in scripts: total_length += len(name)
+    if total_length > max_length:
+        scripts_autocomplete_fn = discord.utils.basic_autocomplete(scripts_autocomplete)
+        scripts_choices = []
+    else:
+        scripts_autocomplete_fn = None
+        scripts_choices = scripts
+
+    if total_length > max_length:
+        print(f'Warning: Command length too long, forcing autocomplete for /dream command.')
+
 
     @commands.slash_command(name = 'dream', description = 'Create an image (advanced)')
     @option(
@@ -217,11 +264,20 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         choices=[x for x in range(1, 13, 1)]
     )
     @option(
+        'hypernet',
+        str,
+        description='Apply a hypernetwork model to influence the output.',
+        required=False,
+        autocomplete=hypernet_autocomplete_fn,
+        choices=hypernet_choices,
+    )
+    @option(
         'script',
         str,
         description='Generates image batches using a script.',
         required=False,
-        choices=scripts
+        autocomplete=scripts_autocomplete_fn,
+        choices=scripts_choices,
     )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, *,
                             prompt: str, negative: str = None,
@@ -241,12 +297,14 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             tiling: Optional[bool] = False,
                             highres_fix: Optional[bool] = False,
                             clip_skip: Optional[int] = None,
+                            hypernet: Optional[str] = None,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
         guild = utility.get_guild(ctx)
         user = utility.get_user(ctx)
         content = None
         ephemeral = False
+        append_options = ''
 
         try:
             print(f'Dream Request -- {user.name}#{user.discriminator} -- {guild}')
@@ -256,7 +314,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 if input:
                     input = input.replace('`', ' ')
                     input = input.replace('\n', ' ')
-                    for param in self.dream_params:
+                    for param in dream_params:
                         input = input.replace(f' {param}:', f' {param} ')
                     input = input.strip()
                 return input
@@ -264,6 +322,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             prompt = sanatize(prompt)
             negative = sanatize(negative)
             style = sanatize(style)
+            hypernet = sanatize(hypernet)
             init_url = sanatize(init_url)
 
             # try to make prompt more interesting
@@ -330,7 +389,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         height = settings.global_var.model_resolutions[display_name]
                     break
 
-            if data_model == '':
+            if data_model == None or data_model == '':
                 print(f'Dream rejected: No checkpoint found.')
                 content = f'<@{user.id}> Invalid checkpoint. I\'m not sure how this happened.'
                 ephemeral = True
@@ -342,14 +401,30 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 ephemeral = True
                 raise Exception()
 
+            # validate autocomplete
+            if style != None and style != 'None':
+                if style not in settings.global_var.style_names:
+                    style = None
+                    append_options += '\nStyle not found. I will remove the style.'
+
+            if hypernet != None and hypernet != 'None':
+                if hypernet not in settings.global_var.hypernet_names:
+                    hypernet = None
+                    append_options += '\nHypernet not found. I will remove the hypernet.'
+
+            if script != None and script != 'None':
+                if script not in scripts:
+                    script = None
+                    append_options += '\nScript not found. I will remove the script.'
+
             if seed == None: seed = random.randint(0, 0xFFFFFFFF)
 
             # get arguments that can be passed into the draw object
             def get_draw_object_args():
                 return (self, ctx, prompt, negative, checkpoint, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
-                        strength, init_url, batch, style,
-                        facefix, tiling, highres_fix, clip_skip, script)
+                        strength, init_url, batch, style, facefix, tiling,
+                        highres_fix, clip_skip, hypernet, script)
 
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
@@ -372,7 +447,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             increment_steps = 0
             increment_guidance_scale = 0
             increment_clip_skip = 0
-            append_options = ''
 
             match script:
                 case None:
@@ -448,7 +522,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
                     except:
                         if content == None:
-                            append_options = append_options + '\nInvalid script. I will ignore the script parameter.'
+                            append_options += '\nInvalid script. I will ignore the script parameter.'
                         else:
                             raise Exception()
                         increment_seed = 1
@@ -459,10 +533,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             # lower step value to the highest setting if user goes over max steps
             if dream_compute_cost > setting_max_compute:
                 steps = min(int(float(steps) * (setting_max_compute / dream_compute_cost)), setting_max_steps)
-                append_options = append_options + '\nDream compute cost is too high! Steps reduced to ``' + str(steps) + '``'
+                append_options += '\nDream compute cost is too high! Steps reduced to ``' + str(steps) + '``'
             if steps > setting_max_steps:
                 steps = setting_max_steps
-                append_options = append_options + '\nExceeded maximum of ``' + str(steps) + '`` steps! This is the best I can do...'
+                append_options += '\nExceeded maximum of ``' + str(steps) + '`` steps! This is the best I can do...'
 
             # reduce batch count if batch compute cost is too high
             if batch != 1:
@@ -473,10 +547,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 setting_max_count = settings.read(guild)['max_count']
                 if dream_compute_batch_cost > setting_max_compute_batch:
                     batch = min(int(float(batch) * setting_max_compute_batch / dream_compute_batch_cost), setting_max_count)
-                    append_options = append_options + '\nBatch compute cost is too high! Batch count reduced to ``' + str(batch) + '``'
+                    append_options += '\nBatch compute cost is too high! Batch count reduced to ``' + str(batch) + '``'
                 if batch > setting_max_count:
                     batch = setting_max_count
-                    append_options = append_options + '\nExceeded maximum of ``' + str(batch) + '`` images! This is the best I can do...'
+                    append_options += '\nExceeded maximum of ``' + str(batch) + '`` images! This is the best I can do...'
 
             # calculate total cost of queued items and reject if there is too expensive
             dream_cost = round(get_dream_cost(width, height, steps, batch), 2)
@@ -738,6 +812,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     })
                     override_settings['face_restoration_model'] = queue_object.facefix
 
+                # update payload if hypernet is used
+                if queue_object.hypernet != None and queue_object.hypernet != 'None':
+                    override_settings['sd_hypernetwork'] = queue_object.hypernet
+
                 # update payload with override_settings
                 override_payload = {
                     'override_settings': override_settings
@@ -932,6 +1010,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             tiling=draw_object.tiling,
             highres_fix=draw_object.highres_fix,
             clip_skip=draw_object.clip_skip,
+            hypernet=draw_object.hypernet,
             script=draw_object.script
         ))
 
@@ -950,21 +1029,25 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     def get_draw_object_from_command(self, command: str):
         # format command for easier processing
         command = '\n\n ' + command + '\n\n'
-        for param in self.dream_params:
+        for param in dream_params:
             command = command.replace(f' {param}:', f'\n\n{param}\n')
         command = command.replace('``', '\n\n')
 
-        def get_param(param):
+        def get_param(param: str, default: str = None):
             result = utility.find_between(command, f'\n{param}\n', '\n\n')
-            return result.strip()
+            result = result.strip()
+            if result == '':
+                return default
+            else:
+                return result.strip()
 
         # get all parameters and validate inputs
-        prompt = get_param('prompt')
+        prompt = get_param('prompt', '')
 
         negative = get_param('negative')
 
         checkpoint = get_param('checkpoint')
-        if checkpoint not in settings.global_var.model_names: checkpoint = 'Default'
+        # if checkpoint not in settings.global_var.model_names: checkpoint = 'Default'
 
         try:
             width = int(get_param('width'))
@@ -1022,7 +1105,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             init_url = None
 
         style = get_param('style')
-        if style not in settings.global_var.style_names: style = None
+        # if style not in settings.global_var.style_names: style = None
+
+        hypernet = get_param('hypernet')
+        # if hypernet not in settings.global_var.hypernet_names: hypernet = None
 
         try:
             tiling = get_param('tiling')
@@ -1055,7 +1141,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             clip_skip = None
 
         script = get_param('script')
-        if script not in self.scripts: script = None
+        # if script not in self.scripts_autocomplete(): script = None
 
         return utility.DrawObject(
             cog=None,
@@ -1078,6 +1164,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             tiling=tiling,
             highres_fix=highres_fix,
             clip_skip=clip_skip,
+            hypernet=hypernet,
             script=script
         )
 
