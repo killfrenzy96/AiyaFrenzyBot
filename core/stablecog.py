@@ -452,6 +452,9 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 case None:
                     increment_seed = 1
 
+                case 'None':
+                    increment_seed = 1
+
                 case 'preset steps':
                     steps = 10
                     increment_steps = 5
@@ -628,7 +631,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 image_validated = True
 
                 # setup inpainting mask
-                if script:
+                if script != None and script != 'None':
                     script_parts = script.split(' ')
                     script_setting = script_parts[0]
                     script_param = script_parts[1]
