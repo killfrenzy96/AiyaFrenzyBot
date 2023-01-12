@@ -385,7 +385,7 @@ class DrawObject(DreamObject):
             command += f' hypernet:{self.hypernet}'
         if self.batch > 1:
             command += f' batch:{self.batch}'
-        if self.script:
+        if self.script != None and self.script != 'None':
             command += f' script:{self.script}'
         return command
 
