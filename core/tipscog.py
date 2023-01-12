@@ -73,6 +73,13 @@ class TipsView(View):
             if style_prompt == '': style_prompt = ' '
             if style_negative == '': style_negative = ' '
             style_list = style_list + f'\n{key} - prompt:``{style_prompt}`` negative:``{style_negative}``'
+
+        if len(style_list) > 3500:
+            style_list = ''
+            for key, value in settings.global_var.style_names.items():
+                style_list = style_list + f'\n{key}'
+        style_list = style_list[:3500]
+
         embed_styles = discord.Embed(title='Styles list', description=style_list)
         embed_styles.colour = settings.global_var.embed_color
 
@@ -89,6 +96,13 @@ class TipsView(View):
             if value == '':
                 value = ' '
             model_list = model_list + f'\n{key} - ``{value}``'
+
+        if len(model_list) > 3500:
+            model_list = ''
+            for key, value in settings.global_var.model_names.items():
+                model_list = model_list + f'\n{key}'
+        model_list = model_list[:3500]
+
         embed_model = discord.Embed(title='Models list', description=model_list)
         embed_model.colour = settings.global_var.embed_color
 
@@ -103,6 +117,9 @@ class TipsView(View):
         hypernet_list = ''
         for hypernet in settings.global_var.hypernet_names:
             hypernet_list = hypernet_list + f'\n{hypernet}'
+
+        hypernet_list = hypernet_list[:3500]
+
         embed_styles = discord.Embed(title='Hypernet list', description=hypernet_list)
         embed_styles.colour = settings.global_var.embed_color
 
@@ -117,6 +134,9 @@ class TipsView(View):
         embedding_list = ''
         for embedding in settings.global_var.embedding_names:
             embedding_list = embedding_list + f'\n{embedding}'
+
+        embedding_list = embedding_list[:3500]
+
         embed_styles = discord.Embed(title='Embedding list', description=embedding_list)
         embed_styles.colour = settings.global_var.embed_color
 
