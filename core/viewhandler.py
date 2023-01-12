@@ -487,21 +487,19 @@ class DrawExtendedView(View):
                 placeholder = f'Change Hypernet - Current: {self.input_object.hypernet}'
 
                 options: list[discord.SelectOption] = []
+                options.append(discord.SelectOption(
+                    label='None'
+                ))
+
                 for hypernet in settings.global_var.hypernet_names:
                     if len(options) >= 25: break
                     if self.input_object.data_model in hypernet:
-                        options.append(discord.SelectOption(
-                            label=hypernet,
-                            description=description
-                        ))
+                        options.append(discord.SelectOption(label=hypernet))
 
                 for hypernet in settings.global_var.hypernet_names:
                     if len(options) >= 25: break
                     if self.input_object.data_model not in hypernet:
-                        options.append(discord.SelectOption(
-                            label=hypernet,
-                            description=description
-                        ))
+                        options.append(discord.SelectOption(label=hypernet))
 
                 self.add_extra_item(Select(
                     placeholder=placeholder,
@@ -785,7 +783,7 @@ class DrawExtendedView(View):
                 case 'button_extra_checkpoint':
                     page = 1
                     if value not in settings.global_var.model_names:
-                        loop.create_task(interaction.response.edit_message('Unknown checkpoint! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
+                        loop.create_task(interaction.response.send_message('Unknown checkpoint! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
                         loop.create_task(interaction.followup.edit_message(message_id=message.id, view=self))
                         return
                     draw_object.model_name = value
@@ -836,7 +834,7 @@ class DrawExtendedView(View):
                 case 'button_extra_sampler':
                     page = 1
                     if value not in settings.global_var.sampler_names:
-                        loop.create_task(interaction.response.edit_message('Unknown sampler! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
+                        loop.create_task(interaction.response.send_message('Unknown sampler! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
                         refresh_view()
                         return
                     draw_object.sampler = value
@@ -847,16 +845,16 @@ class DrawExtendedView(View):
 
                 case 'button_extra_style':
                     page = 2
-                    if value not in settings.global_var.style_names:
-                        loop.create_task(interaction.response.edit_message('Unknown style! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
+                    if value != None and value != 'None' and value not in settings.global_var.style_names:
+                        loop.create_task(interaction.response.send_message('Unknown style! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
                         refresh_view()
                         return
                     draw_object.style = value
 
                 case 'button_extra_hypernet':
                     page = 2
-                    if value not in settings.global_var.hypernet_names:
-                        loop.create_task(interaction.response.edit_message('Unknown hypernet! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
+                    if value != None and value != 'None' and value not in settings.global_var.hypernet_names:
+                        loop.create_task(interaction.response.send_message('Unknown hypernet! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
                         refresh_view()
                         return
                     draw_object.hypernet = value

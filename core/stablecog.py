@@ -813,8 +813,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     override_settings['face_restoration_model'] = queue_object.facefix
 
                 # update payload if hypernet is used
-                if queue_object.hypernet != None and queue_object.hypernet != 'None':
-                    override_settings['sd_hypernetwork'] = queue_object.hypernet
+                # if queue_object.hypernet != None and queue_object.hypernet != 'None':
+                #     override_settings['sd_hypernetwork'] = queue_object.hypernet
 
                 # update payload with override_settings
                 override_payload = {
@@ -911,7 +911,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             # only send model payload if one is defined
             if queue_object.data_model:
                 model_payload = {
-                    'sd_model_checkpoint': queue_object.data_model
+                    'sd_model_checkpoint': queue_object.data_model,
+                    'sd_hypernetwork': queue_object.hypernet if queue_object.hypernet else 'None'
                 }
                 s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=120)
 
