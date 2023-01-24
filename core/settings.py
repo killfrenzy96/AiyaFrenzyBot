@@ -285,7 +285,6 @@ def files_check():
                 global_var.model_resolutions[model_name] = 512
 
     print(f'- Checkpoint models count: {len(global_var.model_names)}')
-    print(global_var.model_names)
 
     print('Loading presets...')
     global_var.presets = {}
