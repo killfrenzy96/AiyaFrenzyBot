@@ -197,26 +197,32 @@ class WebUI:
                 self.facefix_models.append(facefix_model['name'])
             # print(f'- Face fix models count: {len(self.facefix_models)}')
 
-            # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
+            # get upscaler models workaround - if AUTOMATIC1111 provides a better way, this should be updated
             # print('Retrieving upscaler models...')
-            config = s.get(self.url + '/config/', timeout=30).json()
-            try:
-                for item in config['components']:
-                    try:
-                        if item['props']:
-                            if item['props']['label'] == 'Upscaler':
-                                self.upscaler_names = item['props']['choices']
-                    except:
-                        pass
+            # config = s.get(self.url + '/config/', timeout=30).json()
+            # try:
+            #     for item in config['components']:
+            #         try:
+            #             if item['props']:
+            #                 if item['props']['label'] == 'Upscaler':
+            #                     self.upscaler_names = item['props']['choices']
+            #         except:
+            #             pass
 
-                # workaround for upscalers getting duplicated sometimes
-                upscalers: list[str] = []
-                for upscaler in self.upscaler_names:
-                    if upscaler not in upscalers:
-                        upscalers.append(upscaler)
-                self.upscaler_names = upscalers
-            except:
-                print('Warning: Could not read config. Upscalers will be missing.')
+            #     # workaround for upscalers getting duplicated sometimes
+            #     upscalers: list[str] = []
+            #     for upscaler in self.upscaler_names:
+            #         if upscaler not in upscalers:
+            #             upscalers.append(upscaler)
+            #     self.upscaler_names = upscalers
+            # except:
+            #     print('Warning: Could not read config. Upscalers will be missing.')
+
+            # get upscaler models
+            response_data = s.get(self.url + '/sdapi/v1/upscalers', timeout=30).json()
+            self.upscaler_names = []
+            for upscaler in response_data:
+                self.upscaler_names.append(upscaler['name'])
 
             # remove upscalers that seem to have some issues
             if 'LSDR' in self.upscaler_names: self.upscaler_names.remove('LSDR')
