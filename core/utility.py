@@ -166,7 +166,7 @@ class WebUI:
             response_data = s.get(self.url + '/sdapi/v1/sd-models', timeout=30).json()
             self.data_models = []
             for sd_model in response_data:
-                self.data_models.append(sd_model['title'])
+                self.data_models.append(remove_hash(sd_model['title']))
             # print(f'- Stable diffusion models: {len(self.data_models)}')
 
             # get samplers
@@ -197,26 +197,32 @@ class WebUI:
                 self.facefix_models.append(facefix_model['name'])
             # print(f'- Face fix models count: {len(self.facefix_models)}')
 
-            # get samplers workaround - if AUTOMATIC1111 provides a better way, this should be updated
+            # get upscaler models workaround - if AUTOMATIC1111 provides a better way, this should be updated
             # print('Retrieving upscaler models...')
-            config = s.get(self.url + '/config/', timeout=30).json()
-            try:
-                for item in config['components']:
-                    try:
-                        if item['props']:
-                            if item['props']['label'] == 'Upscaler':
-                                self.upscaler_names = item['props']['choices']
-                    except:
-                        pass
+            # config = s.get(self.url + '/config/', timeout=30).json()
+            # try:
+            #     for item in config['components']:
+            #         try:
+            #             if item['props']:
+            #                 if item['props']['label'] == 'Upscaler':
+            #                     self.upscaler_names = item['props']['choices']
+            #         except:
+            #             pass
 
-                # workaround for upscalers getting duplicated sometimes
-                upscalers: list[str] = []
-                for upscaler in self.upscaler_names:
-                    if upscaler not in upscalers:
-                        upscalers.append(upscaler)
-                self.upscaler_names = upscalers
-            except:
-                print('Warning: Could not read config. Upscalers will be missing.')
+            #     # workaround for upscalers getting duplicated sometimes
+            #     upscalers: list[str] = []
+            #     for upscaler in self.upscaler_names:
+            #         if upscaler not in upscalers:
+            #             upscalers.append(upscaler)
+            #     self.upscaler_names = upscalers
+            # except:
+            #     print('Warning: Could not read config. Upscalers will be missing.')
+
+            # get upscaler models
+            response_data = s.get(self.url + '/sdapi/v1/upscalers', timeout=30).json()
+            self.upscaler_names = []
+            for upscaler in response_data:
+                self.upscaler_names.append(upscaler['name'])
 
             # remove upscalers that seem to have some issues
             if 'LSDR' in self.upscaler_names: self.upscaler_names.remove('LSDR')
@@ -348,7 +354,7 @@ class DreamObject:
 # the queue object for txt2image and img2img
 class DrawObject(DreamObject):
     def __init__(self, cog, ctx, prompt, negative, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, hypernet, script,
+                 strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, script,
                  view = None, message = None, write_to_cache = True, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.prompt: str = prompt
@@ -369,7 +375,6 @@ class DrawObject(DreamObject):
         self.tiling: bool = tiling
         self.highres_fix: bool = highres_fix
         self.clip_skip: int = clip_skip
-        self.hypernet: str = hypernet
         self.script: str = script
 
     def get_command(self):
@@ -391,8 +396,6 @@ class DrawObject(DreamObject):
             command += f' highres_fix:{self.highres_fix}'
         if self.clip_skip != 1:
             command += f' clip_skip:{self.clip_skip}'
-        if self.hypernet != None and self.hypernet != 'None':
-            command += f' hypernet:{self.hypernet}'
         if self.batch > 1:
             command += f' batch:{self.batch}'
         if self.script != None and self.script != 'None':
@@ -501,3 +504,11 @@ def find_between(s: str, first: str, last: str):
         return s[start:end]
     except ValueError:
         return ''
+
+def remove_hash(s: str):
+    try:
+        if s.endswith(']') and s[len(s)-9] == '[':
+            s = s[:-9].strip()
+    except:
+        pass
+    return s

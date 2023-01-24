@@ -336,7 +336,6 @@ class Minigame:
             tiling=False,
             highres_fix=False,
             clip_skip=1,
-            hypernet=None,
             script=None,
             message=message,
             write_to_cache=False
@@ -437,8 +436,7 @@ class Minigame:
             # construct a payload for data model
             if queue_object.data_model:
                 model_payload = {
-                    'sd_model_checkpoint': queue_object.data_model,
-                    'sd_hypernetwork': queue_object.hypernet if queue_object.hypernet else 'None'
+                    'sd_model_checkpoint': queue_object.data_model
                 }
                 s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=120)
 

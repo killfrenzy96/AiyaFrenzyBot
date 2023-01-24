@@ -122,7 +122,6 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
                 tiling=draw_object.tiling,
                 highres_fix=draw_object.highres_fix,
                 clip_skip=draw_object.clip_skip,
-                hypernet=draw_object.hypernet,
                 script=draw_object.script
             )
 

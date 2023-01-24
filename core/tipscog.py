@@ -87,7 +87,7 @@ class TipsView(View):
 
     @discord.ui.button(
         custom_id='button_model',
-        label='Models list')
+        label='Checkpoint models')
     async def button_model(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
 
@@ -103,14 +103,14 @@ class TipsView(View):
                 model_list = model_list + f'\n{key}'
         model_list = model_list[:3500]
 
-        embed_model = discord.Embed(title='Models list', description=model_list)
-        embed_model.colour = settings.global_var.embed_color
+        embed_tips = discord.Embed(title='Models list', description=model_list)
+        embed_tips.colour = settings.global_var.embed_color
 
-        loop.create_task(interaction.response.edit_message(embed=embed_model))
+        loop.create_task(interaction.response.edit_message(embed=embed_tips))
 
     @discord.ui.button(
         custom_id='button_hypernet',
-        label='Hypernet list')
+        label='Hypernet models')
     async def button_hypernet(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
 
@@ -119,15 +119,30 @@ class TipsView(View):
             hypernet_list = hypernet_list + f'\n{hypernet}'
 
         hypernet_list = hypernet_list[:3500]
+        if hypernet_list == '': hypernet_list = 'No hypernetworks'
 
-        embed_styles = discord.Embed(title='Hypernet list', description=hypernet_list)
-        embed_styles.colour = settings.global_var.embed_color
+        description = 'Hypernets modify the model to skew all results towards the training data. '
+        description += 'To use a hypernetwork, put ``<hypernet:hypernet_name:1>`` in your prompt.'
 
-        loop.create_task(interaction.response.edit_message(embed=embed_styles))
+        if len(settings.global_var.hypernet_names) > 0:
+            description += '\n\nExamples:'
+            index = 0
+            while index < 3 and index < len(settings.global_var.hypernet_names):
+                description += f'\n``<hypernet:{settings.global_var.hypernet_names[index]}:1>``'
+                index += 1
+
+        embed_tips = discord.Embed(title='Hypernet model list', description=hypernet_list)
+        embed_tips.colour = settings.global_var.embed_color
+
+        embed_tips.add_field(name='How to use hypernet models',
+                             value=description,
+                             inline=False)
+
+        loop.create_task(interaction.response.edit_message(embed=embed_tips))
 
     @discord.ui.button(
         custom_id='button_embedding',
-        label='Embedding list')
+        label='Embedding models')
     async def button_embedding(self, button: discord.Button, interaction: discord.Interaction):
         loop = asyncio.get_running_loop()
 
@@ -136,11 +151,22 @@ class TipsView(View):
             embedding_list = embedding_list + f'\n{embedding}'
 
         embedding_list = embedding_list[:3500]
+        if embedding_list == '': embedding_list = 'No embeddings'
 
-        embed_styles = discord.Embed(title='Embedding list', description=embedding_list)
-        embed_styles.colour = settings.global_var.embed_color
+        embed_tips = discord.Embed(title='Embedding list', description=embedding_list)
+        embed_tips.colour = settings.global_var.embed_color
 
-        loop.create_task(interaction.response.edit_message(embed=embed_styles))
+        description = 'Embeddings contain precise prompts that look like the training data. '
+        description += 'To use an embedding, just put the embedding name in your prompt.'
+
+        embed_tips = discord.Embed(title='Embedding model list', description=embedding_list)
+        embed_tips.colour = settings.global_var.embed_color
+
+        embed_tips.add_field(name='How to use embedding models',
+                             value=description,
+                             inline=False)
+
+        loop.create_task(interaction.response.edit_message(embed=embed_tips))
 
     @discord.ui.button(
         custom_id='button_about',
@@ -150,7 +176,7 @@ class TipsView(View):
 
         url_frenzy = 'https://github.com/killfrenzy96/aiyabot'
         url_aiya = 'https://github.com/Kilvoctu/aiyabot'
-        url2 = 'https://raw.githubusercontent.com/Kilvoctu/kilvoctu.github.io/master/pics/previewthumb.png'
+        url2 = 'https://user-images.githubusercontent.com/32452698/214246647-de407d41-3ed8-4f5f-bdce-183fa6c6d6f8.png'
         embed_about = discord.Embed(title='About me',
                                     description=f'Hi! I\'m an open-source Discord bot written in Python.\n'
                                                 f'This is a fork of aiyabot.\n'

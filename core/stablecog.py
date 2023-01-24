@@ -86,11 +86,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         return [
             style for style in settings.global_var.style_names
         ]
-    # and for hypernet
-    def hypernet_autocomplete(self: discord.AutocompleteContext):
-        return [
-            hypernet for hypernet in settings.global_var.hypernet_names
-        ]
     # and for scripts
     def scripts_autocomplete(self: discord.AutocompleteContext):
         return [
@@ -119,16 +114,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         style_autocomplete_fn = None
         style_choices = settings.global_var.style_names
 
-    # same for hypernet
-    for name in settings.global_var.hypernet_names: total_length += len(name)
     if total_length > 1500: force_autocomplete = True
-
-    if len(settings.global_var.hypernet_names) > 25 or total_length > max_length:
-        hypernet_autocomplete_fn = discord.utils.basic_autocomplete(hypernet_autocomplete)
-        hypernet_choices = []
-    else:
-        hypernet_autocomplete_fn = None
-        hypernet_choices = settings.global_var.hypernet_names
 
     # same for scripts
     for name in scripts: total_length += len(name)
@@ -267,14 +253,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         choices=[x for x in range(1, 13, 1)]
     )
     @option(
-        'hypernet',
-        str,
-        description='Apply a hypernetwork model to influence the output.',
-        required=False,
-        autocomplete=hypernet_autocomplete_fn,
-        choices=hypernet_choices,
-    )
-    @option(
         'script',
         str,
         description='Run a script in this dream.',
@@ -300,7 +278,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             tiling: Optional[bool] = False,
                             highres_fix: Optional[bool] = False,
                             clip_skip: Optional[int] = None,
-                            hypernet: Optional[str] = None,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
         guild = utility.get_guild(ctx)
@@ -325,7 +302,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             prompt = sanatize(prompt)
             negative = sanatize(negative)
             style = sanatize(style)
-            hypernet = sanatize(hypernet)
             init_url = sanatize(init_url)
 
             # try to make prompt more interesting
@@ -410,11 +386,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     style = None
                     append_options += '\nStyle not found. I will remove the style.'
 
-            if hypernet != None and hypernet != 'None':
-                if hypernet not in settings.global_var.hypernet_names:
-                    hypernet = None
-                    append_options += '\nHypernet not found. I will remove the hypernet.'
-
             if script != None and script != 'None':
                 if script not in scripts:
                     script = None
@@ -427,7 +398,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 return (self, ctx, prompt, negative, checkpoint, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
                         strength, init_url, batch, style, facefix, tiling,
-                        highres_fix, clip_skip, hypernet, script)
+                        highres_fix, clip_skip, script)
 
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
@@ -818,10 +789,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     })
                     override_settings['face_restoration_model'] = queue_object.facefix
 
-                # update payload if hypernet is used
-                # if queue_object.hypernet != None and queue_object.hypernet != 'None':
-                #     override_settings['sd_hypernetwork'] = queue_object.hypernet
-
                 # update payload with override_settings
                 override_payload = {
                     'override_settings': override_settings
@@ -918,7 +885,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             if queue_object.data_model:
                 model_payload = {
                     'sd_model_checkpoint': queue_object.data_model,
-                    'sd_hypernetwork': queue_object.hypernet if queue_object.hypernet else 'None'
                 }
                 s.post(url=f'{web_ui.url}/sdapi/v1/options', json=model_payload, timeout=120)
 
@@ -1045,7 +1011,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             tiling=draw_object.tiling,
             highres_fix=draw_object.highres_fix,
             clip_skip=draw_object.clip_skip,
-            hypernet=draw_object.hypernet,
             script=draw_object.script
         ))
 
@@ -1142,9 +1107,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         style = get_param('style')
         # if style not in settings.global_var.style_names: style = None
 
-        hypernet = get_param('hypernet')
-        # if hypernet not in settings.global_var.hypernet_names: hypernet = None
-
         try:
             tiling = get_param('tiling')
             if tiling.lower() == 'true':
@@ -1199,7 +1161,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             tiling=tiling,
             highres_fix=highres_fix,
             clip_skip=clip_skip,
-            hypernet=hypernet,
             script=script
         )
 
