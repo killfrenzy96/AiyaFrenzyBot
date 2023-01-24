@@ -507,8 +507,11 @@ def find_between(s: str, first: str, last: str):
 
 def remove_hash(s: str):
     try:
-        if s.endswith(']') and s[len(s)-9] == '[':
-            s = s[:-9].strip()
+        if s.endswith(']'):
+            if s[len(s)-9] == '[':
+                s = s[:-9].strip()
+            elif s[len(s)-12] == '[':
+                s = s[:-12].strip()
     except:
         pass
     return s
