@@ -166,7 +166,7 @@ class WebUI:
             response_data = s.get(self.url + '/sdapi/v1/sd-models', timeout=30).json()
             self.data_models = []
             for sd_model in response_data:
-                self.data_models.append(sd_model['title'])
+                self.data_models.append(remove_hash(sd_model['title']))
             # print(f'- Stable diffusion models: {len(self.data_models)}')
 
             # get samplers
@@ -348,7 +348,7 @@ class DreamObject:
 # the queue object for txt2image and img2img
 class DrawObject(DreamObject):
     def __init__(self, cog, ctx, prompt, negative, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, hypernet, script,
+                 strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, script,
                  view = None, message = None, write_to_cache = True, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.prompt: str = prompt
@@ -369,7 +369,6 @@ class DrawObject(DreamObject):
         self.tiling: bool = tiling
         self.highres_fix: bool = highres_fix
         self.clip_skip: int = clip_skip
-        self.hypernet: str = hypernet
         self.script: str = script
 
     def get_command(self):
@@ -391,8 +390,6 @@ class DrawObject(DreamObject):
             command += f' highres_fix:{self.highres_fix}'
         if self.clip_skip != 1:
             command += f' clip_skip:{self.clip_skip}'
-        if self.hypernet != None and self.hypernet != 'None':
-            command += f' hypernet:{self.hypernet}'
         if self.batch > 1:
             command += f' batch:{self.batch}'
         if self.script != None and self.script != 'None':
@@ -487,3 +484,11 @@ def find_between(s: str, first: str, last: str):
         return s[start:end]
     except ValueError:
         return ''
+
+def remove_hash(s: str):
+    try:
+        if s.endswith(']') and s[len(s)-9] == '[':
+            s = s[:-9].strip()
+    except:
+        pass
+    return s

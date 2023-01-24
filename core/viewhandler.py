@@ -57,7 +57,6 @@ class DrawModal(Modal):
 
         extra_settings_value += f'\n\ncheckpoint: {self.input_object.model_name}'
         extra_settings_value += f'\nstyle: {self.input_object.style}'
-        extra_settings_value += f'\nhypernet: {self.input_object.hypernet}'
 
         extra_settings_value += f'\n\nfacefix: {self.input_object.facefix}'
         extra_settings_value += f'\ntiling: {self.input_object.tiling}'
@@ -131,7 +130,6 @@ class DrawModal(Modal):
                 if 'tiling' in commands:            draw_object.tiling          = command_draw_object.tiling
                 if 'highres_fix' in commands:       draw_object.highres_fix     = command_draw_object.highres_fix
                 if 'clip_skip' in commands:         draw_object.clip_skip       = command_draw_object.clip_skip
-                if 'hypernet' in commands:          draw_object.hypernet        = command_draw_object.hypernet
                 if 'batch' in commands:             draw_object.batch           = command_draw_object.batch
                 if 'script' in commands:            draw_object.script          = command_draw_object.script
             except:
@@ -321,7 +319,7 @@ class DrawExtendedView(View):
 
         labels = [
             'Checkpoint / Resolution / Sampler',
-            'Guidance Scale / Style / Hypernet',
+            'Guidance Scale / Style',
             'Batch / Steps / Strength' if input_object and input_object.init_url else 'Batch / Steps',
             'More'
         ]
@@ -478,33 +476,6 @@ class DrawExtendedView(View):
                     placeholder=placeholder,
                     custom_id='button_extra_style',
                     row=2,
-                    min_values=1,
-                    max_values=1,
-                    options=options,
-                ))
-
-                # setup select for hypernet
-                placeholder = f'Change Hypernet - Current: {self.input_object.hypernet}'
-
-                options: list[discord.SelectOption] = []
-                options.append(discord.SelectOption(
-                    label='None'
-                ))
-
-                for hypernet in settings.global_var.hypernet_names:
-                    if len(options) >= 25: break
-                    if self.input_object.data_model in hypernet:
-                        options.append(discord.SelectOption(label=hypernet))
-
-                for hypernet in settings.global_var.hypernet_names:
-                    if len(options) >= 25: break
-                    if self.input_object.data_model not in hypernet:
-                        options.append(discord.SelectOption(label=hypernet))
-
-                self.add_extra_item(Select(
-                    placeholder=placeholder,
-                    custom_id='button_extra_hypernet',
-                    row=3,
                     min_values=1,
                     max_values=1,
                     options=options,
@@ -850,14 +821,6 @@ class DrawExtendedView(View):
                         refresh_view()
                         return
                     draw_object.style = value
-
-                case 'button_extra_hypernet':
-                    page = 2
-                    if value != None and value != 'None' and value not in settings.global_var.hypernet_names:
-                        loop.create_task(interaction.response.send_message('Unknown hypernet! I have updated the options for you to try again.', ephemeral=True, delete_after=30))
-                        refresh_view()
-                        return
-                    draw_object.hypernet = value
 
                 case 'button_extra_batch':
                     page = 3

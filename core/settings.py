@@ -268,20 +268,24 @@ def files_check():
     with open('resources/models.csv', encoding='utf-8') as csv_file:
         model_data = list(csv.reader(csv_file, delimiter='|'))
         for row in model_data[1:]:
-            global_var.model_names[row[0]] = row[1]
+            model_name = row[0]
+            data_model = utility.remove_hash(row[1])
+
+            global_var.model_names[model_name] = data_model
 
             try:
-                global_var.model_tokens[row[0]] = row[2]
+                global_var.model_tokens[model_name] = row[2]
             except:
-                global_var.model_tokens[row[0]] = ''
+                global_var.model_tokens[model_name] = ''
 
             try:
                 resolution = int(int(row[3]) / 64) * 64
-                global_var.model_resolutions[row[0]] = resolution
+                global_var.model_resolutions[model_name] = resolution
             except:
-                global_var.model_resolutions[row[0]] = 512
+                global_var.model_resolutions[model_name] = 512
 
     print(f'- Checkpoint models count: {len(global_var.model_names)}')
+    print(global_var.model_names)
 
     print('Loading presets...')
     global_var.presets = {}
@@ -331,7 +335,7 @@ def files_check():
     if len(global_var.model_names) > 25: print('- Warning: More than 25 checkpoints, falling back to autocomplete instead of choices.')
     if len(global_var.style_names) > 25: print('- Warning: More than 25 styles, falling back to autocomplete instead of choices.')
     if len(global_var.upscaler_names) > 25: print('- Warning: More than 25 upscalers, falling back to autocomplete instead of choices.')
-    if len(global_var.hypernet_names) > 25: print('- Warning: More than 25 hyper networks, falling back to autocomplete instead of choices.')
+    # if len(global_var.hypernet_names) > 25: print('- Warning: More than 25 hyper networks, falling back to autocomplete instead of choices.')
 
     # load dream cache
     get_dream_command(-1)
