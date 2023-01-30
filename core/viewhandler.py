@@ -47,9 +47,14 @@ class DrawModal(Modal):
 
         if self.input_object.init_url:
             init_url = self.input_object.init_url
-            extra_settings_value += f'\nstrength: {self.input_object.strength}'
         else:
             init_url = ''
+
+        if self.input_object.init_url or (self.input_object.highres_fix != None or self.input_object.highres_fix != 'None'):
+            extra_settings_value += f'\nstrength: {self.input_object.strength}'
+
+        if self.input_object.model_name == None or self.input_object.model_name == 'None':
+            self.input_object.model_name = 'Default'
 
         extra_settings_value += f'\nsteps: {self.input_object.steps}'
         extra_settings_value += f'\nguidance_scale: {self.input_object.guidance_scale}'
@@ -571,7 +576,7 @@ class DrawExtendedView(View):
                         emoji='✂️'
                     ))
 
-                if self.input_object.highres_fix:
+                if self.input_object.highres_fix == None or self.input_object.highres_fix == 'None':
                     label = 'Disable HighRes Fix'
                 else:
                     label = 'Enable HighRes Fix'
@@ -872,7 +877,16 @@ class DrawExtendedView(View):
 
                 case 'button_extra_highres_fix':
                     page = 4
-                    draw_object.highres_fix = (input_object.highres_fix != True)
+                    if input_object.highres_fix != None and input_object.highres_fix != 'None':
+                        draw_object.highres_fix = None
+                    else:
+                        if 'Latent' in settings.global_var.highres_upscaler_names:
+                            draw_object.highres_fix = 'Latent'
+                        else:
+                            for hires_upscaler in settings.global_var.highres_upscaler_names:
+                                if hires_upscaler != 'None':
+                                    draw_object.highres_fix = hires_upscaler
+                                    break
 
                 case 'button_extra_tiling':
                     page = 4
