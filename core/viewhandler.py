@@ -125,19 +125,19 @@ class DrawModal(Modal):
 
                 stable_cog: stablecog.StableCog = self.stable_cog
                 command_draw_object = stable_cog.get_draw_object_from_command(command.replace('\n', ' '))
-                if 'checkpoint' in commands:        draw_object.model_name      = command_draw_object.model_name
-                if 'width' in commands:             draw_object.width           = command_draw_object.width
-                if 'height' in commands:            draw_object.height          = command_draw_object.height
-                if 'steps' in commands:             draw_object.steps           = command_draw_object.steps
-                if 'guidance_scale' in commands:    draw_object.guidance_scale  = command_draw_object.guidance_scale
-                if 'strength' in commands:          draw_object.strength        = command_draw_object.strength
-                if 'style' in commands:             draw_object.style           = command_draw_object.style
-                if 'facefix' in commands:           draw_object.facefix         = command_draw_object.facefix
-                if 'tiling' in commands:            draw_object.tiling          = command_draw_object.tiling
-                if 'highres_fix' in commands:       draw_object.highres_fix     = command_draw_object.highres_fix
-                if 'clip_skip' in commands:         draw_object.clip_skip       = command_draw_object.clip_skip
-                if 'batch' in commands:             draw_object.batch           = command_draw_object.batch
-                if 'script' in commands:            draw_object.script          = command_draw_object.script
+                draw_object.model_name      = command_draw_object.model_name
+                draw_object.width           = command_draw_object.width
+                draw_object.height          = command_draw_object.height
+                draw_object.steps           = command_draw_object.steps
+                draw_object.guidance_scale  = command_draw_object.guidance_scale
+                draw_object.strength        = command_draw_object.strength
+                draw_object.style           = command_draw_object.style
+                draw_object.facefix         = command_draw_object.facefix
+                draw_object.tiling          = command_draw_object.tiling
+                draw_object.highres_fix     = command_draw_object.highres_fix
+                draw_object.clip_skip       = command_draw_object.clip_skip
+                draw_object.batch           = command_draw_object.batch
+                draw_object.script          = command_draw_object.script
             except:
                 pass
 
