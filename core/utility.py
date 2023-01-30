@@ -80,8 +80,10 @@ class WebUI:
         self.model_tokens = {}
         self.style_names = {}
         self.facefix_models: list[str] = []
+        self.highres_upscaler_names: list[str] = []
         self.upscaler_names: list[str] = []
         self.identify_models: list[str] = []
+        self.lora_names: list[str] = []
         self.hypernet_names: list[str] = []
         self.embedding_names: list[str] = []
         self.messages: list[str] = []
@@ -197,26 +199,26 @@ class WebUI:
                 self.facefix_models.append(facefix_model['name'])
             # print(f'- Face fix models count: {len(self.facefix_models)}')
 
-            # get upscaler models workaround - if AUTOMATIC1111 provides a better way, this should be updated
-            # print('Retrieving upscaler models...')
-            # config = s.get(self.url + '/config/', timeout=30).json()
-            # try:
-            #     for item in config['components']:
-            #         try:
-            #             if item['props']:
-            #                 if item['props']['label'] == 'Upscaler':
-            #                     self.upscaler_names = item['props']['choices']
-            #         except:
-            #             pass
-
-            #     # workaround for upscalers getting duplicated sometimes
-            #     upscalers: list[str] = []
-            #     for upscaler in self.upscaler_names:
-            #         if upscaler not in upscalers:
-            #             upscalers.append(upscaler)
-            #     self.upscaler_names = upscalers
-            # except:
-            #     print('Warning: Could not read config. Upscalers will be missing.')
+            # get settings from config workaround - if AUTOMATIC1111 provides a better way, this should be updated
+            # print('Retrieving config models...')
+            config = s.get(self.url + '/config', timeout=30).json()
+            self.lora_names = []
+            self.highres_upscaler_names = []
+            try:
+                for item in config['components']:
+                    try:
+                        if item['props']:
+                            if item['props']['elem_id'] == 'setting_sd_lora':
+                                self.lora_names = item['props']['choices']
+                            if item['props']['elem_id'] == 'txt2img_hr_upscaler':
+                                self.highres_upscaler_names = item['props']['choices']
+                    except:
+                        pass
+            except:
+                print('Warning: Could not read config. LORA or High-res upscalers will be missing.')
+            self.lora_names.remove('')
+            if 'None' not in self.lora_names: self.lora_names.insert(0, 'None')
+            if 'None' not in self.highres_upscaler_names: self.highres_upscaler_names.insert(0, 'None')
 
             # get upscaler models
             response_data = s.get(self.url + '/sdapi/v1/upscalers', timeout=30).json()
@@ -373,7 +375,7 @@ class DrawObject(DreamObject):
         self.style: str = style
         self.facefix: str = facefix
         self.tiling: bool = tiling
-        self.highres_fix: bool = highres_fix
+        self.highres_fix: str = highres_fix
         self.clip_skip: int = clip_skip
         self.script: str = script
 
@@ -384,15 +386,17 @@ class DrawObject(DreamObject):
         if self.data_model and self.model_name != 'Default':
             command += f' checkpoint:{self.model_name}'
         command += f' width:{self.width} height:{self.height} steps:{self.steps} guidance_scale:{self.guidance_scale} sampler:{self.sampler} seed:{self.seed}'
+        if self.init_url or (self.highres_fix != None and self.highres_fix != 'None'):
+            command += f' strength:{self.strength}'
         if self.init_url:
-            command += f' strength:{self.strength} init_url:{self.init_url}'
+            command += f' init_url:{self.init_url}'
         if self.style != None and self.style != 'None':
             command += f' style:{self.style}'
         if self.facefix != None and self.facefix != 'None':
             command += f' facefix:{self.facefix}'
         if self.tiling:
             command += f' tiling:{self.tiling}'
-        if self.highres_fix:
+        if self.highres_fix != None and self.highres_fix != 'None':
             command += f' highres_fix:{self.highres_fix}'
         if self.clip_skip != 1:
             command += f' clip_skip:{self.clip_skip}'

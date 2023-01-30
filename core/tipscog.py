@@ -121,7 +121,7 @@ class TipsView(View):
         hypernet_list = hypernet_list[:3500]
         if hypernet_list == '': hypernet_list = 'No hypernetworks'
 
-        description = 'Hypernets modify the model to skew all results towards the training data. '
+        description = 'Hypernets modify the checkpoint to skew all results towards the training data. '
         description += 'To use a hypernetwork, put ``<hypernet:hypernet_name:1>`` in your prompt.'
 
         if len(settings.global_var.hypernet_names) > 0:
@@ -139,6 +139,34 @@ class TipsView(View):
                              inline=False)
 
         loop.create_task(interaction.response.edit_message(embed=embed_tips))
+
+    @discord.ui.button(
+        custom_id='button_lora',
+        label='LORA models')
+    async def button_lora(self, button: discord.Button, interaction: discord.Interaction):
+        loop = asyncio.get_running_loop()
+
+        lora_list = ''
+        for lora in settings.global_var.lora_names:
+            lora_list = lora_list + f'\n{lora}'
+
+        lora_list = lora_list[:3500]
+        if lora_list == '': lora_list = 'No LORA models'
+
+        lora_tips = discord.Embed(title='LORA list', description=lora_list)
+        lora_tips.colour = settings.global_var.embed_color
+
+        description = 'LORA models modify the checkpoint to skew all results towards the training data. '
+        description += 'To use a LORA model, put ``<lora:lora_name:1>`` in your prompt.'
+
+        lora_tips = discord.Embed(title='Embedding model list', description=lora_list)
+        lora_tips.colour = settings.global_var.embed_color
+
+        lora_tips.add_field(name='How to use LORA models',
+                             value=description,
+                             inline=False)
+
+        loop.create_task(interaction.response.edit_message(embed=lora_tips))
 
     @discord.ui.button(
         custom_id='button_embedding',

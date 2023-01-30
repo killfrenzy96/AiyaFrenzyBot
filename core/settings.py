@@ -16,6 +16,7 @@ template = {
     'default_steps': 20,
     'default_guidance_scale': 7.0,
     'default_strength': 0.75,
+    'default_strength_highres_fix': 0.6,
     'sampler': 'DPM++ 2M Karras',
     'negative_prompt': '',
     'max_steps': 100,
@@ -42,8 +43,10 @@ class GlobalVar:
     style_names = {}
     presets = {}
     facefix_models: list[str] = []
+    highres_upscaler_names: list[str] = []
     upscaler_names: list[str] = []
     identify_models: list[str] = []
+    lora_names: list[str] = []
     hypernet_names: list[str] = []
     embedding_names: list[str] = []
     messages: list[str] = []
@@ -327,8 +330,10 @@ def files_check():
     global_var.sampler_names = web_ui.sampler_names
     global_var.style_names = web_ui.style_names
     global_var.facefix_models = web_ui.facefix_models
+    global_var.highres_upscaler_names = web_ui.highres_upscaler_names
     global_var.upscaler_names = web_ui.upscaler_names
     global_var.hypernet_names = web_ui.hypernet_names
+    global_var.lora_names = web_ui.lora_names
     global_var.embedding_names = web_ui.embedding_names
 
     if len(global_var.model_names) > 25: print('- Warning: More than 25 checkpoints, falling back to autocomplete instead of choices.')

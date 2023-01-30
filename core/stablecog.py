@@ -89,6 +89,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             script for script in scripts
         ]
 
+    def hires_autocomplete(self: discord.AutocompleteContext):
+        return [
+            hires for hires in settings.global_var.highres_upscaler_names
+        ]
+
     # use autocomplete if there is too much text
     total_length: int = 0
     max_length: int = 1200
@@ -111,7 +116,14 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         style_autocomplete_fn = None
         style_choices = settings.global_var.style_names
 
-    if total_length > 1500: force_autocomplete = True
+    # same for hires upscalers
+    for name in settings.global_var.highres_upscaler_names: total_length += len(name)
+    if total_length > max_length:
+        hires_upscaler_autocomplete_fn = discord.utils.basic_autocomplete(hires_autocomplete)
+        hires_upscaler_choices = []
+    else:
+        hires_upscaler_autocomplete_fn = None
+        hires_upscaler_choices = settings.global_var.highres_upscaler_names
 
     # same for scripts
     for name in scripts: total_length += len(name)
@@ -238,9 +250,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     )
     @option(
         'highres_fix',
-        bool,
+        str,
         description='Tries to fix issues from generating high-res images. Takes longer!',
         required=False,
+        autocomplete=hires_upscaler_autocomplete_fn,
+        choices=hires_upscaler_choices,
     )
     @option(
         'clip_skip',
@@ -273,7 +287,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             style: Optional[str] = None,
                             facefix: Optional[str] = None,
                             tiling: Optional[bool] = False,
-                            highres_fix: Optional[bool] = False,
+                            highres_fix: Optional[str] = None,
                             clip_skip: Optional[int] = None,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
@@ -342,6 +356,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             if strength == None:
                 if script and script.startswith('outpaint'):
                     strength = 1.0
+                elif highres_fix != None and highres_fix != 'None':
+                    strength = settings.read(guild)['default_strength_highres_fix']
                 else:
                     strength = settings.read(guild)['default_strength']
             if batch is None:
@@ -378,6 +394,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 raise Exception()
 
             # validate autocomplete
+            if highres_fix != None and highres_fix != 'None':
+                if highres_fix not in settings.global_var.highres_upscaler_names:
+                    highres_fix = None
+                    append_options += '\nHigh-res fix not found. I will remove the high-res fix.'
+
             if style != None and style != 'None':
                 if style not in settings.global_var.style_names:
                     style = None
@@ -764,10 +785,15 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         })
 
                 # update payload if high-res fix is used
-                if queue_object.highres_fix:
+                if queue_object.highres_fix != None and queue_object.highres_fix != 'None':
                     payload.update({
-                        'enable_hr': queue_object.highres_fix,
-                        'denoising_strength': queue_object.strength
+                        'width': int(queue_object.width / 2),
+                        'height': int(queue_object.height / 2),
+                        "enable_hr": True,
+                        "hr_upscaler": queue_object.highres_fix,
+                        "hr_scale": 2,
+                        "hr_second_pass_steps": int(float(queue_object.steps) * queue_object.strength),
+                        "denoising_strength": queue_object.strength
                     })
 
                 # add any options that would go into the override_settings
@@ -1087,12 +1113,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
         try:
             highres_fix = get_param('highres_fix')
-            if highres_fix.lower() == 'true':
-                highres_fix = True
-            else:
-                highres_fix = False
         except:
-            highres_fix = False
+            highres_fix = None
 
         try:
             facefix = get_param('facefix')
