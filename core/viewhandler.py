@@ -576,7 +576,7 @@ class DrawExtendedView(View):
                         emoji='✂️'
                     ))
 
-                if self.input_object.highres_fix == None or self.input_object.highres_fix == 'None':
+                if self.input_object.highres_fix != None and self.input_object.highres_fix != 'None':
                     label = 'Disable HighRes Fix'
                 else:
                     label = 'Enable HighRes Fix'
