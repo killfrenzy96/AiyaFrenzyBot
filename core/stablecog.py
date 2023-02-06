@@ -802,11 +802,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 # add any options that would go into the override_settings
                 override_settings = {
                     # 'sd_model_checkpoint': queue_object.data_model
+                    'CLIP_stop_at_last_layers': queue_object.clip_skip
                 }
-
-                # update payload if clip skip is used
-                if queue_object.clip_skip != 1:
-                    override_settings['CLIP_stop_at_last_layers'] = queue_object.clip_skip
 
                 # update payload if facefix is used
                 if queue_object.facefix != None and queue_object.facefix != 'None':
