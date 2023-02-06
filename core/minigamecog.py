@@ -369,9 +369,10 @@ class Minigame:
             'denoising_strength': draw_object.strength,
             'tiling': draw_object.tiling,
             'n_iter': draw_object.batch,
-            # 'override_settings': {
-            #     'sd_model_checkpoint': draw_object.data_model
-            # }
+            'override_settings': {
+                # 'sd_model_checkpoint': draw_object.data_model
+                'CLIP_stop_at_last_layers': draw_object.clip_skip
+            }
         }
 
         if self.adventure and init_url and self.images_base64:
