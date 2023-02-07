@@ -37,6 +37,9 @@ class DreamQueueInstance:
         # append dream to queue
         self.queue.append(queue_object)
 
+        if type(queue_object) is utility.DrawObject:
+            self.last_data_model = queue_object.data_model
+
         # start dream queue thread
         if self.dream_thread.is_alive() == False:
             self.dream_thread = threading.Thread(target=self.process_queue, daemon=True)
@@ -74,9 +77,6 @@ class DreamQueueInstance:
                 active_thread_event = threading.Event()
                 active_thread = threading.Thread(target=queue_object.cog.dream, args=[queue_object, self.web_ui, active_thread_event], daemon=True)
                 active_thread.start()
-
-                if type(queue_object) is utility.DrawObject:
-                    self.last_data_model = queue_object.data_model
 
                 # wait for active thread to complete, or event to activate (indicating it is safe to continue)
                 def wait_for_join():
