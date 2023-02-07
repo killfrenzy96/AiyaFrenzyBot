@@ -89,12 +89,12 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
             draw_object = stable_cog.get_draw_object_from_command(command_string)
 
             # apply modifications to preset command
-            if draw_object.prompt: prompt += f', {draw_object.prompt}'
+            if draw_object.prompt: prompt = f'{draw_object.prompt}, {prompt}'
             draw_object.prompt = prompt
 
             if draw_object.negative:
                 if negative:
-                    negative += f', {draw_object.negative}'
+                    negative = f'{draw_object.negative}, {negative}'
                 else:
                     negative = draw_object.negative
             if negative: draw_object.negative = negative
