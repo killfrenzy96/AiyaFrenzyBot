@@ -71,6 +71,7 @@ class DrawModal(Modal):
         extra_settings_value += f'\nscript: {self.input_object.script}'
 
         extra_settings_value += f'\ncontrolnet_model: {self.input_object.controlnet_model}'
+        extra_settings_value += f'\ncontrolnet_weight: {self.input_object.controlnet_weight}'
         extra_settings_value += f'\ncontrolnet_url: {self.input_object.controlnet_url}'
 
         self.add_item(
@@ -142,6 +143,7 @@ class DrawModal(Modal):
                 draw_object.batch           = command_draw_object.batch
                 draw_object.controlnet_model = command_draw_object.controlnet_model
                 draw_object.controlnet_url  = command_draw_object.controlnet_url
+                draw_object.controlnet_weight = command_draw_object.controlnet_weight
                 draw_object.script          = command_draw_object.script
             except:
                 pass

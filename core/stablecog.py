@@ -43,6 +43,7 @@ dream_params = [
     'hypernet',
     'controlnet_model',
     'controlnet_url',
+    'controlnet_weight',
     'script'
 ]
 
@@ -226,6 +227,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         required=False,
     )
     @option(
+        'controlnet_weight',
+        float,
+        description='The amount which controlnet will affect the image (0.0 to 2.0). Default: 1.0',
+        min_value=0,
+        max_value=2,
+    )
+    @option(
         'script',
         str,
         description='Run a script in this dream.',
@@ -253,6 +261,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             controlnet_model: Optional[str] = None,
                             controlnet_image: Optional[discord.Attachment] = None,
                             controlnet_url: Optional[str] = None,
+                            controlnet_weight: Optional[float] = None,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
         guild = utility.get_guild(ctx)
@@ -383,7 +392,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         steps, width, height, guidance_scale, sampler, seed,
                         strength, init_url, batch, style, facefix, tiling,
                         highres_fix, clip_skip, script,
-                        controlnet_model, controlnet_data_model, controlnet_url)
+                        controlnet_model, controlnet_data_model, controlnet_url, controlnet_weight)
 
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
@@ -676,7 +685,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
              # get input controlnet image
             controlnet_image_data: str = None
-            controlnet_image_mask: str = None
+            # controlnet_image_mask: str = None
             controlnet_validated = True
             controlnet_found = False
 
@@ -789,6 +798,12 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     content = 'Controlnet image not found! An init or controlnet image is required when using a controlnet model.'
                     ephemeral = True
                     raise Exception()
+
+                # validate controlnet weight
+                if controlnet_weight == None:
+                    controlnet_weight = 1.0
+                else:
+                    controlnet_weight = max(0, min(2, controlnet_weight))
 
 
             if controlnet_validated == False:
@@ -911,13 +926,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         # 'controlnet_mask': [controlnet_image_mask],
                         'controlnet_module': queue_object.controlnet_model,
                         'controlnet_model': queue_object.controlnet_data_model,
-                        'controlnet_weight': 1,
+                        'controlnet_weight': controlnet_weight,
                         'controlnet_resize_mode': 'Just Resize',
                         'controlnet_lowvram': False,
                         'controlnet_processor_res': min(queue_object.width, queue_object.height),
                         'controlnet_threshold_a': 64,
                         'controlnet_threshold_b': 64,
-                        'controlnet_guidance': 1,
+                        'controlnet_guidance': min(controlnet_weight, 1),
                         'controlnet_guessmode': False,
                     }
                     payload.update(controlnet_payload)
@@ -1142,6 +1157,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             clip_skip=draw_object.clip_skip,
             controlnet_model=draw_object.controlnet_model,
             controlnet_url=draw_object.controlnet_url,
+            controlnet_weight=draw_object.controlnet_weight,
             script=draw_object.script
         ))
 
@@ -1272,6 +1288,12 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         if controlnet_url == '':
             controlnet_url = None
 
+        try:
+            controlnet_weight = float(get_param('controlnet_weight'))
+            controlnet_weight = max(0.0, min(2.0, controlnet_weight))
+        except:
+            controlnet_weight = 1.0
+
         script = get_param('script')
         # if script not in self.scripts_autocomplete(): script = None
 
@@ -1298,6 +1320,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             clip_skip=clip_skip,
             controlnet_model=controlnet_model,
             controlnet_url=controlnet_url,
+            controlnet_weight=controlnet_weight,
             script=script
         )
 

@@ -357,7 +357,7 @@ class DreamObject:
 class DrawObject(DreamObject):
     def __init__(self, cog, ctx, prompt, negative, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
                  strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, script,
-                 controlnet_model = None, controlnet_data_model = None, controlnet_url = None,
+                 controlnet_model = None, controlnet_data_model = None, controlnet_url = None, controlnet_weight = None,
                  view = None, message = None, write_to_cache = True, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.prompt: str = prompt
@@ -381,6 +381,7 @@ class DrawObject(DreamObject):
         self.controlnet_model: str = controlnet_model
         self.controlnet_data_model: str = controlnet_data_model
         self.controlnet_url: str = controlnet_url
+        self.controlnet_weight: float = controlnet_weight
         self.script: str = script
 
     def get_command(self):
@@ -410,6 +411,8 @@ class DrawObject(DreamObject):
             command += f' controlnet_model:{self.controlnet_model}'
         if self.controlnet_url:
             command += f' controlnet_url:{self.controlnet_url}'
+        if self.controlnet_weight and (self.controlnet_model != None and self.controlnet_model != 'None'):
+            command += f' controlnet_weight:{self.controlnet_weight}'
         if self.script != None and self.script != 'None':
             command += f' script:{self.script}'
         return command

@@ -389,6 +389,7 @@ class DreamQueue:
             if queue_object.highres_fix != None and queue_object.highres_fix != 'None': dream_compute_cost_add = dream_compute_cost
             dream_compute_cost *= pow(max(1.0, float(queue_object.width * queue_object.height) / float(512 * 512)), 1.25)
             if queue_object.init_url or (queue_object.highres_fix != None and queue_object.highres_fix != 'None'): dream_compute_cost *= max(0.2, queue_object.strength)
+            if queue_object.controlnet_model != None and queue_object.controlnet_model != 'None': dream_compute_cost *= 1.33
             dream_compute_cost += dream_compute_cost_add
             dream_compute_cost = max(1.0, dream_compute_cost)
 
