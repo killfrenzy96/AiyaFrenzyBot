@@ -336,11 +336,6 @@ def files_check():
     global_var.lora_names = web_ui.lora_names
     global_var.embedding_names = web_ui.embedding_names
 
-    if len(global_var.model_names) > 25: print('- Warning: More than 25 checkpoints, falling back to autocomplete instead of choices.')
-    if len(global_var.style_names) > 25: print('- Warning: More than 25 styles, falling back to autocomplete instead of choices.')
-    if len(global_var.upscaler_names) > 25: print('- Warning: More than 25 upscalers, falling back to autocomplete instead of choices.')
-    # if len(global_var.hypernet_names) > 25: print('- Warning: More than 25 hyper networks, falling back to autocomplete instead of choices.')
-
     # load dream cache
     get_dream_command(-1)
 
@@ -454,3 +449,28 @@ def increment_stats(count: int = 1):
     if global_var.stats_write_thread.is_alive(): global_var.stats_write_thread.join()
     global_var.stats_write_thread = threading.Thread(target=run)
     global_var.stats_write_thread.start()
+
+
+# pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
+def autocomplete_model(self: discord.AutocompleteContext):
+    return [
+        model for model in global_var.model_names
+    ]
+
+# and for styles
+def autocomplete_style(self: discord.AutocompleteContext):
+    return [
+        style for style in global_var.style_names
+    ]
+
+# and for hires upscaler
+def autocomplete_hires(self: discord.AutocompleteContext):
+    return [
+        hires for hires in global_var.highres_upscaler_names
+    ]
+
+# and for upscalers
+def autocomplete_upscaler(self: discord.AutocompleteContext):
+    return [
+        upscaler for upscaler in global_var.upscaler_names
+    ]
