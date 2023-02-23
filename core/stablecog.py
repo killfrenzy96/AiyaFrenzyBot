@@ -205,25 +205,6 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         required=False,
     )
     @option(
-        'strength',
-        float,
-        description='The amount in which init_image will be altered (0.0 to 1.0). Default: 0.75',
-        min_value=0,
-        max_value=1,
-    )
-    @option(
-        'init_image',
-        discord.Attachment,
-        description='The starter image for generation. Remember to set strength value!',
-        required=False,
-    )
-    @option(
-        'init_url',
-        str,
-        description='The starter URL image for generation. This overrides init_image!',
-        required=False,
-    )
-    @option(
         'batch',
         int,
         description='The number of images to generate. This is \'Batch count\', not \'Batch size\'.',
@@ -267,6 +248,25 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         choices=[x for x in range(1, 13, 1)]
     )
     @option(
+        'init_image',
+        discord.Attachment,
+        description='The starter image for generation. Remember to set strength value!',
+        required=False,
+    )
+    @option(
+        'init_url',
+        str,
+        description='The starter URL image for generation. This overrides init_image!',
+        required=False,
+    )
+    @option(
+        'strength',
+        float,
+        description='The amount in which init_image will be altered (0.0 to 1.0). Default: 0.75',
+        min_value=0,
+        max_value=1,
+    )
+    @option(
         'script',
         str,
         description='Run a script in this dream.',
@@ -283,15 +283,15 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             guidance_scale: Optional[float] = None,
                             sampler: Optional[str] = None,
                             seed: Optional[int] = None,
-                            strength: Optional[float] = None,
-                            init_image: Optional[discord.Attachment] = None,
-                            init_url: Optional[str] = None,
                             batch: Optional[int] = None,
                             style: Optional[str] = None,
                             facefix: Optional[str] = None,
                             tiling: Optional[bool] = False,
                             highres_fix: Optional[str] = None,
                             clip_skip: Optional[int] = None,
+                            init_image: Optional[discord.Attachment] = None,
+                            init_url: Optional[str] = None,
+                            strength: Optional[float] = None,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
         guild = utility.get_guild(ctx)
