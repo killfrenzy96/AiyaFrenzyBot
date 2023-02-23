@@ -41,6 +41,8 @@ dream_params = [
     'highres_fix',
     'clip_skip',
     'hypernet',
+    'controlnet_model',
+    'controlnet_url',
     'script'
 ]
 
@@ -205,6 +207,25 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         max_value=1,
     )
     @option(
+        'controlnet_model',
+        str,
+        description='The image for controlnet. Using this also requires an init or controlnet image.',
+        required=False,
+        autocomplete=settings.autocomplete_controlnet,
+    )
+    @option(
+        'controlnet_image',
+        discord.Attachment,
+        description='The image for controlnet. If not specified, this will use init_image.',
+        required=False,
+    )
+    @option(
+        'controlnet_url',
+        str,
+        description='The URL image for controlnet. This overrides controlnet_input_image!',
+        required=False,
+    )
+    @option(
         'script',
         str,
         description='Run a script in this dream.',
@@ -229,6 +250,9 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str] = None,
                             strength: Optional[float] = None,
+                            controlnet_model: Optional[str] = None,
+                            controlnet_image: Optional[discord.Attachment] = None,
+                            controlnet_url: Optional[str] = None,
                             script: Optional[str] = None):
         loop = asyncio.get_event_loop()
         guild = utility.get_guild(ctx)
@@ -351,12 +375,15 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
             if seed == None: seed = random.randint(0, 0xFFFFFFFF)
 
+            controlnet_data_model: str = None
+
             # get arguments that can be passed into the draw object
             def get_draw_object_args():
                 return (self, ctx, prompt, negative, checkpoint, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
                         strength, init_url, batch, style, facefix, tiling,
-                        highres_fix, clip_skip, script)
+                        highres_fix, clip_skip, script,
+                        controlnet_model, controlnet_data_model, controlnet_url)
 
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
@@ -646,6 +673,128 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             if image_validated == False:
                 raise Exception()
 
+
+             # get input controlnet image
+            controlnet_image_data: str = None
+            controlnet_image_mask: str = None
+            controlnet_validated = True
+            controlnet_found = False
+
+            # validate controlnet model
+            if controlnet_model != None and controlnet_model != 'None':
+                for (display_name, full_name) in settings.global_var.controlnet_models.items():
+                    if controlnet_model == display_name or controlnet_model == full_name:
+                        controlnet_model = display_name
+                        controlnet_data_model = full_name
+                        controlnet_found = True
+                        break
+
+                if controlnet_found == False:
+                    controlnet_model = None
+                    controlnet_data_model = None
+
+                    if not (controlnet_url or controlnet_image):
+                        append_options += '\nControlnet model not found. I will remove the controlnet.'
+
+            if controlnet_found == False:
+                if controlnet_url or controlnet_image:
+                    for (display_name, full_name) in settings.global_var.controlnet_models.items():
+                        if display_name == 'depth':
+                            controlnet_model = display_name
+                            controlnet_data_model = full_name
+                            controlnet_found = True
+                            break
+
+                    # if controlnet_found == False:
+                    #     controlnet_model, controlnet_data_model = settings.global_var.controlnet_models.items()
+                    #     append_options += f'\nControlnet model unspecified. I will use ``{controlnet_model}``.'
+
+            if controlnet_found:
+                if controlnet_url or controlnet_image:
+                    if not controlnet_url and controlnet_image:
+                        controlnet_url = controlnet_image.url
+
+                    if controlnet_url.startswith('https://cdn.discordapp.com/') == False and controlnet_url.startswith('https://media.discordapp.net/') == False:
+                        print(f'Dream rejected: Controlnet image is not from the Discord CDN.')
+                        content = 'Only URL images from the Discord CDN are allowed!'
+                        ephemeral = True
+                        raise Exception()
+
+                    try:
+                        # reject URL downloads larger than 10MB
+                        url_head = await loop.run_in_executor(None, requests.head, controlnet_url)
+                        url_size = int(url_head.headers.get('content-length', -1))
+                    except:
+                        content = 'Controlnet image not found! Please check the image URL.'
+                        ephemeral = True
+                        raise Exception()
+
+                    # check image download size
+                    if url_size > 10 * 1024 * 1024:
+                        print(f'Dream rejected: Controlnet image download too large.')
+                        content = 'Controlnet image download is too large! Please make the download size smaller.'
+                        ephemeral = True
+                        raise Exception()
+
+                    # download and encode the image
+                    try:
+                        image_response = await loop.run_in_executor(None, requests.get, controlnet_url)
+                        image_data = image_response.content
+                        image_string = base64.b64encode(image_data).decode('utf-8')
+                    except:
+                        print(f'Dream rejected: Controlnet image download failed.')
+                        content = 'Controlnet image download failed! Please check the image URL.'
+                        ephemeral = True
+                        raise Exception()
+
+                    # check if image can open
+                    try:
+                        image_bytes = io.BytesIO(image_data)
+                        image_pil = Image.open(image_bytes)
+                        image_pil_width, image_pil_height = image_pil.size
+                    except Exception as e:
+                        print(f'Dream rejected: Controlnet image is corrupted.')
+                        print(f'\n{traceback.print_exc()}')
+                        content = 'Controlnet image is corrupted! Please check the image you uploaded.'
+                        ephemeral = True
+                        raise Exception()
+
+                    # limit image width/height
+                    if image_pil_width * image_pil_height > 4096 * 4096:
+                        print(f'Dream rejected: Controlnet image size is too large.')
+                        content = 'Controlnet image size is too large! Please use a lower resolution image.'
+                        ephemeral = True
+                        raise Exception()
+
+                    # setup image mask
+                    # image_mask = Image.new('RGB', (width, height), color='black')
+                    # buffer = io.BytesIO()
+                    # image_mask.save(buffer, format='PNG')
+                    # controlnet_image_mask = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                    # controlnet_image_mask = 'data:image/png;base64,' + controlnet_image_mask
+
+                    # setup image variable
+                    # controlnet_image_data = 'data:image/png;base64,' + image_string
+                    controlnet_image_data = image_string
+                    controlnet_validated = True
+
+                # fallback to using init_image
+                elif image_validated:
+                    controlnet_image_data = image.removeprefix('data:image/png;base64,')
+                    controlnet_validated = True
+
+                else:
+                    print(f'Dream rejected: Controlnet image not found.')
+                    print(f'\n{traceback.print_exc()}')
+                    content = 'Controlnet image not found! An init or controlnet image is required when using a controlnet model.'
+                    ephemeral = True
+                    raise Exception()
+
+
+            if controlnet_validated == False:
+                raise Exception()
+
+
             # increment number of images generated
             settings.increment_stats(batch)
 
@@ -755,6 +904,24 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 }
                 payload.update(override_payload)
 
+                # setup controlnet payload
+                if queue_object.controlnet_model and controlnet_validated:
+                    controlnet_payload = {
+                        'controlnet_input_image': [controlnet_image_data],
+                        # 'controlnet_mask': [controlnet_image_mask],
+                        'controlnet_module': queue_object.controlnet_model,
+                        'controlnet_model': queue_object.controlnet_data_model,
+                        'controlnet_weight': 1,
+                        'controlnet_resize_mode': 'Just Resize',
+                        'controlnet_lowvram': False,
+                        'controlnet_processor_res': min(queue_object.width, queue_object.height),
+                        'controlnet_threshold_a': 64,
+                        'controlnet_threshold_b': 64,
+                        'controlnet_guidance': 1,
+                        'controlnet_guessmode': False,
+                    }
+                    payload.update(controlnet_payload)
+
                 # attach payload to queue object
                 queue_object.payload = payload
                 return queue_object
@@ -858,6 +1025,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 url = f'{web_ui.url}/sdapi/v1/img2img'
             else:
                 url = f'{web_ui.url}/sdapi/v1/txt2img'
+            if queue_object.controlnet_model != None and queue_object.controlnet_model != 'None':
+                url = url.replace('/sdapi/v1/', '/controlnet/')
             response = s.post(url=url, json=queue_object.payload, timeout=120)
             queue_object.payload = None
 
@@ -971,6 +1140,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             tiling=draw_object.tiling,
             highres_fix=draw_object.highres_fix,
             clip_skip=draw_object.clip_skip,
+            controlnet_model=draw_object.controlnet_model,
+            controlnet_url=draw_object.controlnet_url,
             script=draw_object.script
         ))
 
@@ -1093,6 +1264,14 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         except:
             clip_skip = None
 
+        controlnet_model = get_param('controlnet_model')
+        if controlnet_model == '':
+            controlnet_model = None
+
+        controlnet_url = get_param('controlnet_url')
+        if controlnet_url == '':
+            controlnet_url = None
+
         script = get_param('script')
         # if script not in self.scripts_autocomplete(): script = None
 
@@ -1117,6 +1296,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             tiling=tiling,
             highres_fix=highres_fix,
             clip_skip=clip_skip,
+            controlnet_model=controlnet_model,
+            controlnet_url=controlnet_url,
             script=script
         )
 

@@ -50,6 +50,7 @@ class GlobalVar:
     hypernet_names: list[str] = []
     embedding_names: list[str] = []
     messages: list[str] = []
+    controlnet_models = {}
 
     images_generated: int
     config_cache: dict = None
@@ -342,6 +343,19 @@ def files_check():
     # get interrogate models - no API endpoint for this, so it's hard coded
     global_var.identify_models = ['clip', 'deepdanbooru']
 
+    # get controlnet models (hardcoded for now)
+    global_var.controlnet_models = {
+        'canny': 'control_sd15_canny [fef5e48e]',
+        'depth': 'control_sd15_depth [fef5e48e]',
+        'depth_leres': 'control_sd15_depth [fef5e48e]',
+        'hed': 'control_sd15_hed [fef5e48e]',
+        'mlsd': 'control_sd15_mlsd [fef5e48e]',
+        'normal_map': 'control_sd15_normal [fef5e48e]',
+        'openpose': 'control_sd15_openpose [fef5e48e]',
+        'scribble': 'control_sd15_scribble [fef5e48e]',
+        'fake_scribble': 'control_sd15_scribble [fef5e48e]'
+    }
+
 
 def guilds_check(self: discord.Bot):
     # add dummy guild for private channels
@@ -473,4 +487,10 @@ def autocomplete_hires(self: discord.AutocompleteContext):
 def autocomplete_upscaler(self: discord.AutocompleteContext):
     return [
         upscaler for upscaler in global_var.upscaler_names
+    ]
+
+# and for controlnets
+def autocomplete_controlnet(self: discord.AutocompleteContext):
+    return [
+        controlnet for controlnet in global_var.controlnet_models
     ]

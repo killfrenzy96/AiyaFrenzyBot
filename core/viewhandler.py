@@ -70,6 +70,9 @@ class DrawModal(Modal):
         extra_settings_value += f'\nclip_skip: {self.input_object.clip_skip}'
         extra_settings_value += f'\nscript: {self.input_object.script}'
 
+        extra_settings_value += f'\ncontrolnet_model: {self.input_object.controlnet_model}'
+        extra_settings_value += f'\ncontrolnet_url: {self.input_object.controlnet_url}'
+
         self.add_item(
             InputText(
                 label='Init URL. \'C\' uses current image.',
@@ -137,6 +140,8 @@ class DrawModal(Modal):
                 draw_object.highres_fix     = command_draw_object.highres_fix
                 draw_object.clip_skip       = command_draw_object.clip_skip
                 draw_object.batch           = command_draw_object.batch
+                draw_object.controlnet_model = command_draw_object.controlnet_model
+                draw_object.controlnet_url  = command_draw_object.controlnet_url
                 draw_object.script          = command_draw_object.script
             except:
                 pass
@@ -649,6 +654,23 @@ class DrawExtendedView(View):
                     emoji='🩼'
                 ))
 
+                # add control net
+                self.add_extra_item(Button(
+                    label='Create Variations with Controlnet',
+                    custom_id='button_extra_controlnet_variation',
+                    row=3,
+                    emoji='🧬'
+                ))
+
+                # add control net
+                if self.input_object.controlnet_url:
+                    self.add_extra_item(Button(
+                        label='Remove Controlnet Image',
+                        custom_id='button_extra_remove_controlnet_variation',
+                        row=3,
+                        emoji='✂️'
+                    ))
+
                 # add background removal
                 self.add_extra_item(Button(
                     label='Remove Background',
@@ -925,6 +947,51 @@ class DrawExtendedView(View):
                     loop.create_task(bgremove_cog.dream_handler(interaction, init_url=init_url))
                     refresh_view()
                     return
+
+                case 'button_extra_controlnet_variation':
+                    page = 4
+
+                    # obtain URL for the original image
+                    controlnet_url = message.attachments[0].url
+                    if not controlnet_url:
+                        loop.create_task(interaction.response.send_message('The image seems to be missing. This interaction no longer works.', ephemeral=True, delete_after=30))
+                        return
+
+                    # get input object
+                    if self.input_object:
+                        input_object = self.input_object
+                    else:
+                        input_object = await get_input_object(stable_cog, interaction, '🧬')
+                        if input_object == None: return
+
+                    # setup draw object to send to the stablecog
+                    draw_object = copy.copy(input_object)
+                    draw_object.seed = None
+                    draw_object.ctx = interaction
+                    draw_object.view = None
+                    draw_object.payload = None
+                    # draw_object.init_url = None
+                    draw_object.controlnet_url = controlnet_url
+                    if draw_object.script:
+                        if draw_object.script.startswith('inpaint'):
+                            draw_object.script = None
+                        elif draw_object.script.startswith('outpaint'):
+                            draw_object.script = None
+                            draw_object.strength = None
+
+                case 'button_extra_remove_controlnet_variation':
+                    page = 4
+                    draw_object.controlnet_model = None
+                    draw_object.controlnet_data_model = None
+                    draw_object.controlnet_url = None
+
+                    if draw_object.script:
+                        if draw_object.script.startswith('inpaint') or draw_object.script.startswith('outpaint'):
+                            draw_object.script = None
+
+                    if 'inpaint' in draw_object.model_name or 'inpaint' in draw_object.data_model:
+                        draw_object.model_name = None
+                        draw_object.data_model = None
 
                 case other:
                     # outpainting directions
