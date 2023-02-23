@@ -73,70 +73,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         self.wait_message: list[str] = []
         self.bot: discord.Bot = bot
 
-    # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
-    def model_autocomplete(self: discord.AutocompleteContext):
-        return [
-            model for model in settings.global_var.model_names
-        ]
-    # and for styles
-    def style_autocomplete(self: discord.AutocompleteContext):
-        return [
-            style for style in settings.global_var.style_names
-        ]
-    # and for scripts
-    def scripts_autocomplete(self: discord.AutocompleteContext):
+    # list for scripts
+    def autocomplete_scripts(self: discord.AutocompleteContext):
         return [
             script for script in scripts
         ]
-
-    def hires_autocomplete(self: discord.AutocompleteContext):
-        return [
-            hires for hires in settings.global_var.highres_upscaler_names
-        ]
-
-    # use autocomplete if there is too much text
-    total_length: int = 0
-    max_length: int = 1200
-
-    # use autocomplete if there are too many models, otherwise use choices
-    for (name, value) in settings.global_var.model_names.items(): total_length += len(name)
-    if len(settings.global_var.model_names) > 25 or total_length > max_length:
-        checkpoint_autocomplete_fn = discord.utils.basic_autocomplete(model_autocomplete)
-        checkpoint_choices = []
-    else:
-        checkpoint_autocomplete_fn = None
-        checkpoint_choices = settings.global_var.model_names
-
-    # same for styles
-    for (name, value) in settings.global_var.style_names.items(): total_length += len(name)
-    if len(settings.global_var.style_names) > 25 or total_length > max_length:
-        style_autocomplete_fn = discord.utils.basic_autocomplete(style_autocomplete)
-        style_choices = []
-    else:
-        style_autocomplete_fn = None
-        style_choices = settings.global_var.style_names
-
-    # same for hires upscalers
-    for name in settings.global_var.highres_upscaler_names: total_length += len(name)
-    if total_length > max_length:
-        hires_upscaler_autocomplete_fn = discord.utils.basic_autocomplete(hires_autocomplete)
-        hires_upscaler_choices = []
-    else:
-        hires_upscaler_autocomplete_fn = None
-        hires_upscaler_choices = settings.global_var.highres_upscaler_names
-
-    # same for scripts
-    for name in scripts: total_length += len(name)
-    if total_length > max_length:
-        scripts_autocomplete_fn = discord.utils.basic_autocomplete(scripts_autocomplete)
-        scripts_choices = []
-    else:
-        scripts_autocomplete_fn = None
-        scripts_choices = scripts
-
-    if total_length > max_length:
-        print(f'Warning: Command length too long, forcing autocomplete for /dream command.')
-
 
     @commands.slash_command(name = 'dream', description = 'Create an image (advanced)')
     @option(
@@ -156,8 +97,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         str,
         description='Select the data model for image generation',
         required=False,
-        autocomplete=checkpoint_autocomplete_fn,
-        choices=checkpoint_choices,
+        autocomplete=settings.autocomplete_model,
     )
     @option(
         'steps',
@@ -213,8 +153,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         str,
         description='Apply a predefined style to the generation.',
         required=False,
-        autocomplete=style_autocomplete_fn,
-        choices=style_choices,
+        autocomplete=settings.autocomplete_style,
     )
     @option(
         'facefix',
@@ -234,8 +173,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         str,
         description='Tries to fix issues from generating high-res images. Takes longer!',
         required=False,
-        autocomplete=hires_upscaler_autocomplete_fn,
-        choices=hires_upscaler_choices,
+        autocomplete=settings.autocomplete_hires,
     )
     @option(
         'clip_skip',
@@ -268,8 +206,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         str,
         description='Generates image batches using a script.',
         required=False,
-        autocomplete=scripts_autocomplete_fn,
-        choices=scripts_choices,
+        autocomplete=autocomplete_scripts,
     )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, *,
                             prompt: str, negative: str = None,
