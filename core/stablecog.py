@@ -700,6 +700,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             controlnet_found = False
 
             # validate controlnet model
+            if controlnet_model == 'None':
+                controlnet_model = None
+            if controlnet_url == 'None':
+                controlnet_url = None
+
             if controlnet_model != None and controlnet_model != 'None':
                 for (display_name, full_name) in settings.global_var.controlnet_models.items():
                     if controlnet_model == display_name or controlnet_model == full_name:
