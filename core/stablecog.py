@@ -339,6 +339,16 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 sampler = settings.read(guild)['sampler']
             if clip_skip == None:
                 clip_skip = settings.read(guild)['clip_skip']
+            if style == 'None':
+                style = None
+            if facefix == 'None':
+                facefix = None
+            if highres_fix == 'None':
+                highres_fix = None
+            if init_url == 'None':
+                init_url = None
+            if script == 'None':
+                script = None
 
             # get data model and token from checkpoint
             data_model: str = None
