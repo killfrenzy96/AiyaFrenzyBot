@@ -816,7 +816,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
                 # validate controlnet weight
                 if controlnet_weight == None:
-                    controlnet_weight = 1.0
+                    controlnet_weight = 0.75
                 else:
                     controlnet_weight = max(0, min(2, controlnet_weight))
 
