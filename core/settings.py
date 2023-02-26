@@ -345,15 +345,15 @@ def files_check():
 
     # get controlnet models (hardcoded for now)
     global_var.controlnet_models = {
-        'canny': 'control_sd15_canny [fef5e48e]',
-        'depth': 'control_sd15_depth [fef5e48e]',
-        'depth_leres': 'control_sd15_depth [fef5e48e]',
-        'hed': 'control_sd15_hed [fef5e48e]',
-        'mlsd': 'control_sd15_mlsd [fef5e48e]',
-        'normal_map': 'control_sd15_normal [fef5e48e]',
-        'openpose': 'control_sd15_openpose [fef5e48e]',
-        'scribble': 'control_sd15_scribble [fef5e48e]',
-        'fake_scribble': 'control_sd15_scribble [fef5e48e]'
+        'canny': 'control_canny-fp16 [e3fe7712]',
+        'depth': 'control_depth-fp16 [400750f6]',
+        'depth_leres': 'control_depth-fp16 [400750f6]',
+        'hed': 'control_hed-fp16 [13fee50b]',
+        'mlsd': 'control_mlsd-fp16 [e3705cfa]',
+        'normal_map': 'control_normal-fp16 [63f96f7c]',
+        'openpose': 'control_openpose-fp16 [9ca67cc5]',
+        'scribble': 'control_scribble-fp16 [c508311e]',
+        'fake_scribble': 'control_scribble-fp16 [c508311e]'
     }
 
 
