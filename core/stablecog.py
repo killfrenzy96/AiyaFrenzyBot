@@ -803,7 +803,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     controlnet_validated = True
 
                 # fallback to using init_image
-                elif image_validated:
+                elif image_validated and image:
                     controlnet_image_data = image.removeprefix('data:image/png;base64,')
                     controlnet_validated = True
 
