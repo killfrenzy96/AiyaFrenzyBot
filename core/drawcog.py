@@ -22,7 +22,7 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
 
     # use autocomplete if there are too many models, otherwise use choices
     if len(settings.global_var.presets) > 25:
-        preset_autocomplete_fn = discord.utils.basic_autocomplete(presets_autocomplete)
+        preset_autocomplete_fn = settings.custom_autocomplete(presets_autocomplete)
         preset_choices = []
     else:
         preset_autocomplete_fn = None

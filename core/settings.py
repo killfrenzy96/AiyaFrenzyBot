@@ -465,32 +465,39 @@ def increment_stats(count: int = 1):
     global_var.stats_write_thread.start()
 
 
+def custom_autocomplete(context: discord.AutocompleteContext, values: list[str]):
+    filtered: list[str] = []
+    for value in values:
+        if context.value.lower() in value.lower():
+            filtered.append(value)
+    return filtered
+
 # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
-def autocomplete_model(self: discord.AutocompleteContext):
-    return [
+def autocomplete_model(context: discord.AutocompleteContext):
+    return custom_autocomplete(context, [
         model for model in global_var.model_names
-    ]
+    ])
 
 # and for styles
-def autocomplete_style(self: discord.AutocompleteContext):
-    return [
+def autocomplete_style(context: discord.AutocompleteContext):
+    return custom_autocomplete(context, [
         style for style in global_var.style_names
-    ]
+    ])
 
 # and for hires upscaler
-def autocomplete_hires(self: discord.AutocompleteContext):
-    return [
+def autocomplete_hires(context: discord.AutocompleteContext):
+    return custom_autocomplete(context, [
         hires for hires in global_var.highres_upscaler_names
-    ]
+    ])
 
 # and for upscalers
-def autocomplete_upscaler(self: discord.AutocompleteContext):
-    return [
+def autocomplete_upscaler(context: discord.AutocompleteContext):
+    return custom_autocomplete(context, [
         upscaler for upscaler in global_var.upscaler_names
-    ]
+    ])
 
 # and for controlnets
-def autocomplete_controlnet(self: discord.AutocompleteContext):
-    return [
+def autocomplete_controlnet(context: discord.AutocompleteContext):
+    return custom_autocomplete([
         controlnet for controlnet in global_var.controlnet_models
-    ]
+    ])
