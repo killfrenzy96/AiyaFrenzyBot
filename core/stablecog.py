@@ -1307,7 +1307,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             controlnet_weight = float(get_param('controlnet_weight'))
             controlnet_weight = max(0.0, min(2.0, controlnet_weight))
         except:
-            controlnet_weight = 1.0
+            controlnet_weight = None
 
         script = get_param('script')
         # if script not in self.scripts_autocomplete(): script = None
