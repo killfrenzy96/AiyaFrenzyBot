@@ -498,6 +498,6 @@ def autocomplete_upscaler(context: discord.AutocompleteContext):
 
 # and for controlnets
 def autocomplete_controlnet(context: discord.AutocompleteContext):
-    return custom_autocomplete([
+    return custom_autocomplete(context, [
         controlnet for controlnet in global_var.controlnet_models
     ])
