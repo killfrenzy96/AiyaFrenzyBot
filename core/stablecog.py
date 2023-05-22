@@ -394,6 +394,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
             if seed == None: seed = random.randint(0, 0xFFFFFFFF)
 
+            controlnet_preprocessor: str = None
             controlnet_data_model: str = None
 
             # get arguments that can be passed into the draw object
@@ -402,7 +403,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         steps, width, height, guidance_scale, sampler, seed,
                         strength, init_url, batch, style, facefix, tiling,
                         highres_fix, clip_skip, script,
-                        controlnet_model, controlnet_data_model, controlnet_url, controlnet_weight)
+                        controlnet_model, controlnet_preprocessor, controlnet_data_model, controlnet_url, controlnet_weight)
 
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
@@ -706,26 +707,30 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 controlnet_url = None
 
             if controlnet_model != None and controlnet_model != 'None':
-                for (display_name, full_name) in settings.global_var.controlnet_models.items():
-                    if controlnet_model == display_name or controlnet_model == full_name:
+                for (display_name, controlnet_preprocessor) in settings.global_var.controlnet_models_preprocessor.items():
+                    if controlnet_model == display_name or controlnet_model == controlnet_preprocessor:
                         controlnet_model = display_name
-                        controlnet_data_model = full_name
+                        controlnet_preprocessor = controlnet_preprocessor
+                        controlnet_data_model = settings.global_var.controlnet_models[display_name]
                         controlnet_found = True
                         break
 
                 if controlnet_found == False:
                     controlnet_model = None
+                    controlnet_preprocessor = None
                     controlnet_data_model = None
 
                     if not (controlnet_url or controlnet_image):
                         append_options += '\nControlnet model not found. I will remove the controlnet.'
 
+            # set default control model if only controlnet image is specified
             if controlnet_found == False:
                 if controlnet_url or controlnet_image:
-                    for (display_name, full_name) in settings.global_var.controlnet_models.items():
+                    for (display_name, controlnet_preprocessor) in settings.global_var.controlnet_models_preprocessor.items():
                         if display_name == 'depth':
                             controlnet_model = display_name
-                            controlnet_data_model = full_name
+                            controlnet_preprocessor = controlnet_preprocessor
+                            controlnet_data_model = settings.global_var.controlnet_models[display_name]
                             controlnet_found = True
                             break
 
@@ -937,20 +942,26 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 # setup controlnet payload
                 if queue_object.controlnet_model and controlnet_validated:
                     controlnet_payload = {
-                        'controlnet_input_image': [controlnet_image_data],
-                        # 'controlnet_mask': [controlnet_image_mask],
-                        'controlnet_module': queue_object.controlnet_model,
-                        'controlnet_model': queue_object.controlnet_data_model,
-                        'controlnet_weight': controlnet_weight,
-                        'controlnet_resize_mode': 'Just Resize',
-                        'controlnet_lowvram': False,
-                        'controlnet_processor_res': min(queue_object.width, queue_object.height),
-                        'controlnet_threshold_a': 64,
-                        'controlnet_threshold_b': 64,
-                        'controlnet_guidance': min(controlnet_weight, 1),
-                        'controlnet_guessmode': False,
+                        'input_image': [controlnet_image_data],
+                        # 'mask': [controlnet_image_mask],
+                        'module': queue_object.controlnet_preprocessor,
+                        'model': queue_object.controlnet_data_model,
+                        'weight': controlnet_weight,
+                        'resize_mode': 'Just Resize',
+                        'lowvram': False,
+                        'processor_res': min(queue_object.width, queue_object.height),
+                        'threshold_a': 64,
+                        'threshold_b': 64,
                     }
-                    payload.update(controlnet_payload)
+                    payload.update({
+                        'alwayson_scripts': {
+                            'controlnet': {
+                                'args': [
+                                    controlnet_payload
+                                ]
+                            }
+                        }
+                    })
 
                 # attach payload to queue object
                 queue_object.payload = payload
@@ -1055,8 +1066,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 url = f'{web_ui.url}/sdapi/v1/img2img'
             else:
                 url = f'{web_ui.url}/sdapi/v1/txt2img'
-            if queue_object.controlnet_model != None and queue_object.controlnet_model != 'None':
-                url = url.replace('/sdapi/v1/', '/controlnet/')
+            # if queue_object.controlnet_model != None and queue_object.controlnet_model != 'None':
+            #     url = url.replace('/sdapi/v1/', '/controlnet/')
             response = s.post(url=url, json=queue_object.payload, timeout=120)
             queue_object.payload = None
 

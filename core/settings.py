@@ -51,6 +51,7 @@ class GlobalVar:
     embedding_names: list[str] = []
     messages: list[str] = []
     controlnet_models = {}
+    controlnet_models_preprocessor = {}
 
     images_generated: int
     config_cache: dict = None
@@ -353,8 +354,85 @@ def files_check():
         'normal_map': 'control_normal-fp16 [63f96f7c]',
         'openpose': 'control_openpose-fp16 [9ca67cc5]',
         'scribble': 'control_scribble-fp16 [c508311e]',
-        'fake_scribble': 'control_scribble-fp16 [c508311e]'
+        'fake_scribble': 'control_scribble-",fp16 [c508311e]'
     }
+
+    # set defaults for controlnet model file
+    # default models are from: https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/tree/main
+    controlnet_header = ['display_name', 'preprocessor', 'model_full_name']
+    unset_controlnet_models = [
+        ['pix2pix', 'none', 'control_v11e_sd15_ip2p_fp16 [fabb3f7d]'],
+        ['style_transfer', 'none', 't2iadapter_style-fp16 [0e2e8330]'],
+        ['canny', 'canny', 'control_v11p_sd15_canny_fp16 [b18e0966]'],
+        ['depth', 'depth', 'control_v11f1p_sd15_depth_fp16 [4b72d323]'],
+        ['depth_leres', 'depth_leres', 'control_v11f1p_sd15_depth_fp16 [4b72d323]'],
+        ['depth_leres++', 'depth_leres++', 'control_v11f1p_sd15_depth_fp16 [4b72d323]'],
+        ['mlsd', 'mlsd', 'control_v11p_sd15_mlsd_fp16 [77b5ad24]'],
+        ['openpose', 'openpose', 'control_v11p_sd15_openpose_fp16 [73c2b67d]'],
+        ['openpose_hand', 'openpose_hand', 'control_v11p_sd15_openpose_fp16 [73c2b67d]'],
+        ['openpose_face', 'openpose_face', 'control_v11p_sd15_openpose_fp16 [73c2b67d]'],
+        ['openpose_faceonly', 'openpose_faceonly', 'control_v11p_sd15_openpose_fp16 [73c2b67d]'],
+        ['openpose_full', 'openpose_full', 'control_v11p_sd15_openpose_fp16 [73c2b67d]'],
+        ['pidinet_sketch', 'pidinet_sketch', 't2iadapter_sketch-fp16 [75b15924]'],
+        ['pidinet_scribble', 'pidinet_scribble', 'control_v11p_sd15_scribble_fp16 [4e6af23e]'],
+        ['scribble_hed', 'scribble_hed', 'control_v11p_sd15_scribble_fp16 [4e6af23e]'],
+        ['segmentation', 'segmentation', 'control_v11p_sd15_seg_fp16 [ab613144]'],
+        ['depth_zoe', 'depth_zoe', 'control_v11f1p_sd15_depth_fp16 [4b72d323]'],
+        ['normal_bae', 'normal_bae', 'control_v11p_sd15_normalbae_fp16 [592a19d8]'],
+        ['lineart', 'lineart', 'control_v11p_sd15_lineart_fp16 [5c23b17d]'],
+        ['lineart_coarse', 'lineart_coarse', 'control_v11p_sd15_lineart_fp16 [5c23b17d]'],
+        ['lineart_anime', 'lineart_anime', 'control_v11p_sd15s2_lineart_anime_fp16 [c58f338b]'],
+        ['lineart_standard', 'lineart_standard', 'control_v11p_sd15_lineart_fp16 [5c23b17d]'],
+        ['shuffle', 'shuffle', 'control_v11e_sd15_shuffle_fp16 [04a71f87]'],
+        ['tile_resample', 'tile_resample', 'control_v11u_sd15_tile_fp16 [39a89b25]'],
+        ['invert', 'invert', 't2iadapter_sketch-fp16 [75b15924]'],
+        ['lineart_anime_denoise', 'lineart_anime_denoise', 'control_v11p_sd15s2_lineart_anime_fp16 [c58f338b]'],
+        ['inpaint', 'inpaint', 'control_v11p_sd15_inpaint_fp16 [be8bc0ed]']
+    ]
+
+    # if controlnet-models.csv exists and has data
+    make_model_file = True
+    if os.path.isfile('resources/controlnet-models.csv'):
+        with open('resources/controlnet-models.csv', encoding='utf-8') as f:
+            reader = csv.reader(f, delimiter='|')
+            for i, row in enumerate(reader):
+                # if header is missing columns, reformat the file
+                if i == 0:
+                    if len(row)<4:
+                        with open('resources/controlnet-models.csv', 'r') as fp:
+                            reader = csv.DictReader(fp, fieldnames=controlnet_header, delimiter = '|')
+                            with open('resources/controlnet-models2.csv', 'w', newline='') as fh:
+                                writer = csv.DictWriter(fh, fieldnames=reader.fieldnames, extrasaction='ignore', delimiter = '|')
+                                writer.writeheader()
+                                controlnet_header = next(reader)
+                                writer.writerows(reader)
+                                replace_model_file = True
+                # if first row has data, do nothing
+                if i == 1:
+                    make_model_file = False
+        if replace_model_file:
+            os.remove('resources/controlnet-models.csv')
+            os.rename('resources/controlnet-models2.csv', 'resources/controlnet-models.csv')
+
+    # create/reformat controlnet-models.csv if something is wrong
+    if make_model_file:
+        print(f'Uh oh, missing controlnet-models.csv data. Creating a new one.')
+        with open('resources/controlnet-models.csv', 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f, delimiter = '|')
+            writer.writerow(controlnet_header)
+            for unset_controlnet_model in unset_controlnet_models:
+                writer.writerow(unset_controlnet_model)
+
+    # get display_name:model_full_name pairs from controlnet-models.csv into global variable
+    with open('resources/controlnet-models.csv', encoding='utf-8') as csv_file:
+        model_data = list(csv.reader(csv_file, delimiter='|'))
+        for row in model_data[1:]:
+            display_name = row[0]
+            preprocessor = row[1]
+            data_model = row[2]
+
+            global_var.controlnet_models[display_name] = data_model
+            global_var.controlnet_models_preprocessor[display_name] = preprocessor
 
 
 def guilds_check(self: discord.Bot):

@@ -984,6 +984,7 @@ class DrawExtendedView(View):
                 case 'button_extra_remove_controlnet_variation':
                     page = 4
                     draw_object.controlnet_model = None
+                    draw_object.controlnet_preprocessor = None
                     draw_object.controlnet_data_model = None
                     draw_object.controlnet_url = None
 

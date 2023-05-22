@@ -87,6 +87,8 @@ class WebUI:
         self.hypernet_names: list[str] = []
         self.embedding_names: list[str] = []
         self.messages: list[str] = []
+        # self.controlnet_preprocessors: list[str] = []
+        # self.controlnet_models: list[str] = []
 
         if '--gradio-auth' in self.flags:
             try:
@@ -247,6 +249,24 @@ class WebUI:
                     self.embedding_names.append(embedding_model)
             # print(f'- Embedding models count: {len(self.embedding_names)}')
 
+            # get controlnet preprocessors
+            # print('Retrieving controlnet preprocessors...')
+            # response_data = s.get(self.url + '/controlnet/module_list', timeout=30).json()
+            # self.controlnet_preprocessors = []
+            # for (item, controlnet_preprocessor_list) in response_data.items():
+            #     for (controlnet_preprocessor, value) in controlnet_preprocessor_list.items():
+            #         self.controlnet_preprocessors.append(controlnet_preprocessor)
+            # print(f'- Controlnet preprocessors count: {len(self.controlnet_preprocessors)}')
+
+            # get controlnet models
+            # print('Retrieving controlnet models...')
+            # response_data = s.get(self.url + '/controlnet/model_list', timeout=30).json()
+            # self.controlnet_models = []
+            # for (item, controlnet_model_list) in response_data.items():
+            #     for (controlnet_model, value) in controlnet_model_list.items():
+            #         self.controlnet_models.append(controlnet_model)
+            # print(f'- Controlnet models count: {len(self.controlnet_models)}')
+
             print(f'> Loaded data for WebUI at {self.url}')
             print(f'> - Models:{len(self.data_models)} Samplers:{len(self.sampler_names)} Styles:{len(self.style_names)} FaceFix:{len(self.facefix_models)} Upscalers:{len(self.upscaler_names)} HyperNets:{len(self.hypernet_names)} Embeddings:{len(self.embedding_names)}')
             if len(self.flags):
@@ -357,7 +377,7 @@ class DreamObject:
 class DrawObject(DreamObject):
     def __init__(self, cog, ctx, prompt, negative, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
                  strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, script,
-                 controlnet_model = None, controlnet_data_model = None, controlnet_url = None, controlnet_weight = None,
+                 controlnet_model = None, controlnet_preprocessor = None, controlnet_data_model = None, controlnet_url = None, controlnet_weight = None,
                  view = None, message = None, write_to_cache = True, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.prompt: str = prompt
@@ -379,6 +399,7 @@ class DrawObject(DreamObject):
         self.highres_fix: str = highres_fix
         self.clip_skip: int = clip_skip
         self.controlnet_model: str = controlnet_model
+        self.controlnet_preprocessor: str = controlnet_preprocessor
         self.controlnet_data_model: str = controlnet_data_model
         self.controlnet_url: str = controlnet_url
         self.controlnet_weight: float = controlnet_weight
