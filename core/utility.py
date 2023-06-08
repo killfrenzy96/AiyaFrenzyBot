@@ -2,6 +2,7 @@ import time
 import requests
 import threading
 import discord
+import traceback
 
 # WebUI access point
 class WebUI:
@@ -218,7 +219,7 @@ class WebUI:
                         pass
             except:
                 print('Warning: Could not read config. LORA or High-res upscalers will be missing.')
-            self.lora_names.remove('')
+            if '' in self.lora_names: self.lora_names.remove('')
             if 'None' not in self.lora_names: self.lora_names.insert(0, 'None')
             if 'None' not in self.highres_upscaler_names: self.highres_upscaler_names.insert(0, 'None')
 
@@ -279,6 +280,7 @@ class WebUI:
 
         except Exception as e:
             print(f'> Retrieve data failed for WebUI at {self.url}')
+            print(f'\n{traceback.print_exc()}')
             self.online = False
             return False
 
