@@ -895,7 +895,7 @@ class DrawExtendedView(View):
                         if draw_object.script.startswith('inpaint') or draw_object.script.startswith('outpaint'):
                             draw_object.script = None
 
-                    if (draw_object.model_name != None and 'inpaint' in draw_object.model_name) or (draw_object.data_model and 'inpaint' in draw_object.data_model):
+                    if (draw_object.model_name != None and ('inpaint' in draw_object.model_name or 'refiner' in draw_object.model_name)) or (draw_object.data_model and ('inpaint' in draw_object.data_model or 'refiner' in draw_object.data_model)):
                         draw_object.model_name = None
                         draw_object.data_model = None
 
