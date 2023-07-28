@@ -2,8 +2,3 @@ py-cord
 python-dotenv
 requests
 Pillow
-pydub
-scipy
-torch
-torchaudio
-torchvision
