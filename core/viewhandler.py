@@ -251,27 +251,11 @@ class DrawView(View):
                     draw_object.strength = None
 
             # use inpaint or refiner model if it exists
-            model_name = draw_object.model_name
-            if model_name == None or model_name == 'Default':
-                data_model = settings.global_var.model_names['Default']
-                for (display_name, full_name) in settings.global_var.model_names.items():
-                    if (display_name != 'Default' and full_name == data_model):
-                        model_name = display_name
-
-            if model_name:
-                model_name_new = model_name + '_inpaint'
-                if model_name_new in settings.global_var.model_names.keys():
-                    draw_object.model_name = model_name_new
-                    draw_object.data_model = settings.global_var.model_names[model_name_new]
-                else:
-                    model_name_new = model_name + '_refiner'
-                    if model_name_new in settings.global_var.model_names.keys():
-                        draw_object.model_name = model_name_new
-                        draw_object.data_model = settings.global_var.model_names[model_name_new]
-                        draw_object.strength = 0.5
-                    else:
-                        draw_object.model_name = None
-                        draw_object.data_model = None
+            model_name_new = settings.get_inpaint_model(draw_object.model_name)
+            if model_name_new:
+                draw_object.model_name = model_name_new
+                draw_object.data_model = settings.global_var.model_names[model_name_new]
+                if ('_refiner' in model_name_new): draw_object.strength = 0.5
 
             # run stablecog dream using draw object
             loop.create_task(stable_cog.dream_object(draw_object))
@@ -807,26 +791,13 @@ class DrawExtendedView(View):
                             draw_object.batch = 1
 
                             # use inpaint or refiner model if it exists
-                            model_name = draw_object.model_name
-                            if model_name == None or model_name == 'Default':
-                                data_model = settings.global_var.model_names['Default']
-                                for (display_name, full_name) in settings.global_var.model_names.items():
-                                    if (display_name != 'Default' and full_name == data_model):
-                                        model_name = display_name
-
-                            if model_name:
-                                model_name_new = model_name + '_inpaint'
-                                if model_name_new in settings.global_var.model_names.keys():
-                                    draw_object.model_name = model_name_new
-                                    draw_object.data_model = settings.global_var.model_names[model_name_new]
-                                else:
-                                    model_name_new = model_name + '_refiner'
-                                    if model_name_new in settings.global_var.model_names.keys():
-                                        draw_object.model_name = model_name_new
-                                        draw_object.data_model = settings.global_var.model_names[model_name_new]
-                                    else:
-                                        draw_object.model_name = None
-                                        draw_object.data_model = None
+                            model_name_new = settings.get_inpaint_model(draw_object.model_name)
+                            if model_name_new:
+                                draw_object.model_name = model_name_new
+                                draw_object.data_model = settings.global_var.model_names[model_name_new]
+                            else:
+                                draw_object.model_name = None
+                                draw_object.data_model = None
                         else:
                             # upscale image with upscale cog
                             upscale_cog: upscalecog.UpscaleCog = self.upscale_cog
@@ -901,8 +872,8 @@ class DrawExtendedView(View):
                             draw_object.script = None
 
                     if (draw_object.model_name != None and (draw_object.model_name.endswith('_inpaint') or draw_object.model_name.endswith('_refiner'))):
-                        model_name_new = draw_object.model_name.replace('_inpaint', '').replace('_refiner', '')
-                        if model_name_new in settings.global_var.model_names.keys():
+                        model_name_new = settings.get_non_inpaint_model(draw_object.model_name)
+                        if model_name_new:
                             draw_object.model_name = model_name_new
                             draw_object.data_model = settings.global_var.model_names[model_name_new]
                         else:

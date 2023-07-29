@@ -335,8 +335,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 raise Exception()
 
             if (not init_image and not init_url) and ('_inpaint' in checkpoint or '_inpaint' in data_model or '_refiner' in checkpoint or '_refiner' in data_model):
-                model_name_new = checkpoint.replace('_inpaint', '').replace('_refiner', '')
-                if model_name_new in settings.global_var.model_names.keys():
+                model_name_new = settings.get_non_inpaint_model(checkpoint)
+                if model_name_new:
                     checkpoint = model_name_new
                     data_model = settings.global_var.model_names[model_name_new]
                     token = settings.global_var.model_tokens[model_name_new]
