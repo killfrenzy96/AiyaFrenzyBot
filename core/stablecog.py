@@ -347,6 +347,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 init_url = None
             if script == 'None':
                 script = None
+            is_resolution_set = width != None or height != None
 
             # get data model and token from checkpoint
             data_model: str = None
@@ -369,8 +370,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 raise Exception()
 
             if (not init_image and not init_url) and ('_inpaint' in checkpoint or '_inpaint' in data_model or '_refiner' in checkpoint or '_refiner' in data_model):
-                model_name_new = checkpoint.replace('_inpaint', '').replace('_refiner', '')
-                if model_name_new in settings.global_var.model_names.keys():
+                model_name_new = settings.get_non_inpaint_model(checkpoint)
+                if model_name_new:
                     checkpoint = model_name_new
                     data_model = settings.global_var.model_names[model_name_new]
                     token = settings.global_var.model_tokens[model_name_new]
@@ -609,6 +610,16 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     content = 'Image size is too large! Please use a lower resolution image.'
                     ephemeral = True
                     raise Exception()
+
+                # fix output aspect ratio
+                if is_resolution_set == False:
+                    target_aspect_ratio = float(image_pil_width) / float(image_pil_height)
+                    if target_aspect_ratio > 1.01:
+                        height = int(round(float(width) / target_aspect_ratio / 64.0) * 64)
+                    if target_aspect_ratio < 0.99:
+                        width = int(round(float(height) * target_aspect_ratio / 64.0) * 64)
+
+                    print(f'{is_resolution_set} {target_aspect_ratio} {image_pil_width}x{image_pil_height} {width}x{height}')
 
                 # setup image variable
                 image = 'data:image/png;base64,' + image_string
@@ -1205,7 +1216,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 width = int(width / 64) * 64
                 if width not in [x for x in range(192, 1025, 64)]: width = 512
         except:
-            width = 512
+            width = None
 
         try:
             height = int(get_param('height'))
@@ -1213,7 +1224,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 height = int(height / 64) * 64
                 if height not in [x for x in range(192, 1025, 64)]: height = 512
         except:
-            height = 512
+            height = None
 
         try:
             guidance_scale = float(get_param('guidance_scale'))
@@ -1242,13 +1253,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             strength = float(get_param('strength'))
             strength = max(0.0, min(1.0, strength))
         except:
-            strength = 0.75
+            strength = None
 
         try:
             batch = int(get_param('batch'))
             batch = max(1, batch)
         except:
-            batch = 1
+            batch = None
 
         init_url = get_param('init_url')
         if init_url == '':

@@ -550,6 +550,35 @@ def custom_autocomplete(context: discord.AutocompleteContext, values: list[str])
             filtered.append(value)
     return filtered
 
+def get_inpaint_model(model_name: str):
+    if model_name == None or model_name == 'Default':
+        data_model = global_var.model_names['Default']
+        for (display_name, full_name) in global_var.model_names.items():
+            if (display_name != 'Default' and full_name == data_model):
+                model_name = display_name
+
+    if model_name:
+        model_name_new = model_name + '_inpaint'
+        if model_name_new in global_var.model_names.keys():
+            return model_name_new
+        else:
+            model_name_new = model_name + '_refiner'
+            if model_name_new in global_var.model_names.keys():
+                return model_name_new
+            else:
+                return None
+
+def get_non_inpaint_model(model_name: str):
+    if (model_name == None):
+        return None
+
+    if (model_name.endswith('_inpaint') or model_name.endswith('_refiner')):
+        model_name_new = model_name.replace('_inpaint', '').replace('_refiner', '')
+        if model_name_new in global_var.model_names.keys():
+            return model_name_new
+        else:
+            return None
+
 # pulls from model_names list and makes some sort of dynamic list to bypass Discord 25 choices limit
 def autocomplete_model(context: discord.AutocompleteContext):
     return custom_autocomplete(context, [

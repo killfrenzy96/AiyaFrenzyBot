@@ -102,6 +102,13 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
             if init_url: draw_object.init_url = init_url
             if batch: draw_object.batch = batch
 
+            # switch to inpaint or refiner model if init_url or init_image is used
+            if init_image or init_url:
+                new_model_name = settings.get_inpaint_model(draw_object.model_name)
+                if new_model_name:
+                    draw_object.model_name = new_model_name
+                    if '_refiner' in new_model_name: draw_object.strength = 0.5
+
             # execute dream command
             await stable_cog.dream_handler(ctx=ctx,
                 prompt=draw_object.prompt,
