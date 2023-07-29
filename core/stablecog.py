@@ -368,11 +368,17 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 ephemeral = True
                 raise Exception()
 
-            if (not init_image and not init_url) and ('inpaint' in checkpoint or 'inpaint' in data_model or 'refiner' in checkpoint or 'refiner' in data_model):
-                print(f'Dream rejected: Inpaint model selected without init image.')
-                content = f'<@{user.id}> Invalid checkpoint. Inpainting model requires init_image or init_url.'
-                ephemeral = True
-                raise Exception()
+            if (not init_image and not init_url) and ('_inpaint' in checkpoint or '_inpaint' in data_model or '_refiner' in checkpoint or '_refiner' in data_model):
+                model_name_new = checkpoint.replace('_inpaint', '').replace('_refiner', '')
+                if model_name_new in settings.global_var.model_names.keys():
+                    checkpoint = model_name_new
+                    data_model = settings.global_var.model_names[model_name_new]
+                    append_options += f'\nInpaint checkpoint was selected without init_image or init_url. I will use ``{checkpoint}`` instead'
+                else:
+                    print(f'Dream rejected: Inpaint model selected without init image.')
+                    content = f'<@{user.id}> Invalid checkpoint. Inpainting model requires init_image or init_url.'
+                    ephemeral = True
+                    raise Exception()
 
             # validate autocomplete
             if highres_fix != None and highres_fix != 'None':
