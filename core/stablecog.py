@@ -339,6 +339,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 if model_name_new in settings.global_var.model_names.keys():
                     checkpoint = model_name_new
                     data_model = settings.global_var.model_names[model_name_new]
+                    token = settings.global_var.model_tokens[model_name_new]
                     append_options += f'\nInpaint checkpoint was selected without init_image or init_url. I will use ``{checkpoint}`` instead'
                 else:
                     print(f'Dream rejected: Inpaint model selected without init image.')
