@@ -184,6 +184,7 @@ class WebUI:
             # remove samplers that seem to have some issues under certain cases
             if 'DPM adaptive' in self.sampler_names: self.sampler_names.remove('DPM adaptive')
             if 'PLMS' in self.sampler_names: self.sampler_names.remove('PLMS')
+            if 'UniPC' in self.sampler_names: self.sampler_names.remove('UniPC')
             # print(f'- Samplers count: {len(self.sampler_names)}')
 
             # get styles
