@@ -262,7 +262,7 @@ class DrawView(View):
             if model_name_new:
                 draw_object.model_name = model_name_new
                 draw_object.data_model = settings.global_var.model_names[model_name_new]
-                if ('_refiner' in model_name_new): draw_object.strength = 0.5
+                if ('_refiner' in model_name_new): draw_object.strength = 0.25
 
             # run stablecog dream using draw object
             loop.create_task(stable_cog.dream_object(draw_object))
