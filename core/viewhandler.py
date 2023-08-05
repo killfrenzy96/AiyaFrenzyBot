@@ -257,6 +257,12 @@ class DrawView(View):
                     draw_object.script = None
                     draw_object.strength = None
 
+            # remove controlnet variation
+            draw_object.controlnet_model = None
+            draw_object.controlnet_preprocessor = None
+            draw_object.controlnet_data_model = None
+            draw_object.controlnet_url = None
+
             # use inpaint or refiner model if it exists
             model_name_new = settings.get_inpaint_model(draw_object.model_name)
             if model_name_new:
@@ -975,6 +981,9 @@ class DrawExtendedView(View):
                         elif draw_object.script.startswith('outpaint'):
                             draw_object.script = None
                             draw_object.strength = None
+
+                    # remove init image variation
+                    draw_object.init_url = None
 
                 case 'button_extra_remove_controlnet_variation':
                     page = 4
