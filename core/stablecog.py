@@ -79,7 +79,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
     # list for scripts
     def autocomplete_scripts(self: discord.AutocompleteContext):
-        return settings.custom_autocomplete([
+        return settings.custom_autocomplete(self, [
             script for script in scripts
         ])
 
