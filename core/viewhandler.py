@@ -995,6 +995,11 @@ class DrawExtendedView(View):
                     # remove init image variation
                     draw_object.init_url = None
 
+                    # transfer highres prompt to main prompt
+                    draw_object.highres_fix = None
+                    if draw_object.highres_fix_prompt: draw_object.prompt = draw_object.highres_fix_prompt
+                    if draw_object.highres_fix_negative: draw_object.negative = draw_object.highres_fix_negative
+
                 case 'button_extra_remove_controlnet_variation':
                     page = 4
                     draw_object.controlnet_model = None
