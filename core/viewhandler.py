@@ -448,6 +448,7 @@ class DrawExtendedView(View):
                     options.append(discord.SelectOption(
                         label=sampler
                     ))
+                    if len(options) >= 25: break
 
                 self.add_extra_item(Select(
                     placeholder=placeholder,
