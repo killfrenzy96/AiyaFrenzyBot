@@ -723,6 +723,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
                 payload_negative = queue_object.negative
 
+                payload_hires_prompt = queue_object.highres_fix_prompt
+                if token: payload_hires_prompt = f'{token} {payload_hires_prompt}'
+
+                payload_hires_negative = queue_object.highres_fix_negative
+
                 # update prompt if style is used
                 if queue_object.style and queue_object.style != 'None' and queue_object.style in settings.global_var.style_names:
                     # payload.update({
@@ -743,6 +748,18 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             payload_negative += ', ' + style_negative
                         else:
                             payload_negative = style_negative
+
+                    if style_prompt:
+                        if payload_hires_prompt:
+                            payload_hires_prompt += ', ' + style_prompt
+                        else:
+                            payload_hires_prompt = style_prompt
+
+                    if style_negative:
+                        if payload_hires_negative:
+                            payload_hires_negative += ', ' + style_negative
+                        else:
+                            payload_hires_negative = style_negative
 
                 payload = {
                     'prompt': payload_prompt,
@@ -789,29 +806,22 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         "denoising_strength": queue_object.strength
                     })
 
+                    # update highres prompts if style is used
+                    if queue_object.style and queue_object.style != 'None' and queue_object.style in settings.global_var.style_names:
+                        # payload.update({
+                        #     'styles': [queue_object.style]
+                        # })
+                        values: list[str] = settings.global_var.style_names[queue_object.style].split('\n')
+                        style_prompt = values[0]
+                        style_negative = values[1]
+
                     # construct payloads for highres prompts
                     if queue_object.highres_fix_prompt != None and queue_object.highres_fix_prompt != '':
-                        payload_hires_prompt = queue_object.highres_fix_prompt
-                        if token: payload_hires_prompt = f'{token} {payload_hires_prompt}'
-
-                        if style_prompt:
-                            if payload_hires_prompt:
-                                payload_hires_prompt += ', ' + style_prompt
-                            else:
-                                payload_hires_prompt = style_prompt
-
                         payload.update({
                             "hr_prompt": payload_hires_prompt
                         })
 
                     if queue_object.highres_fix_negative != None and queue_object.highres_fix_negative != '':
-                        payload_hires_negative = queue_object.highres_fix_negative
-                        if style_negative:
-                            if payload_hires_negative:
-                                payload_hires_negative += ', ' + style_negative
-                            else:
-                                payload_hires_negative = style_negative
-
                         payload.update({
                             "hr_negative_prompt": payload_hires_negative
                         })
