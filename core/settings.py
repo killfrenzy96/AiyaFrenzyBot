@@ -493,6 +493,12 @@ def autocomplete_model(context: discord.AutocompleteContext):
         model for model in global_var.model_names
     ])
 
+# and for samplers
+def autocomplete_sampler(context: discord.AutocompleteContext):
+    return custom_autocomplete(context, [
+        model for model in global_var.sampler_names
+    ])
+
 # and for styles
 def autocomplete_style(context: discord.AutocompleteContext):
     return custom_autocomplete(context, [
