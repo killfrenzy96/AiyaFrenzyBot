@@ -79,6 +79,12 @@ class IdentifyCog(commands.Cog, description = 'Describe an image'):
                         image_validated = False
                         raise Exception()
 
+                    # defer response before downloading
+                    try:
+                        loop.create_task(ctx.defer())
+                    except:
+                        pass
+
                     # download and encode the image
                     image_data = await loop.run_in_executor(None, requests.get, init_url)
                     image = 'data:image/png;base64,' + base64.b64encode(image_data.content).decode('utf-8')

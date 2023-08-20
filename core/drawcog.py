@@ -89,15 +89,16 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
             draw_object = stable_cog.get_draw_object_from_command(command_string)
 
             # apply modifications to preset command
-            if draw_object.prompt: prompt = f'{draw_object.prompt}, {prompt}'
-            draw_object.prompt = prompt
+            if draw_object.prompt:
+                draw_object.prompt = f'{draw_object.prompt}, {prompt}'
+            else:
+                draw_object.prompt = prompt
 
             if draw_object.negative:
                 if negative:
-                    negative = f'{draw_object.negative}, {negative}'
-                else:
-                    negative = draw_object.negative
-            if negative: draw_object.negative = negative
+                    draw_object.negative = f'{draw_object.negative}, {negative}'
+            else:
+                if negative: draw_object.negative = negative
 
             if init_url: draw_object.init_url = init_url
             if batch: draw_object.batch = batch
@@ -108,6 +109,13 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
                 if new_model_name:
                     draw_object.model_name = new_model_name
                     if '_refiner' in new_model_name: draw_object.strength = 0.25
+
+            # update hires fix prompt if needed
+            if draw_object.highres_fix_prompt != None or draw_object.highres_fix_prompt != '':
+                draw_object.highres_fix_prompt = f'{draw_object.highres_fix_prompt}, {prompt}'
+
+            if negative and (draw_object.highres_fix_negative != None or draw_object.highres_fix_negative != ''):
+                draw_object.highres_fix_negative = f'{draw_object.highres_fix_negative}, {negative}'
 
             # execute dream command
             await stable_cog.dream_handler(ctx=ctx,

@@ -275,6 +275,11 @@ class DrawView(View):
                 draw_object.data_model = settings.global_var.model_names[model_name_new]
                 if ('_refiner' in model_name_new): draw_object.strength = 0.25
 
+            # transfer highres prompt to main prompt
+            draw_object.highres_fix = None
+            if draw_object.highres_fix_prompt: draw_object.prompt = draw_object.highres_fix_prompt
+            if draw_object.highres_fix_negative: draw_object.negative = draw_object.highres_fix_negative
+
             # run stablecog dream using draw object
             loop.create_task(stable_cog.dream_object(draw_object))
 
