@@ -37,6 +37,8 @@ dream_params = [
     'facefix',
     'tiling',
     'highres_fix',
+    'highres_fix_prompt',
+    'highres_fix_negative',
     'clip_skip',
     'hypernet',
     'script'

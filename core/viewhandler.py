@@ -63,9 +63,12 @@ class DrawModal(Modal):
         extra_settings_value += f'\n\ncheckpoint: {self.input_object.model_name}'
         extra_settings_value += f'\nstyle: {self.input_object.style}'
 
+        extra_settings_value += f'\n\nhighres_fix: {self.input_object.highres_fix}'
+        extra_settings_value += f'\nhighres_fix_prompt: {self.input_object.highres_fix_prompt}'
+        extra_settings_value += f'\nhighres_fix_negative: {self.input_object.highres_fix_negative}'
+
         extra_settings_value += f'\n\nfacefix: {self.input_object.facefix}'
         extra_settings_value += f'\ntiling: {self.input_object.tiling}'
-        extra_settings_value += f'\nhighres_fix: {self.input_object.highres_fix}'
         extra_settings_value += f'\nclip_skip: {self.input_object.clip_skip}'
         extra_settings_value += f'\nscript: {self.input_object.script}'
 
@@ -134,6 +137,8 @@ class DrawModal(Modal):
                 draw_object.facefix         = command_draw_object.facefix
                 draw_object.tiling          = command_draw_object.tiling
                 draw_object.highres_fix     = command_draw_object.highres_fix
+                draw_object.highres_fix_prompt = command_draw_object.highres_fix_prompt
+                draw_object.highres_fix_negative = command_draw_object.highres_fix_negative
                 draw_object.clip_skip       = command_draw_object.clip_skip
                 draw_object.batch           = command_draw_object.batch
                 draw_object.script          = command_draw_object.script
