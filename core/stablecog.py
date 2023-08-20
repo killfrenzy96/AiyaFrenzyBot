@@ -360,9 +360,9 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 facefix = None
             if highres_fix == 'None':
                 highres_fix = None
-            if highres_fix_prompt == None:
+            if highres_fix_prompt == None or highres_fix_prompt == 'None':
                 highres_fix_prompt = ''
-            if highres_fix_negative == None:
+            if highres_fix_negative == None or highres_fix_negative == 'None':
                 highres_fix_negative = ''
             if init_url == 'None':
                 init_url = None
@@ -917,19 +917,17 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         else:
                             payload_prompt = style_prompt
 
-                    if style_negative:
-                        if payload_negative:
-                            payload_negative += ', ' + style_negative
-                        else:
-                            payload_negative = style_negative
-
-                    if style_prompt:
                         if payload_hires_prompt:
                             payload_hires_prompt += ', ' + style_prompt
                         else:
                             payload_hires_prompt = style_prompt
 
                     if style_negative:
+                        if payload_negative:
+                            payload_negative += ', ' + style_negative
+                        else:
+                            payload_negative = style_negative
+
                         if payload_hires_negative:
                             payload_hires_negative += ', ' + style_negative
                         else:
