@@ -841,6 +841,14 @@ class DrawExtendedView(View):
                             else:
                                 draw_object.model_name = None
                                 draw_object.data_model = None
+
+                            # transfer highres prompt to main prompt
+                            draw_object.highres_fix = None
+                            if draw_object.highres_fix_prompt: draw_object.prompt = draw_object.highres_fix_prompt
+                            if draw_object.highres_fix_negative: draw_object.negative = draw_object.highres_fix_negative
+                            draw_object.highres_fix_prompt = None
+                            draw_object.highres_fix_negative = None
+
                         else:
                             script = None
                             if len(message.attachments) > 1:
