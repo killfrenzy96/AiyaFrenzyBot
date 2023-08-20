@@ -16,7 +16,7 @@ template = {
     'default_steps': 20,
     'default_guidance_scale': 7.0,
     'default_strength': 0.75,
-    'default_strength_highres_fix': 0.6,
+    'default_strength_highres_fix': 0.65,
     'sampler': 'DPM++ 2M Karras',
     'negative_prompt': '',
     'max_steps': 100,
