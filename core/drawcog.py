@@ -128,6 +128,8 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
                 facefix=draw_object.facefix,
                 tiling=draw_object.tiling,
                 highres_fix=draw_object.highres_fix,
+                highres_fix_prompt=draw_object.highres_fix_prompt,
+                highres_fix_negative=draw_object.highres_fix_negative,
                 clip_skip=draw_object.clip_skip,
                 script=draw_object.script
             )
