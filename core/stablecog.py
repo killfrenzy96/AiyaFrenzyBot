@@ -790,7 +790,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
 
                     if queue_object.highres_fix_negative != None and queue_object.highres_fix_negative != '':
                         payload.update({
-                            "hr_prompt_negative": highres_fix_negative
+                            "hr_negative_prompt": highres_fix_negative
                         })
 
                 # add any options that would go into the override_settings
