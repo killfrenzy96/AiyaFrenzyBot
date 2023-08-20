@@ -111,10 +111,10 @@ class DrawCog(commands.Cog, description='An simplified way to create images from
                     if '_refiner' in new_model_name: draw_object.strength = 0.25
 
             # update hires fix prompt if needed
-            if draw_object.highres_fix_prompt != None or draw_object.highres_fix_prompt != '':
+            if draw_object.highres_fix_prompt != None and draw_object.highres_fix_prompt != '':
                 draw_object.highres_fix_prompt = f'{draw_object.highres_fix_prompt}, {prompt}'
 
-            if negative and (draw_object.highres_fix_negative != None or draw_object.highres_fix_negative != ''):
+            if negative and (draw_object.highres_fix_negative != None and draw_object.highres_fix_negative != ''):
                 draw_object.highres_fix_negative = f'{draw_object.highres_fix_negative}, {negative}'
 
             # execute dream command

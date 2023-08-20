@@ -64,6 +64,8 @@ class DrawModal(Modal):
         extra_settings_value += f'\nstyle: {self.input_object.style}'
 
         extra_settings_value += f'\n\nhighres_fix: {self.input_object.highres_fix}'
+        if self.input_object.highres_fix_prompt == None: self.input_object.highres_fix_prompt = ''
+        if self.input_object.highres_fix_negative == None: self.input_object.highres_fix_negative = ''
         extra_settings_value += f'\nhighres_fix_prompt: {self.input_object.highres_fix_prompt}'
         extra_settings_value += f'\nhighres_fix_negative: {self.input_object.highres_fix_negative}'
 
