@@ -148,6 +148,12 @@ class UpscaleCog(commands.Cog):
                     ephemeral = True
                     raise Exception()
 
+                # defer response before downloading
+                try:
+                    loop.create_task(ctx.defer())
+                except:
+                    pass
+
                 # download and encode the image
                 try:
                     image_response = await loop.run_in_executor(None, requests.get, init_url)
