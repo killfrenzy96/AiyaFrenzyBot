@@ -266,6 +266,8 @@ class DrawView(View):
             draw_object.highres_fix = None
             if draw_object.highres_fix_prompt: draw_object.prompt = draw_object.highres_fix_prompt
             if draw_object.highres_fix_negative: draw_object.negative = draw_object.highres_fix_negative
+            draw_object.highres_fix_prompt = None
+            draw_object.highres_fix_negative = None
 
             # run stablecog dream using draw object
             loop.create_task(stable_cog.dream_object(draw_object))
