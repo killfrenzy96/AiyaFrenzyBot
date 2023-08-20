@@ -333,6 +333,8 @@ class Minigame:
             facefix=False,
             tiling=False,
             highres_fix=False,
+            highres_fix_prompt=None,
+            highres_fix_negative=None,
             clip_skip=1,
             script=None,
             message=message,

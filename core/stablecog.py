@@ -171,9 +171,21 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @option(
         'highres_fix',
         str,
-        description='Tries to fix issues from generating high-res images. Takes longer!',
+        description='A prompt to condition the model with.',
         required=False,
         autocomplete=settings.autocomplete_hires,
+    )
+    @option(
+        'highres_fix_prompt',
+        str,
+        description='Overrides prompt on the highres fix pass.',
+        required=False,
+    )
+    @option(
+        'highres_fix_negative',
+        str,
+        description='Overrides negative prompt on the highres fix pass.',
+        required=False,
     )
     @option(
         'clip_skip',
@@ -209,7 +221,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         autocomplete=autocomplete_scripts,
     )
     async def dream_handler(self, ctx: discord.ApplicationContext | discord.Message | discord.Interaction, *,
-                            prompt: str, negative: str = None,
+                            prompt: str,
+                            negative: str = None,
                             checkpoint: Optional[str] = None,
                             steps: Optional[int] = None,
                             width: Optional[int] = None,
@@ -222,6 +235,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                             facefix: Optional[str] = None,
                             tiling: Optional[bool] = False,
                             highres_fix: Optional[str] = None,
+                            highres_fix_prompt: Optional[str] = None,
+                            highres_fix_negative: Optional[str] = None,
                             clip_skip: Optional[int] = None,
                             init_image: Optional[discord.Attachment] = None,
                             init_url: Optional[str] = None,
@@ -309,6 +324,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 facefix = None
             if highres_fix == 'None':
                 highres_fix = None
+            if highres_fix_prompt == None:
+                highres_fix_prompt = ''
+            if highres_fix_negative == None:
+                highres_fix_negative = ''
             if init_url == 'None':
                 init_url = None
             if script == 'None':
@@ -371,7 +390,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 return (self, ctx, prompt, negative, checkpoint, data_model,
                         steps, width, height, guidance_scale, sampler, seed,
                         strength, init_url, batch, style, facefix, tiling,
-                        highres_fix, clip_skip, script)
+                        highres_fix, highres_fix_prompt, highres_fix_negative,
+                        clip_skip, script)
 
             # get estimate of the compute cost of this dream
             def get_dream_cost(_width: int, _height: int, _steps: int, _count: int = 1):
@@ -761,6 +781,16 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                         "denoising_strength": queue_object.strength
                     })
 
+                    if queue_object.highres_fix_prompt != None and queue_object.highres_fix_prompt != '':
+                        payload.update({
+                            "hr_prompt": highres_fix_prompt
+                        })
+
+                    if queue_object.highres_fix_negative != None and queue_object.highres_fix_negative != '':
+                        payload.update({
+                            "hr_prompt_negative": highres_fix_negative
+                        })
+
                 # add any options that would go into the override_settings
                 override_settings = {
                     # 'sd_model_checkpoint': queue_object.data_model
@@ -967,6 +997,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             facefix=draw_object.facefix,
             tiling=draw_object.tiling,
             highres_fix=draw_object.highres_fix,
+            highres_fix_prompt=draw_object.highres_fix_prompt,
+            highres_fix_negative=draw_object.highres_fix_negative,
             clip_skip=draw_object.clip_skip,
             script=draw_object.script
         ))
@@ -1078,6 +1110,10 @@ class StableCog(commands.Cog, description='Create images from natural language.'
         except:
             highres_fix = None
 
+        highres_fix_prompt = get_param('highres_fix_prompt')
+
+        highres_fix_negative = get_param('highres_fix_negative')
+
         try:
             facefix = get_param('facefix')
             if facefix not in settings.global_var.facefix_models: facefix = None
@@ -1113,6 +1149,8 @@ class StableCog(commands.Cog, description='Create images from natural language.'
             facefix=facefix,
             tiling=tiling,
             highres_fix=highres_fix,
+            highres_fix_prompt=highres_fix_prompt,
+            highres_fix_negative=highres_fix_negative,
             clip_skip=clip_skip,
             script=script
         )

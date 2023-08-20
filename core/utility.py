@@ -359,7 +359,7 @@ class DreamObject:
 # the queue object for txt2image and img2img
 class DrawObject(DreamObject):
     def __init__(self, cog, ctx, prompt, negative, model_name, data_model, steps, width, height, guidance_scale, sampler, seed,
-                 strength, init_url, batch, style, facefix, tiling, highres_fix, clip_skip, script,
+                 strength, init_url, batch, style, facefix, tiling, highres_fix, highres_fix_prompt, highres_fix_negative, clip_skip, script,
                  view = None, message = None, write_to_cache = True, wait_for_dream: DreamObject = None, payload = None):
         super().__init__(cog, ctx, view, message, write_to_cache, wait_for_dream, payload)
         self.prompt: str = prompt
@@ -379,6 +379,8 @@ class DrawObject(DreamObject):
         self.facefix: str = facefix
         self.tiling: bool = tiling
         self.highres_fix: str = highres_fix
+        self.highres_fix_prompt: str = highres_fix_prompt
+        self.highres_fix_negative: str = highres_fix_negative
         self.clip_skip: int = clip_skip
         self.script: str = script
 
@@ -401,6 +403,10 @@ class DrawObject(DreamObject):
             command += f' tiling:{self.tiling}'
         if self.highres_fix != None and self.highres_fix != 'None':
             command += f' highres_fix:{self.highres_fix}'
+            if self.highres_fix_prompt != None and self.highres_fix_prompt != '':
+                command += f' highres_fix_prompt:{self.highres_fix_prompt}'
+            if self.highres_fix_negative != None and self.highres_fix_negative != '':
+                command += f' highres_fix_negative:{self.highres_fix_negative}'
         if self.clip_skip != 1:
             command += f' clip_skip:{self.clip_skip}'
         if self.batch > 1:
