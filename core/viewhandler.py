@@ -1054,6 +1054,13 @@ class DrawExtendedView(View):
                         draw_object.strength = 1.0
                         draw_object.seed = None
 
+                        # transfer highres prompt to main prompt
+                        draw_object.highres_fix = None
+                        if draw_object.highres_fix_prompt: draw_object.prompt = draw_object.highres_fix_prompt
+                        if draw_object.highres_fix_negative: draw_object.negative = draw_object.highres_fix_negative
+                        draw_object.highres_fix_prompt = None
+                        draw_object.highres_fix_negative = None
+
             # start dream
             loop.create_task(stable_cog.dream_object(draw_object))
             refresh_view()

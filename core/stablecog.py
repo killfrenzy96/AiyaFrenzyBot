@@ -370,6 +370,13 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                 script = None
             is_resolution_set = width != None or height != None
 
+            # remove highres fix if there is an init image
+            if highres_fix != None and (init_url != None or init_image != None):
+                append_options += f'\nHighres fix is not supported with init_image or init_url. I will remove highres fix.'
+                highres_fix = None
+                highres_fix_prompt = None
+                highres_fix_negative = None
+
             # get data model and token from checkpoint
             data_model: str = None
             token: str = None
