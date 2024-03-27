@@ -377,6 +377,11 @@ class StableCog(commands.Cog, description='Create images from natural language.'
                     raise Exception()
 
             # validate autocomplete
+            if sampler != None and sampler != 'None':
+                if sampler not in settings.global_var.sampler_names:
+                    sampler = settings.read(guild)['sampler']
+                    append_options += '\nSampler not found. Using default sampler.'
+
             if highres_fix != None and highres_fix != 'None':
                 if highres_fix not in settings.global_var.highres_upscaler_names:
                     highres_fix = None
