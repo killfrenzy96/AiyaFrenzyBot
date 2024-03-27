@@ -133,7 +133,7 @@ class StableCog(commands.Cog, description='Create images from natural language.'
     @option(
         'sampler',
         str,
-        description='The sampler to use for generation. Default: DPM++ 2M Karras',
+        description='The sampler to use for generation. Default: DPM++ 2M',
         required=False,
         autocomplete=settings.autocomplete_sampler,
     )

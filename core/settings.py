@@ -17,7 +17,7 @@ template = {
     'default_guidance_scale': 7.0,
     'default_strength': 0.75,
     'default_strength_highres_fix': 0.6,
-    'sampler': 'DPM++ 2M Karras',
+    'sampler': 'DPM++ 2M',
     'negative_prompt': '',
     'max_steps': 100,
     'default_count': 1,
@@ -61,9 +61,7 @@ class GlobalVar:
     stats_write_thread = threading.Thread()
 
     slow_samplers = [
-        'Heun', 'DPM2', 'DPM2 a', 'DPM++ 2S a',
-        'DPM2 Karras', 'DPM2 a Karras', 'DPM++ 2S a Karras',
-        'DPM++ SDE', 'DPM++ SDE Karras']
+        'Heun', 'DPM2', 'DPM2 a', 'DPM++ 2S a', 'DPM++ SDE']
 
 global_var = GlobalVar()
 
